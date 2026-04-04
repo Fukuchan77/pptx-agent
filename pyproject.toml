@@ -1,0 +1,156 @@
+[project]
+name = "pptx-agent"
+version = "0.1.0"
+description = "AI-powered PowerPoint presentation generator"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic-ai-slim[logfire,openai]>=1.77.0",
+    "pydantic-ai-litellm>=0.2.3",
+    # python-pptx 1.0.2 (August 2024 release) includes Pillow 10+ compatibility fixes
+    # No internal fork needed - T024 satisfied by upstream version
+    "python-pptx>=1.0.2",
+    "pydantic-settings>=2.13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.15.8",
+    "pyright>=1.1.408",
+    "ty>=0.0.28",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    "ANN",    # flake8-annotations
+    "ASYNC",  # flake8-async
+    "S",      # bandit (security)
+    "B",      # flake8-bugbear
+    "A",      # flake8-builtins
+    "COM",    # flake8-commas
+    "C4",     # flake8-comprehensions
+    "DTZ",    # flake8-datetimez
+    "T10",    # flake8-debugger
+    "EM",     # flake8-errmsg
+    "EXE",    # flake8-executable
+    "ISC",    # flake8-implicit-str-concat
+    "ICN",    # flake8-import-conventions
+    "G",      # flake8-logging-format
+    "INP",    # flake8-no-pep420
+    "PIE",    # flake8-pie
+    "T20",    # flake8-print
+    "PYI",    # flake8-pyi
+    "PT",     # flake8-pytest-style
+    "Q",      # flake8-quotes
+    "RSE",    # flake8-raise
+    "RET",    # flake8-return
+    "SLF",    # flake8-self
+    "SLOT",   # flake8-slots
+    "SIM",    # flake8-simplify
+    "TID",    # flake8-tidy-imports
+    "TCH",    # flake8-type-checking
+    "INT",    # flake8-gettext
+    "ARG",    # flake8-unused-arguments
+    "PTH",    # flake8-use-pathlib
+    "TD",     # flake8-todos
+    "FIX",    # flake8-fixme
+    "ERA",    # eradicate
+    "PD",     # pandas-vet
+    "PGH",    # pygrep-hooks
+    "PL",     # pylint
+    "TRY",    # tryceratops
+    "FLY",    # flynt
+    "NPY",    # numpy-specific rules
+    "PERF",   # perflint
+    "RUF",    # ruff-specific rules
+]
+
+ignore = [
+    "ANN401",  # Dynamically typed expressions (Any) are disallowed
+    "COM812",  # Trailing comma missing (conflicts with formatter)
+    "ISC001",  # Implicit string concatenation (conflicts with formatter)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "S101",    # Use of assert detected
+    "ANN001",  # Missing type annotation for function arguments (pytest fixtures)
+    "ANN201",  # Missing return type annotation for public function
+    "PLR2004", # Magic value used in comparison
+    "ARG001",  # Unused function argument
+    "PLC0415", # Import outside top-level (lazy imports in tests are ok)
+    "SLF001",  # Private member access (necessary for testing internals)
+    "PT017",   # Assertions in except blocks (acceptable test pattern)
+    "RUF043",  # Regex metacharacters (pytest.raises match patterns)
+    "F841",    # Unused variables (sometimes intentional in tests)
+    "PLR0912", # Too many branches (tests can be complex)
+    "PLR0913", # Too many arguments (test fixtures)
+    "S110",    # try-except-pass (acceptable in tests)
+]
+"src/pptx_agent/config.py" = ["PLW0603", "PYI063", "ANN001"]  # Global singleton, pydantic hooks
+"src/pptx_agent/pptx_wrapper/shapes.py" = ["SLF001", "S110", "SIM105"]  # Private XML access, defensive error handling
+"src/pptx_agent/pptx_wrapper/slide.py" = ["PLR0912", "S110"]  # Complex placeholder matching logic
+"src/pptx_agent/pptx_wrapper/smartart.py" = ["ARG004", "SIM102", "TRY301", "B904"]  # NotImplementedError stub
+"src/pptx_agent/template_parser/parser.py" = ["ANN001"]  # python-pptx types not annotatable
+"src/pptx_agent/validators.py" = ["ARG001"]  # Future expansion placeholder
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.pyright]
+include = ["src", "tests"]
+exclude = ["**/__pycache__", ".venv", "build", "dist"]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+reportUnknownVariableType = false
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=src/pptx_agent",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-fail-under=80",
+]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*", "**/__pycache__/*", "src/pptx_agent/config.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]

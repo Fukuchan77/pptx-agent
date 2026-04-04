@@ -1,0 +1,43 @@
+[tools]
+python = "3.12"
+
+[tasks.dev]
+description = "Activate virtual environment"
+run = """
+#!/usr/bin/env bash
+echo "Virtual environment is at: .venv"
+echo "Activate with: source .venv/bin/activate"
+echo "Or run commands with: uv run <command>"
+"""
+
+[tasks.test]
+description = "Run pytest tests"
+run = "uv run pytest"
+
+[tasks."test-cov"]
+description = "Run pytest with coverage report"
+run = "uv run pytest --cov=src/pptx_agent --cov-report=term-missing --cov-report=html"
+
+[tasks.lint]
+description = "Run ruff linter checks"
+run = "uv run ruff check ."
+
+[tasks."lint-fix"]
+description = "Run ruff linter with auto-fix"
+run = "uv run ruff check --fix ."
+
+[tasks.format]
+description = "Format code with ruff"
+run = "uv run ruff format ."
+
+[tasks.typecheck]
+description = "Run pyright type checker"
+run = "uv run pyright"
+
+[tasks.ci]
+description = "Run all CI checks (lint, typecheck, test)"
+run = [
+  "mise run lint",
+  "mise run typecheck",
+  "mise run test-cov"
+]
