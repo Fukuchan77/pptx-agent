@@ -2,7 +2,14 @@
 
 An AI-powered tool that generates professional PowerPoint presentations from text or Markdown input using Large Language Models (LLMs).
 
-## Features
+## 📚 Documentation
+
+- **[User Guide](docs/user-guide.md)** - Complete installation, configuration, and usage instructions
+- **[Developer Guide](docs/developer-guide.md)** - Architecture, development workflow, and contribution guidelines
+- **[API Reference](docs/api-reference.md)** - Technical API documentation
+- **[Deployment Guide](docs/deployment.md)** - Production deployment instructions _(coming soon)_
+
+## ✨ Features
 
 - **Automated Presentation Generation**: Convert text/Markdown documents into structured PowerPoint presentations
 - **Multi-Language Support**: Supports Japanese and English with language-aware text capacity calculations
@@ -68,11 +75,28 @@ WATSONX_PROJECT_ID=your-project-id
 ANTHROPIC_API_KEY=your-api-key
 ```
 
-## Usage
+## 🚀 Quick Start
 
-### Basic Usage
+Generate your first presentation in 3 steps:
 
-Generate a presentation from a text file:
+```bash
+# 1. Install
+uv sync --all-extras
+
+# 2. Configure (add your API key to .env)
+echo "LLM_PROVIDER=anthropic" >> .env
+echo "ANTHROPIC_API_KEY=your-key-here" >> .env
+
+# 3. Generate
+uv run python -m pptx_agent.main \
+  --input examples/sample-input.txt \
+  --template templates/basic-template.pptx \
+  --output my-presentation.pptx
+```
+
+## 📖 Usage Examples
+
+### Basic Presentation Generation
 
 ```bash
 uv run python -m pptx_agent.main \
@@ -81,15 +105,37 @@ uv run python -m pptx_agent.main \
   --output output.pptx
 ```
 
-### With Language Specification
+### Japanese Presentation
+
+```bash
+uv run python -m pptx_agent.main \
+  --input content-ja.txt \
+  --template templates/japanese-template.pptx \
+  --output presentation-ja.pptx \
+  --language ja
+```
+
+### With Template Manifest (Optimized)
+
+```bash
+uv run python -m pptx_agent.main \
+  --input proposal.md \
+  --template templates/corporate-template.pptx \
+  --manifest templates/corporate-manifest.json \
+  --output proposal.pptx
+```
+
+### Verbose Mode (Debugging)
 
 ```bash
 uv run python -m pptx_agent.main \
   --input input.txt \
   --template templates/basic-template.pptx \
   --output output.pptx \
-  --language ja
+  --verbose
 ```
+
+For more examples and detailed usage instructions, see the **[User Guide](docs/user-guide.md)**.
 
 ## Development
 
@@ -197,9 +243,21 @@ uv run pytest tests/unit/test_project_structure.py
 uv run pytest tests/unit/test_project_structure.py::test_src_directory_exists
 ```
 
-## Contributing
+## 🤝 Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines and contribution process.
+We welcome contributions! Please see:
+
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
+- **[Developer Guide](docs/developer-guide.md)** - Development setup and workflow
+- **[API Reference](docs/api-reference.md)** - Technical documentation
+
+### Quick Contribution Steps
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Follow TDD: Write tests first, then implement
+4. Run CI checks: `mise run ci`
+5. Submit a Pull Request
 
 ## License
 
