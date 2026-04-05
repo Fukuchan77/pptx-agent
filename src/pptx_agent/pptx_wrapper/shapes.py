@@ -20,6 +20,11 @@ from pptx_agent.pptx_wrapper.placeholder_ops import (
     get_placeholder_bounds,
     remove_placeholder_safely,
 )
+from pptx_agent.pptx_wrapper.type_helpers import (
+    add_chart_with_bounds,
+    add_picture_with_bounds,
+    add_table_with_bounds,
+)
 from pptx_agent.pptx_wrapper.xml_utils import safe_get_element
 
 logger = logging.getLogger(__name__)
@@ -101,9 +106,9 @@ class ChartWrapper:
             # If placeholder not found, add chart at default position
             x, y = Inches(DEFAULT_SHAPE_LEFT_INCHES), Inches(DEFAULT_SHAPE_TOP_INCHES)
             cx, cy = Inches(DEFAULT_SHAPE_WIDTH_INCHES), Inches(DEFAULT_SHAPE_HEIGHT_INCHES)
-            # CategoryChartData is a subclass of ChartData,
-            # but type checker doesn't recognize inheritance
-            slide.shapes.add_chart(ChartWrapper.CHART_TYPES[chart_type], x, y, cx, cy, chart_data)  # type: ignore[arg-type]
+            add_chart_with_bounds(
+                slide, ChartWrapper.CHART_TYPES[chart_type], x, y, cx, cy, chart_data
+            )
         else:
             # Replace placeholder with chart
             left, top, width, height = get_placeholder_bounds(chart_placeholder)
@@ -112,15 +117,14 @@ class ChartWrapper:
             remove_placeholder_safely(chart_placeholder)
 
             # Add chart in same position
-            # CategoryChartData is a subclass of ChartData,
-            # but type checker doesn't recognize inheritance
-            slide.shapes.add_chart(
+            add_chart_with_bounds(
+                slide,
                 ChartWrapper.CHART_TYPES[chart_type],
-                left,  # type: ignore[arg-type]
-                top,  # type: ignore[arg-type]
-                width,  # type: ignore[arg-type]
-                height,  # type: ignore[arg-type]
-                chart_data,  # type: ignore[arg-type]
+                left,
+                top,
+                width,
+                height,
+                chart_data,
             )
 
 
@@ -170,7 +174,7 @@ class TableWrapper:
             # Add table at default position
             x, y = Inches(DEFAULT_SHAPE_LEFT_INCHES), Inches(DEFAULT_SHAPE_TOP_INCHES)
             cx, cy = Inches(DEFAULT_SHAPE_WIDTH_INCHES), Inches(DEFAULT_SHAPE_HEIGHT_INCHES)
-            table = slide.shapes.add_table(num_rows, num_cols, x, y, cx, cy).table
+            table = add_table_with_bounds(slide, num_rows, num_cols, x, y, cx, cy)
         else:
             # Replace placeholder with table
             left, top, width, height = get_placeholder_bounds(table_placeholder)
@@ -179,14 +183,15 @@ class TableWrapper:
             remove_placeholder_safely(table_placeholder)
 
             # Add table in same position
-            table = slide.shapes.add_table(
+            table = add_table_with_bounds(
+                slide,
                 num_rows,
                 num_cols,
-                left,  # type: ignore[arg-type]
-                top,  # type: ignore[arg-type]
-                width,  # type: ignore[arg-type]
-                height,  # type: ignore[arg-type]
-            ).table
+                left,
+                top,
+                width,
+                height,
+            )
 
         # Populate table
         row_idx = 0
@@ -239,18 +244,19 @@ class ImageWrapper:
             pic = slide.shapes.add_picture(str(img_path), left, top)
         else:
             # Insert image in placeholder
-            left, top, width, height = get_placeholder_bounds(image_placeholder)  # type: ignore[assignment]
+            left, top, width, height = get_placeholder_bounds(image_placeholder)
 
             # Remove placeholder safely
             remove_placeholder_safely(image_placeholder)
 
             # Add image in same position, maintaining aspect ratio
-            pic = slide.shapes.add_picture(
+            pic = add_picture_with_bounds(
+                slide,
                 str(img_path),
-                left,  # type: ignore[arg-type]
-                top,  # type: ignore[arg-type]
-                width=width,  # type: ignore[arg-type]
-                height=height,  # type: ignore[arg-type]
+                left,
+                top,
+                width,
+                height,
             )
 
         # Set alt text if provided

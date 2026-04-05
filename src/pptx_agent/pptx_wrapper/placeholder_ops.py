@@ -14,21 +14,52 @@ from pptx_agent.pptx_wrapper.xml_utils import safe_get_element, safe_remove_elem
 logger = logging.getLogger(__name__)
 
 
-def find_placeholder(slide: Slide, placeholder_name: str) -> Any | None:
-    """Find placeholder by name or type.
+def find_placeholder(slide: Slide, placeholder_name: str, fuzzy_match: bool = False) -> Any | None:
+    """Find placeholder by name or type with optional fuzzy matching.
 
     Args:
         slide: Slide to search in
         placeholder_name: Name or type name of placeholder to find
+        fuzzy_match: If True, use case-insensitive partial matching and fallback logic
 
     Returns:
         Placeholder shape if found, None otherwise
     """
     for shape in slide.shapes:
-        if shape.is_placeholder and (
-            placeholder_name in (shape.name, shape.placeholder_format.type.name)
-        ):
+        if not shape.is_placeholder:
+            continue
+
+        # Try exact match first on name
+        if shape.name == placeholder_name:
             return shape
+
+        # Try placeholder type name with exception handling
+        try:
+            if shape.placeholder_format.type.name == placeholder_name:
+                return shape
+        except AttributeError as e:
+            # If accessing placeholder format fails, log and continue searching
+            logger.debug("Could not access placeholder_format for shape %s: %s", shape.name, e)
+
+        # If fuzzy match enabled, try case-insensitive partial match on name
+        if fuzzy_match and placeholder_name.lower() in shape.name.lower():
+            return shape
+
+    # If still not found and fuzzy match enabled with generic name, try fallback
+    if fuzzy_match and placeholder_name.lower() in ["content", "body", "text"]:
+        for shape in slide.shapes:
+            if shape.is_placeholder and hasattr(shape, "text_frame"):
+                # Skip title placeholder
+                try:
+                    if shape.placeholder_format.type.name != "TITLE":
+                        return shape
+                except AttributeError:
+                    # If we can't determine type, use it anyway as fallback
+                    logger.debug(
+                        "Could not determine placeholder type for shape, using as fallback"
+                    )
+                    return shape
+
     return None
 
 

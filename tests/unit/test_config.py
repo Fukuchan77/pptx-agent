@@ -139,3 +139,150 @@ class TestConfigValidConfiguration:
         assert config.llm_provider == "anthropic"
         assert config.llm_model == "claude-3-5-sonnet-20241022"
         assert config.anthropic_api_key == "sk-ant-test-key"
+
+
+class TestConfigAPIKeyFormatValidation:
+    """Test API key format validation."""
+
+    def test_watsonx_apikey_empty_string_fails(self) -> None:
+        """Empty string API key should fail validation."""
+        with pytest.raises(ValueError, match="API key appears to be invalid"):
+            Config(
+                llm_provider="watsonx",
+                llm_model="test-model",
+                watsonx_url="https://us-south.ml.cloud.ibm.com",
+                watsonx_apikey="",
+                watsonx_project_id="test-project-id",
+            )  # type: ignore[call-arg]
+
+    def test_watsonx_apikey_too_short_fails(self) -> None:
+        """API key shorter than 10 characters should fail validation."""
+        with pytest.raises(ValueError, match="API key appears to be invalid"):
+            Config(
+                llm_provider="watsonx",
+                llm_model="test-model",
+                watsonx_url="https://us-south.ml.cloud.ibm.com",
+                watsonx_apikey="short",
+                watsonx_project_id="test-project-id",
+            )  # type: ignore[call-arg]
+
+    def test_watsonx_apikey_whitespace_only_fails(self) -> None:
+        """Whitespace-only API key should fail validation."""
+        with pytest.raises(ValueError, match="API key appears to be invalid"):
+            Config(
+                llm_provider="watsonx",
+                llm_model="test-model",
+                watsonx_url="https://us-south.ml.cloud.ibm.com",
+                watsonx_apikey="     ",
+                watsonx_project_id="test-project-id",
+            )  # type: ignore[call-arg]
+
+    def test_watsonx_apikey_with_leading_trailing_whitespace_validates_content(
+        self,
+    ) -> None:
+        """API key with whitespace should validate stripped content."""
+        with pytest.raises(ValueError, match="API key appears to be invalid"):
+            Config(
+                llm_provider="watsonx",
+                llm_model="test-model",
+                watsonx_url="https://us-south.ml.cloud.ibm.com",
+                watsonx_apikey="  short  ",
+                watsonx_project_id="test-project-id",
+            )  # type: ignore[call-arg]
+
+    def test_anthropic_api_key_empty_string_fails(self) -> None:
+        """Empty string API key should fail validation."""
+        with pytest.raises(ValueError, match="API key appears to be invalid"):
+            Config(
+                llm_provider="anthropic",
+                llm_model="claude-3-5-sonnet-20241022",
+                anthropic_api_key="",
+            )  # type: ignore[call-arg]
+
+    def test_anthropic_api_key_too_short_fails(self) -> None:
+        """API key shorter than 10 characters should fail validation."""
+        with pytest.raises(ValueError, match="API key appears to be invalid"):
+            Config(
+                llm_provider="anthropic",
+                llm_model="claude-3-5-sonnet-20241022",
+                anthropic_api_key="short",
+            )  # type: ignore[call-arg]
+
+    def test_anthropic_api_key_whitespace_only_fails(self) -> None:
+        """Whitespace-only API key should fail validation."""
+        with pytest.raises(ValueError, match="API key appears to be invalid"):
+            Config(
+                llm_provider="anthropic",
+                llm_model="claude-3-5-sonnet-20241022",
+                anthropic_api_key="     ",
+            )  # type: ignore[call-arg]
+
+    def test_watsonx_apikey_valid_length_passes(self) -> None:
+        """API key with 10 or more characters should pass validation."""
+        config = Config(
+            llm_provider="watsonx",
+            llm_model="test-model",
+            watsonx_url="https://us-south.ml.cloud.ibm.com",
+            watsonx_apikey="valid-key-123",
+            watsonx_project_id="test-project-id",
+        )  # type: ignore[call-arg]
+
+        assert config.watsonx_apikey == "valid-key-123"
+
+    def test_anthropic_api_key_valid_length_passes(self) -> None:
+        """API key with 10 or more characters should pass validation."""
+        config = Config(
+            llm_provider="anthropic",
+            llm_model="claude-3-5-sonnet-20241022",
+            anthropic_api_key="sk-ant-valid-key",
+        )  # type: ignore[call-arg]
+
+        assert config.anthropic_api_key == "sk-ant-valid-key"
+
+    def test_watsonx_apikey_strips_whitespace(self) -> None:
+        """API key with leading/trailing whitespace should be stripped."""
+        config = Config(
+            llm_provider="watsonx",
+            llm_model="test-model",
+            watsonx_url="https://us-south.ml.cloud.ibm.com",
+            watsonx_apikey="  valid-key-123  ",
+            watsonx_project_id="test-project-id",
+        )  # type: ignore[call-arg]
+
+        assert config.watsonx_apikey == "valid-key-123", (
+            "API key should be stripped of leading/trailing whitespace"
+        )
+
+    def test_anthropic_api_key_strips_whitespace(self) -> None:
+        """API key with leading/trailing whitespace should be stripped."""
+        config = Config(
+            llm_provider="anthropic",
+            llm_model="claude-3-5-sonnet-20241022",
+            anthropic_api_key="  sk-ant-valid-key  ",
+        )  # type: ignore[call-arg]
+
+        assert config.anthropic_api_key == "sk-ant-valid-key", (
+            "API key should be stripped of leading/trailing whitespace"
+        )
+
+    def test_watsonx_apikey_none_passes(self) -> None:
+        """None API key should pass through validation (handled by model_post_init)."""
+        # This will fail at model_post_init, not at field validation
+        with pytest.raises(ValueError, match="Required configuration for watsonx"):
+            Config(
+                llm_provider="watsonx",
+                llm_model="test-model",
+                watsonx_url="https://us-south.ml.cloud.ibm.com",
+                watsonx_apikey=None,
+                watsonx_project_id="test-project-id",
+            )  # type: ignore[call-arg]
+
+    def test_anthropic_api_key_none_passes(self) -> None:
+        """None API key should pass through validation (handled by model_post_init)."""
+        # This will fail at model_post_init, not at field validation
+        with pytest.raises(ValueError, match="Required configuration for anthropic"):
+            Config(
+                llm_provider="anthropic",
+                llm_model="claude-3-5-sonnet-20241022",
+                anthropic_api_key=None,
+            )  # type: ignore[call-arg]

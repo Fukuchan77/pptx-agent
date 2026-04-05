@@ -54,6 +54,17 @@ DEFAULT_SHAPE_HEIGHT_INCHES = 4
 
 
 # =============================================================================
+# Presentation Constraints
+# =============================================================================
+
+# Minimum number of slides per FR-019 requirement
+MIN_SLIDES = 3
+
+# Maximum number of slides per FR-019 requirement
+MAX_SLIDES = 30
+
+
+# =============================================================================
 # Percentage Calculation Constants
 # =============================================================================
 

@@ -98,6 +98,25 @@ class TestPresentationWrapper:
         with pytest.raises((ValueError, AttributeError)):
             wrapper.get_layouts()
 
+    def test_core_properties_with_loaded_template(self, template_path: str):
+        """Should return core_properties when template is loaded."""
+        wrapper = PresentationWrapper()
+        wrapper.load_template(template_path)
+
+        # Should return core_properties object
+        core_props = wrapper.core_properties
+        assert core_props is not None
+        # Verify it's the actual core_properties object
+        assert hasattr(core_props, "title")
+        assert hasattr(core_props, "created")
+
+    def test_core_properties_without_loaded_template(self):
+        """Should raise ValueError when template is not loaded."""
+        wrapper = PresentationWrapper()
+
+        with pytest.raises(ValueError, match="Template must be loaded"):
+            _ = wrapper.core_properties
+
 
 class TestSlideWrapper:
     """Tests for SlideWrapper class."""

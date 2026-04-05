@@ -85,6 +85,131 @@ class TestFindPlaceholder:
         result = find_placeholder(slide, "Content")
         assert result is None
 
+    def test_find_by_partial_match_with_fuzzy_disabled(self):
+        """Should NOT find placeholder by partial match when fuzzy_match=False."""
+        slide = MagicMock()
+
+        placeholder = MagicMock()
+        placeholder.is_placeholder = True
+        placeholder.name = "Content Placeholder 1"
+        placeholder.placeholder_format.type.name = "BODY"
+
+        slide.shapes = [placeholder]
+
+        # Should NOT find with fuzzy_match=False (default)
+        result = find_placeholder(slide, "Content", fuzzy_match=False)
+        assert result is None
+
+    def test_find_by_partial_match_with_fuzzy_enabled(self):
+        """Should find placeholder by partial match when fuzzy_match=True."""
+        slide = MagicMock()
+
+        placeholder = MagicMock()
+        placeholder.is_placeholder = True
+        placeholder.name = "Content Placeholder 1"
+        placeholder.placeholder_format.type.name = "BODY"
+
+        slide.shapes = [placeholder]
+
+        # Should find with fuzzy_match=True
+        result = find_placeholder(slide, "Content", fuzzy_match=True)
+        assert result == placeholder
+
+    def test_find_by_case_insensitive_match_with_fuzzy(self):
+        """Should find placeholder by case-insensitive match when fuzzy_match=True."""
+        slide = MagicMock()
+
+        placeholder = MagicMock()
+        placeholder.is_placeholder = True
+        placeholder.name = "CONTENT Placeholder"
+        placeholder.placeholder_format.type.name = "BODY"
+
+        slide.shapes = [placeholder]
+
+        # Should find with case-insensitive fuzzy match
+        result = find_placeholder(slide, "content", fuzzy_match=True)
+        assert result == placeholder
+
+    def test_handles_attribute_error_gracefully(self):
+        """Should handle AttributeError when accessing placeholder_format.type.name."""
+        slide = MagicMock()
+
+        placeholder = MagicMock()
+        placeholder.is_placeholder = True
+        placeholder.name = "Content"
+        # Simulate AttributeError when accessing placeholder_format.type.name
+        placeholder.placeholder_format.type.name = MagicMock(
+            side_effect=AttributeError("type has no attribute name")
+        )
+
+        slide.shapes = [placeholder]
+
+        # Should not crash and still find by name
+        result = find_placeholder(slide, "Content")
+        assert result == placeholder
+
+    def test_generic_fallback_for_content(self):
+        """Should find first non-title placeholder when searching for 'content'."""
+        slide = MagicMock()
+
+        title_placeholder = MagicMock()
+        title_placeholder.is_placeholder = True
+        title_placeholder.name = "Title 1"
+        title_placeholder.placeholder_format.type.name = "TITLE"
+        title_placeholder.text_frame = MagicMock()
+
+        content_placeholder = MagicMock()
+        content_placeholder.is_placeholder = True
+        content_placeholder.name = "Text Placeholder 2"
+        content_placeholder.placeholder_format.type.name = "BODY"
+        content_placeholder.text_frame = MagicMock()
+
+        slide.shapes = [title_placeholder, content_placeholder]
+
+        # Should find content placeholder, skipping title
+        result = find_placeholder(slide, "content", fuzzy_match=True)
+        assert result == content_placeholder
+
+    def test_generic_fallback_for_body(self):
+        """Should find first non-title placeholder when searching for 'body'."""
+        slide = MagicMock()
+
+        title_placeholder = MagicMock()
+        title_placeholder.is_placeholder = True
+        title_placeholder.name = "Title 1"
+        title_placeholder.placeholder_format.type.name = "TITLE"
+
+        body_placeholder = MagicMock()
+        body_placeholder.is_placeholder = True
+        body_placeholder.name = "Body Placeholder"
+        body_placeholder.placeholder_format.type.name = "BODY"
+        body_placeholder.text_frame = MagicMock()
+
+        slide.shapes = [title_placeholder, body_placeholder]
+
+        # Should find body placeholder
+        result = find_placeholder(slide, "body", fuzzy_match=True)
+        assert result == body_placeholder
+
+    def test_generic_fallback_with_attribute_error(self):
+        """Should handle AttributeError during generic fallback."""
+        slide = MagicMock()
+
+        placeholder = MagicMock()
+        placeholder.is_placeholder = True
+        placeholder.name = "Some Placeholder"
+        placeholder.text_frame = MagicMock()
+        # Simulate AttributeError when accessing placeholder_format.type.name
+        type(placeholder.placeholder_format).type = property(
+            lambda _: MagicMock(name=MagicMock(side_effect=AttributeError))
+        )
+
+        slide.shapes = [placeholder]
+
+        # Should use placeholder as fallback despite AttributeError
+        result = find_placeholder(slide, "content", fuzzy_match=True)
+        assert result == placeholder
+
 
 class TestGetPlaceholderBounds:
     """Tests for get_placeholder_bounds function."""

@@ -35,16 +35,15 @@ def validate_pptx_file(file_path: Path | str) -> None:
     if isinstance(file_path, str):
         file_path = Path(file_path)
 
-    # Check if file exists
-    if not file_path.exists():
+    # Check compressed file size (EAFP pattern - try operation directly)
+    try:
+        file_size = file_path.stat().st_size
+    except FileNotFoundError as e:
         msg = (
             f"File validation failed: file does not exist at '{file_path}'. "
             "Expected: valid path to existing file."
         )
-        raise InvalidFileError(msg)
-
-    # Check compressed file size
-    file_size = file_path.stat().st_size
+        raise InvalidFileError(msg) from e
     if file_size > MAX_FILE_SIZE:
         msg = (
             f"File size limit exceeded: {file_size} bytes (compressed), "
@@ -206,6 +205,35 @@ def validate_pptx_structure(file_path: Path | str) -> None:
     - XXE (external entity injection)
     - Excessive entity expansion depth
 
+    **セキュリティ設計の判断根拠 (Code Review M-5より):**
+
+    現在の実装は、XMLパーサーを使わず正規表現ベースの検出を採用しています。
+    これはCLIツールとしての使用において以下の理由で十分です:
+
+    1. **信頼されたファイル源**: CLIツールとして、ユーザーが明示的に指定した
+       ローカルファイルのみを処理します。不特定多数からのアップロードは想定していません。
+
+    2. **単純な検出で十分な脅威**: 正規表現で検出対象の<!ENTITY>やSYSTEMは、
+       PPTXファイルの正常な構造には不要です。これらが含まれる場合は、
+       明らかに異常または悪意のある改変がなされています。
+
+    3. **エンコーディングバイパスのリスク**: UTF-16やUTF-32でエンコードされた
+       <!ENTITY>を検出できない可能性がありますが、Office製品が生成する
+       標準的なPPTXファイルはUTF-8を使用するため、現在の用途では許容されます。
+
+    **将来のWebサービス化における考慮事項:**
+
+    もしこのツールをWebサービスとして展開する場合は、以下の対策を推奨します:
+
+    1. **defusedxmlの導入**: 正規表現ではなくdefusedxmlライブラリを使用し、
+       XML解析時に自動的にXXEやエンティティ展開を防ぐことを検討してください。
+
+    2. **エンコーディング対策**: 様々なエンコーディングでのバイパスを防ぐため、
+       XMLパーサーレベルでの検証が必要になります。
+
+    3. **サンドボックス環境**: 信頼できないファイルを隔離された環境で
+       処理する仕組みを構築してください。
+
     Args:
         file_path: Path to the PPTX file
 
@@ -216,7 +244,9 @@ def validate_pptx_structure(file_path: Path | str) -> None:
     if isinstance(file_path, str):
         file_path = Path(file_path)
 
-    # Patterns that indicate malicious XML
+    # 正規表現パターンによる悪意のあるXMLの検出
+    # 注意: これはCLIツール用の簡易的な検出です。
+    # Webサービス化する場合はdefusedxmlライブラリの使用を推奨します。
     entity_pattern = re.compile(rb"<!ENTITY", re.IGNORECASE)
     doctype_pattern = re.compile(rb"<!DOCTYPE", re.IGNORECASE)
     system_pattern = re.compile(rb"SYSTEM\s+", re.IGNORECASE)
@@ -228,7 +258,11 @@ def validate_pptx_structure(file_path: Path | str) -> None:
                 if file_info.filename.endswith(".xml") or file_info.filename.endswith(".rels"):
                     content = zf.read(file_info.filename)
 
-                    # Check for entity declarations (billion laughs, entity expansion)
+                    # エンティティ宣言の検出 (Billion Laughs攻撃、エンティティ展開攻撃)
+                    # 標準的なPPTXファイルには<!ENTITY>は含まれないため、
+                    # これが存在する場合は悪意のある改変と判断できます。
+                    # 制限事項: UTF-8以外のエンコーディングでのバイパスは検出できませんが、
+                    # Office製品が生成するPPTXはUTF-8を使用するため、CLI用途では許容されます。
                     if entity_pattern.search(content):
                         msg = (
                             f"XML security validation failed: malicious entity declaration "
@@ -237,8 +271,10 @@ def validate_pptx_structure(file_path: Path | str) -> None:
                         )
                         raise SecurityValidationError(msg)
 
-                    # Check for DOCTYPE with potential XXE
-                    # DOCTYPE is allowed in some cases, but check for SYSTEM (external entities)
+                    # XXE (外部エンティティ参照) の検出
+                    # <!DOCTYPE>自体は一部のXMLで正当に使用されるため、
+                    # SYSTEMキーワードとの組み合わせで外部エンティティ参照を検出します。
+                    # これによりファイルシステムへのアクセスやネットワークリクエストを防ぎます。
                     if doctype_pattern.search(content) and system_pattern.search(content):
                         msg = (
                             f"XML security validation failed: external entity reference (XXE) "

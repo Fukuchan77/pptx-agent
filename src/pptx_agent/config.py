@@ -7,9 +7,13 @@ import logging
 import threading
 from typing import Any, Literal
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
+
+# API key validation constants
+MIN_API_KEY_LENGTH = 10
 
 
 class Config(BaseSettings):
@@ -48,6 +52,25 @@ class Config(BaseSettings):
 
     # Anthropic settings (required when provider=anthropic)
     anthropic_api_key: str | None = None
+
+    @field_validator("watsonx_apikey", "anthropic_api_key", mode="before")
+    @classmethod
+    def validate_api_key_not_empty(cls, v: str | None) -> str | None:
+        """Validate that API keys have minimum length to prevent obviously invalid values.
+
+        Args:
+            v: The API key value to validate
+
+        Returns:
+            The validated API key value with whitespace stripped (or None if None was provided)
+
+        Raises:
+            ValueError: If the API key is too short (less than MIN_API_KEY_LENGTH characters)
+        """
+        if v is not None and len(v.strip()) < MIN_API_KEY_LENGTH:
+            msg = "API key appears to be invalid (too short)"
+            raise ValueError(msg)
+        return v.strip() if v is not None else None
 
     def model_post_init(self, __context: Any) -> None:
         """Validate provider-specific required fields."""

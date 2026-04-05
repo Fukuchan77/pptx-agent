@@ -5,6 +5,7 @@ logged, and not silently swallowed.
 """
 
 import logging
+import os
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -112,9 +113,7 @@ class TestSlideExceptionHandling:
         with caplog.at_level(logging.DEBUG):
             # Try to add text - if accessing placeholder format fails,
             # it should be logged
-            slide.add_text(
-                placeholder_name="Content", text="Test content", check_overflow=False
-            )
+            slide.add_text(placeholder_name="Content", text="Test content", check_overflow=False)
 
         # The operation might succeed, but if placeholder format access fails,
         # we should see it logged (not silently caught)
@@ -210,8 +209,6 @@ class TestLoggingConfigExceptionHandling:
 
         with patch.dict("os.environ", {"LOGFIRE_ENABLED": "true"}, clear=True):
             # Remove test environment marker
-            import os
-
             os.environ.pop("PYTEST_CURRENT_TEST", None)
 
             # PermissionError should propagate, not be caught
@@ -230,8 +227,6 @@ class TestLoggingConfigExceptionHandling:
         mock_logfire.configure.side_effect = RuntimeError("Config error")
 
         with patch.dict("os.environ", {"LOGFIRE_ENABLED": "true"}, clear=True):
-            import os
-
             os.environ.pop("PYTEST_CURRENT_TEST", None)
 
             with patch.dict("sys.modules", {"logfire": mock_logfire}):
@@ -250,8 +245,6 @@ class TestLoggingConfigExceptionHandling:
         mock_logfire.configure.side_effect = ValueError("Invalid config")
 
         with patch.dict("os.environ", {"LOGFIRE_ENABLED": "true"}, clear=True):
-            import os
-
             os.environ.pop("PYTEST_CURRENT_TEST", None)
 
             with patch.dict("sys.modules", {"logfire": mock_logfire}):

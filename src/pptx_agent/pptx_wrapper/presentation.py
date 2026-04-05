@@ -1,6 +1,6 @@
 """Presentation-level wrapper for python-pptx."""
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pptx import Presentation as PresentationFactory
 
@@ -37,6 +37,21 @@ class PresentationWrapper:
 
         self._prs = PresentationFactory(str(validated_path))
         self._template_path = str(validated_path)
+
+    @property
+    def core_properties(self) -> Any:
+        """Return core properties of the presentation.
+
+        Returns:
+            Core properties object from the underlying presentation
+
+        Raises:
+            ValueError: If template not loaded
+        """
+        if self._prs is None:
+            msg = "Template must be loaded"
+            raise ValueError(msg)
+        return self._prs.core_properties
 
     def add_slide(self, layout_name: str) -> SlideWrapper:
         """Add slide with specified layout.

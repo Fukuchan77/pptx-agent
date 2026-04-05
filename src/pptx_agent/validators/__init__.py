@@ -4,6 +4,15 @@ from pydantic import BaseModel
 
 from pptx_agent.schemas import PresentationSchema, SlideSchema, TextBlock
 from pptx_agent.template_parser import TemplateMetadata
+from pptx_agent.validators.input_validator import InputValidationError, validate_and_sanitize
+
+__all__ = [
+    "InputValidationError",
+    "ValidationResult",
+    "validate_and_sanitize",
+    "validate_presentation_schema",
+    "validate_slide_schema",
+]
 
 
 class ValidationResult(BaseModel):

@@ -5,6 +5,10 @@ class InvalidFileError(Exception):
     """Raised when file is invalid or cannot be processed."""
 
 
+class ContentValidationError(Exception):
+    """Raised when content validation fails."""
+
+
 class FileSizeLimitError(Exception):
     """Raised when file size exceeds allowed limits."""
 

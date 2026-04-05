@@ -6,6 +6,8 @@ from typing import Any
 from pptx.slide import Slide
 
 from pptx_agent.constants import EMU_PER_CHAR_WIDTH, EMU_PER_LINE_HEIGHT
+from pptx_agent.pptx_wrapper.placeholder_ops import find_placeholder
+from pptx_agent.pptx_wrapper.type_helpers import set_text_frame_text
 
 logger = logging.getLogger(__name__)
 
@@ -54,45 +56,8 @@ class SlideWrapper:
         """
         result: dict[str, Any] = {"success": False, "overflow": False, "warnings": []}
 
-        # Find placeholder by name (flexible matching)
-        placeholder = None
-        for shape in self._slide.shapes:
-            if shape.is_placeholder:
-                # Try exact match first
-                if shape.name == placeholder_name:
-                    placeholder = shape
-                    break
-                # Try placeholder type name
-                try:
-                    if shape.placeholder_format.type.name == placeholder_name:
-                        placeholder = shape
-                        break
-                except AttributeError as e:
-                    # If accessing placeholder format fails, log and continue searching
-                    logger.debug(
-                        "Could not access placeholder_format for shape %s: %s", shape.name, e
-                    )
-                # Try case-insensitive partial match on name
-                if placeholder_name.lower() in shape.name.lower():
-                    placeholder = shape
-                    break
-
-        # If still not found and name suggests content placeholder, try generic fallback
-        if placeholder is None and placeholder_name.lower() in ["content", "body", "text"]:
-            for shape in self._slide.shapes:
-                if shape.is_placeholder and hasattr(shape, "text_frame"):
-                    # Skip title placeholder
-                    try:
-                        if shape.placeholder_format.type.name != "TITLE":
-                            placeholder = shape
-                            break
-                    except AttributeError:
-                        # If we can't determine type, use it anyway as fallback
-                        logger.debug(
-                            "Could not determine placeholder type for shape, using as fallback"
-                        )
-                        placeholder = shape
-                        break
+        # Find placeholder using shared utility function with fuzzy matching
+        placeholder = find_placeholder(self._slide, placeholder_name, fuzzy_match=True)
 
         if placeholder is None:
             result["warnings"].append(f"Placeholder '{placeholder_name}' not found")
@@ -101,7 +66,7 @@ class SlideWrapper:
         # Add text to placeholder
         if hasattr(placeholder, "text_frame"):
             # Type narrowing: hasattr check ensures text_frame exists
-            placeholder.text_frame.text = text  # type: ignore[attr-defined]
+            set_text_frame_text(placeholder, text)
             result["success"] = True
 
             # Check for overflow if requested

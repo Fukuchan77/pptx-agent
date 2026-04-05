@@ -1,5 +1,8 @@
 """Unit tests for file validator module."""
 
+import os
+import stat
+import sys
 import zipfile
 from pathlib import Path
 
@@ -10,6 +13,7 @@ from pptx_agent.validators.exceptions import (
     FileSizeLimitError,
     InvalidFileError,
     PathTraversalError,
+    SecurityValidationError,
 )
 from pptx_agent.validators.file_validator import (
     validate_output_path,
@@ -283,8 +287,6 @@ class TestValidateTemplatePath:
         except OSError:
             pytest.skip("Symlinks not supported on this platform")
 
-        from pptx_agent.validators.exceptions import SecurityValidationError
-
         with pytest.raises(SecurityValidationError) as exc_info:
             validate_template_path(str(symlink_path))
 
@@ -310,7 +312,6 @@ class TestValidateTemplatePath:
             zf.writestr("content.xml", "x" * 1000)
 
         # Pass relative path
-        import os
 
         os.chdir(tmp_path.parent)
         relative_path = f"{tmp_path.name}/template.pptx"
@@ -323,7 +324,6 @@ class TestValidateTemplatePath:
 
     def test_validate_template_path_unreadable(self, tmp_path: Path) -> None:
         """Test validation fails for unreadable template file."""
-        import sys
 
         if sys.platform == "win32":
             pytest.skip("Permission testing not reliable on Windows")
@@ -334,7 +334,6 @@ class TestValidateTemplatePath:
             zf.writestr("content.xml", "x" * 1000)
 
         # Remove read permission
-        import stat
 
         template_path.chmod(stat.S_IWUSR)  # Write-only
 

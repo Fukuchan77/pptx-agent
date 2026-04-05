@@ -7,8 +7,6 @@ requires-python = ">=3.12"
 dependencies = [
     "pydantic-ai-slim[logfire,openai]>=1.77.0",
     "pydantic-ai-litellm>=0.2.3",
-    # python-pptx 1.0.2 (August 2024 release) includes Pillow 10+ compatibility fixes
-    # No internal fork needed - T024 satisfied by upstream version
     "python-pptx>=1.0.2",
     "pydantic-settings>=2.13.0",
 ]
@@ -105,6 +103,7 @@ ignore = [
     "S110",    # try-except-pass (acceptable in tests)
 ]
 "src/pptx_agent/config.py" = ["PLW0603", "PYI063", "ANN001"]  # Global singleton, pydantic hooks
+"src/pptx_agent/main.py" = ["T201", "PLR0911"]  # CLI uses print, many error returns
 "src/pptx_agent/pptx_wrapper/shapes.py" = ["SLF001", "S110", "SIM105"]  # Private XML access, defensive error handling
 "src/pptx_agent/pptx_wrapper/slide.py" = ["PLR0912", "S110"]  # Complex placeholder matching logic
 "src/pptx_agent/pptx_wrapper/smartart.py" = ["ARG004", "SIM102", "TRY301", "B904"]  # NotImplementedError stub

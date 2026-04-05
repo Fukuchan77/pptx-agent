@@ -9,21 +9,7 @@ Language ratios are imported from text_capacity module to avoid duplication.
 from typing import Literal
 
 from pptx_agent.schemas.template_manifest import LayoutInfo, TemplateManifest
-from pptx_agent.utils.text_capacity import get_language_multiplier
-
-
-def calculate_effective_capacity(max_chars: int, language: Literal["en", "ja"]) -> int:
-    """Calculate effective capacity for a placeholder based on language.
-
-    Args:
-        max_chars: Maximum character capacity of the placeholder
-        language: Target language code ('en' or 'ja')
-
-    Returns:
-        Effective capacity after applying language ratio
-    """
-    multiplier = get_language_multiplier(language)
-    return int(max_chars * multiplier)
+from pptx_agent.utils.text_capacity import calculate_effective_capacity
 
 
 def calculate_layout_capacities(
