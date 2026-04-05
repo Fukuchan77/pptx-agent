@@ -31,6 +31,9 @@ class Config(BaseSettings):
         WATSONX_APIKEY: Watsonx API key
         WATSONX_PROJECT_ID: Watsonx project ID
         ANTHROPIC_API_KEY: Anthropic API key (for Claude)
+        ENVIRONMENT: 'development' or 'production' (default: development)
+        MAX_RETRIES: Maximum HTTP retries (default: auto-set based on environment)
+        REQUEST_TIMEOUT: Request timeout in seconds (default: auto-set based on environment)
     """
 
     model_config = SettingsConfigDict(
@@ -44,6 +47,31 @@ class Config(BaseSettings):
     llm_provider: Literal["watsonx", "anthropic"]
     llm_model: str
     llm_api_base: str | None = None
+
+    # Environment and retry settings
+    environment: Literal["development", "production"] = "development"
+    max_retries: int | None = None  # Auto-set based on environment
+    request_timeout: int | None = None  # Auto-set based on environment
+
+    # Stage-specific timeouts (FR-047, FR-048)
+    outline_timeout: int = 120  # 120 seconds for outline generation
+    slide_timeout: int = 60  # 60 seconds per slide
+
+    # Usage limits (FR-049)
+    max_requests: int = 20  # Maximum 20 requests
+    max_response_tokens: int = 50000  # Maximum 50,000 response tokens
+
+    # HTTP-level retry configuration (FR-045)
+    retry_base_delay: float = 1.0  # Base delay for exponential backoff (seconds)
+    retry_max_delay: float = 8.0  # Maximum delay (1→2→4→8 seconds)
+
+    # Agent-level retry (FR-046)
+    agent_retries: int = 3  # 3 attempts for validation failures
+
+    # Provider fallback (FR-050)
+    enable_fallback: bool | None = None  # Auto-set based on environment
+    fallback_provider: str | None = None  # Auto-set for production
+    fallback_model: str | None = None  # Auto-set for production
 
     # Watsonx settings (required when provider=watsonx)
     watsonx_url: str | None = None
@@ -73,7 +101,26 @@ class Config(BaseSettings):
         return v.strip() if v is not None else None
 
     def model_post_init(self, __context: Any) -> None:
-        """Validate provider-specific required fields."""
+        """Validate provider-specific required fields and set environment-based defaults."""
+        # Set environment-specific retry and timeout defaults (FR-051, FR-079, FR-080)
+        if self.max_retries is None:
+            self.max_retries = 1 if self.environment == "development" else 5
+
+        if self.request_timeout is None:
+            self.request_timeout = 60 if self.environment == "development" else 120
+
+        # Set provider fallback configuration (FR-050)
+        if self.enable_fallback is None:
+            self.enable_fallback = self.environment == "production"
+
+        # Set fallback provider/model for production (FR-050)
+        if self.enable_fallback and self.fallback_provider is None:
+            self.fallback_provider = "anthropic"
+            # Set default fallback model if not specified
+            if self.fallback_model is None:
+                self.fallback_model = "claude-3-5-sonnet-20241022"
+
+        # Validate provider-specific required fields
         if self.llm_provider == "watsonx":
             if not all([self.watsonx_url, self.watsonx_apikey, self.watsonx_project_id]):
                 # Log generic warning without exposing field names to prevent information leakage

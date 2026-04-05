@@ -286,3 +286,171 @@ class TestConfigAPIKeyFormatValidation:
                 llm_model="claude-3-5-sonnet-20241022",
                 anthropic_api_key=None,
             )  # type: ignore[call-arg]
+
+
+class TestConfigRetryStrategies:
+    """Test retry strategy configuration for different environments."""
+
+    def test_development_environment_has_fail_fast_retry_config(self) -> None:
+        """Development environment should have retries=1, timeout=60s."""
+        config = Config(
+            llm_provider="watsonx",
+            llm_model="test-model",
+            watsonx_url="https://us-south.ml.cloud.ibm.com",
+            watsonx_apikey="test-api-key",
+            watsonx_project_id="test-project-id",
+            environment="development",
+        )  # type: ignore[call-arg]
+
+        assert config.environment == "development"
+        assert config.max_retries == 1
+        assert config.request_timeout == 60
+
+    def test_production_environment_has_resilience_retry_config(self) -> None:
+        """Production environment should have retries=5, timeout=120s."""
+        config = Config(
+            llm_provider="watsonx",
+            llm_model="test-model",
+            watsonx_url="https://us-south.ml.cloud.ibm.com",
+            watsonx_apikey="test-api-key",
+            watsonx_project_id="test-project-id",
+            environment="production",
+        )  # type: ignore[call-arg]
+
+        assert config.environment == "production"
+        assert config.max_retries == 5
+        assert config.request_timeout == 120
+
+    def test_default_environment_is_development(self) -> None:
+        """Default environment should be development."""
+        config = Config(
+            llm_provider="watsonx",
+            llm_model="test-model",
+            watsonx_url="https://us-south.ml.cloud.ibm.com",
+            watsonx_apikey="test-api-key",
+            watsonx_project_id="test-project-id",
+        )  # type: ignore[call-arg]
+
+        assert config.environment == "development"
+        assert config.max_retries == 1
+
+
+class TestConfigTimeouts:
+    """Test timeout configuration."""
+
+    def test_outline_generation_timeout_is_120_seconds(self) -> None:
+        """Outline generation should have 120s timeout."""
+        config = Config(
+            llm_provider="watsonx",
+            llm_model="test-model",
+            watsonx_url="https://us-south.ml.cloud.ibm.com",
+            watsonx_apikey="test-api-key",
+            watsonx_project_id="test-project-id",
+        )  # type: ignore[call-arg]
+
+        assert config.outline_timeout == 120
+
+    def test_slide_generation_timeout_is_60_seconds(self) -> None:
+        """Individual slide generation should have 60s timeout."""
+        config = Config(
+            llm_provider="watsonx",
+            llm_model="test-model",
+            watsonx_url="https://us-south.ml.cloud.ibm.com",
+            watsonx_apikey="test-api-key",
+            watsonx_project_id="test-project-id",
+        )  # type: ignore[call-arg]
+
+        assert config.slide_timeout == 60
+
+
+class TestConfigUsageLimits:
+    """Test usage limits enforcement."""
+
+    def test_max_requests_limit_is_20(self) -> None:
+        """Maximum requests should be limited to 20."""
+        config = Config(
+            llm_provider="watsonx",
+            llm_model="test-model",
+            watsonx_url="https://us-south.ml.cloud.ibm.com",
+            watsonx_apikey="test-api-key",
+            watsonx_project_id="test-project-id",
+        )  # type: ignore[call-arg]
+
+        assert config.max_requests == 20
+
+    def test_max_response_tokens_limit_is_50000(self) -> None:
+        """Maximum response tokens should be limited to 50,000."""
+        config = Config(
+            llm_provider="watsonx",
+            llm_model="test-model",
+            watsonx_url="https://us-south.ml.cloud.ibm.com",
+            watsonx_apikey="test-api-key",
+            watsonx_project_id="test-project-id",
+        )  # type: ignore[call-arg]
+
+        assert config.max_response_tokens == 50000
+
+
+class TestConfigHTTPRetry:
+    """Test HTTP-level retry configuration."""
+
+    def test_http_retry_has_exponential_backoff_config(self) -> None:
+        """HTTP retry should have exponential backoff configuration."""
+        config = Config(
+            llm_provider="watsonx",
+            llm_model="test-model",
+            watsonx_url="https://us-south.ml.cloud.ibm.com",
+            watsonx_apikey="test-api-key",
+            watsonx_project_id="test-project-id",
+        )  # type: ignore[call-arg]
+
+        # Should have exponential backoff params: base_delay, max_delay
+        assert hasattr(config, "retry_base_delay")
+        assert hasattr(config, "retry_max_delay")
+        assert config.retry_base_delay == 1.0  # 1 second base
+        assert config.retry_max_delay == 8.0  # 8 seconds max (1→2→4→8)
+
+    def test_agent_level_retry_is_3_attempts(self) -> None:
+        """Agent-level validation failures should retry 3 times."""
+        config = Config(
+            llm_provider="watsonx",
+            llm_model="test-model",
+            watsonx_url="https://us-south.ml.cloud.ibm.com",
+            watsonx_apikey="test-api-key",
+            watsonx_project_id="test-project-id",
+        )  # type: ignore[call-arg]
+
+        assert config.agent_retries == 3
+
+
+class TestConfigProviderFallback:
+    """Test provider fallback configuration."""
+
+    def test_production_enables_provider_fallback(self) -> None:
+        """Production environment should enable provider fallback."""
+        config = Config(
+            llm_provider="watsonx",
+            llm_model="test-model",
+            watsonx_url="https://us-south.ml.cloud.ibm.com",
+            watsonx_apikey="test-api-key",
+            watsonx_project_id="test-project-id",
+            anthropic_api_key="sk-ant-fallback-key",
+            environment="production",
+        )  # type: ignore[call-arg]
+
+        assert config.enable_fallback is True
+        assert config.fallback_provider == "anthropic"
+        assert config.fallback_model is not None
+
+    def test_development_disables_provider_fallback(self) -> None:
+        """Development environment should disable provider fallback."""
+        config = Config(
+            llm_provider="watsonx",
+            llm_model="test-model",
+            watsonx_url="https://us-south.ml.cloud.ibm.com",
+            watsonx_apikey="test-api-key",
+            watsonx_project_id="test-project-id",
+            environment="development",
+        )  # type: ignore[call-arg]
+
+        assert config.enable_fallback is False
