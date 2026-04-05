@@ -20,6 +20,7 @@ from pptx_agent.schemas.presentation import PresentationSchema
 from pptx_agent.schemas.slide import ContentBlock, SlideSchema
 from pptx_agent.schemas.template_manifest import TemplateManifest
 from pptx_agent.schemas.text import TextBlock
+from pptx_agent.schemas.visual_assets import ChartBlock, TableBlock
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +98,7 @@ def _convert_slide_to_schema(
         slide_content.layout_name,
         language,
         manifest,
+        slide_content.title,
     )
 
     # Generate or preserve speaker notes
@@ -119,22 +121,30 @@ def _convert_slide_to_schema(
     )
 
 
-def _generate_content_blocks(
+def _generate_content_blocks(  # noqa: PLR0911
     content: str,
     layout_name: str,
     language: Literal["en", "ja"],
     manifest: TemplateManifest | None = None,
+    slide_title: str = "",
 ) -> list[ContentBlock]:
     """Generate ContentBlock list from content string.
+
+    Supports:
+    - Text content (default)
+    - Chart data with "chart:" prefix
+    - Table data with "table:" prefix
+    - Mixed content (text + chart/table)
 
     Args:
         content: Content string from outline
         layout_name: Layout name for determining placeholder
         language: Output language ('en' or 'ja')
         manifest: Optional TemplateManifest for placeholder name resolution
+        slide_title: Slide title (used for chart titles)
 
     Returns:
-        List of ContentBlock objects (TextBlocks)
+        List of ContentBlock objects (TextBlocks, ChartBlocks, TableBlocks)
     """
     # Handle empty content
     if not content or not content.strip():
@@ -142,6 +152,18 @@ def _generate_content_blocks(
 
     # Determine placeholder name based on layout
     placeholder_name = _determine_placeholder_name(layout_name, manifest)
+
+    # Check for chart data (format: "chart:type|key1=value1,key2=value2")
+    if content.startswith("chart:"):
+        return [_parse_chart_data(content, placeholder_name, slide_title)]
+
+    # Check for table data (format: "table:header1|header2\nrow1|row2")
+    if content.startswith("table:"):
+        return [_parse_table_data(content, placeholder_name)]
+
+    # Check for mixed content (text + chart/table)
+    if "chart:" in content:
+        return _parse_mixed_content(content, placeholder_name, slide_title, language)
 
     # For Title Slide layouts, use content as subtitle
     if "title" in layout_name.lower() and "content" not in layout_name.lower():
@@ -283,3 +305,126 @@ def _generate_speaker_notes(
         )
 
     return notes
+
+
+def _parse_chart_data(content: str, placeholder_name: str, title: str) -> ChartBlock:
+    """Parse chart data from content string.
+
+    Format: "chart:type|key1=value1,key2=value2,key3=value3"
+    Example: "chart:bar|Q1=100,Q2=150,Q3=200"
+
+    Args:
+        content: Content string starting with "chart:"
+        placeholder_name: Placeholder name for the chart
+        title: Chart title (from slide title)
+
+    Returns:
+        ChartBlock instance with parsed data
+    """
+    # Remove "chart:" prefix
+    chart_content = content[6:].strip()
+
+    # Split into chart type and data
+    parts = chart_content.split("|", 1)
+    chart_type = parts[0].strip()
+    data_str = parts[1] if len(parts) > 1 else ""
+
+    # Parse data (format: key1=value1,key2=value2)
+    categories = []
+    values = []
+    for pair in data_str.split(","):
+        if "=" in pair:
+            key, value = pair.split("=", 1)
+            categories.append(key.strip())
+            try:
+                values.append(float(value.strip()))
+            except ValueError:
+                values.append(0.0)
+
+    # Create chart data structure
+    chart_data = {
+        "categories": categories,
+        "series": [{"name": "Series 1", "values": values}],
+    }
+
+    return ChartBlock(
+        placeholder_name=placeholder_name,
+        chart_type=chart_type,
+        data=chart_data,
+        title=title,
+    )
+
+
+def _parse_table_data(content: str, placeholder_name: str) -> TableBlock:
+    """Parse table data from content string.
+
+    Format: "table:header1|header2|header3\\nrow1col1|row1col2|row1col3"
+    Example: "table:Product|Price|Rating\\nProduct A|$100|4.5"
+
+    Args:
+        content: Content string starting with "table:"
+        placeholder_name: Placeholder name for the table
+
+    Returns:
+        TableBlock instance with parsed data
+    """
+    # Remove "table:" prefix
+    table_content = content[6:].strip()
+
+    # Split into lines
+    lines = table_content.split("\n")
+
+    # First line is headers
+    headers = [h.strip() for h in lines[0].split("|")] if lines else []
+
+    # Remaining lines are data rows
+    rows = []
+    for line in lines[1:]:
+        if line.strip():
+            row = [cell.strip() for cell in line.split("|")]
+            rows.append(row)
+
+    return TableBlock(placeholder_name=placeholder_name, rows=rows, headers=headers)
+
+
+def _parse_mixed_content(
+    content: str,
+    placeholder_name: str,
+    title: str,
+    language: Literal["en", "ja"],
+) -> list[ContentBlock]:
+    """Parse mixed content with both text and charts.
+
+    Example: "Key findings: chart:bar|Jan=100,Feb=120"
+
+    Args:
+        content: Content string with mixed text and chart data
+        placeholder_name: Placeholder name
+        title: Slide title for chart
+        language: Output language
+
+    Returns:
+        List of ContentBlock objects (TextBlock + ChartBlock)
+    """
+    blocks: list[ContentBlock] = []
+
+    # Split by "chart:" marker
+    parts = content.split("chart:", 1)
+
+    # Add text part if present
+    text_part = parts[0].strip()
+    if text_part:
+        blocks.append(
+            TextBlock(
+                placeholder_name=placeholder_name,
+                text=text_part,
+                language=language,
+            )
+        )
+
+    # Add chart part if present
+    if len(parts) > 1:
+        chart_content = f"chart:{parts[1]}"
+        blocks.append(_parse_chart_data(chart_content, placeholder_name, title))
+
+    return blocks

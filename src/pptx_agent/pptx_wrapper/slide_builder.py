@@ -10,9 +10,12 @@ from datetime import UTC, datetime
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
+from pptx_agent.pptx_wrapper.chart_builder import add_chart_to_slide
 from pptx_agent.pptx_wrapper.presentation import PresentationWrapper
+from pptx_agent.pptx_wrapper.table_builder import add_table_to_slide
 from pptx_agent.schemas import PresentationSchema, SlideSchema
 from pptx_agent.schemas.text import TextBlock
+from pptx_agent.schemas.visual_assets import ChartBlock, TableBlock
 from pptx_agent.validators.exceptions import InvalidFileError
 
 
@@ -128,15 +131,20 @@ def build_presentation(
 
         # Populate content blocks
         for block in slide_schema.content:
-            # Handle TextBlock (primary focus for this task)
+            # Handle TextBlock
             if isinstance(block, TextBlock):
                 slide.add_text(
                     placeholder_name=block.placeholder_name,
                     text=block.text,
                     check_overflow=False,  # Minimal implementation
                 )
-            # Other block types (Chart, Table, etc.) are future enhancements
-            # For now, skip them to keep implementation minimal
+            # Handle ChartBlock
+            elif isinstance(block, ChartBlock):
+                add_chart_to_slide(slide, block)
+            # Handle TableBlock
+            elif isinstance(block, TableBlock):
+                add_table_to_slide(slide, block)
+            # Other block types (ImageBlock, SmartArtBlock) are future enhancements
 
     # Embed metadata before saving
     _embed_metadata(prs, content, template_path)
@@ -214,6 +222,10 @@ def rebuild_slide_with_layout(
                 text=block.text,
                 check_overflow=False,
             )
+        elif isinstance(block, ChartBlock):
+            add_chart_to_slide(slide, block)
+        elif isinstance(block, TableBlock):
+            add_table_to_slide(slide, block)
 
     # Save the modified presentation
     output_pathobj = Path(pptx_path)

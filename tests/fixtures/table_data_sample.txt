@@ -1,0 +1,83 @@
+# Product Inventory Report
+
+## Current Stock Levels
+
+Here is our current inventory across all warehouses:
+
+| Product Name | SKU | Quantity | Unit Price | Total Value | Warehouse |
+|--------------|-----|----------|------------|-------------|-----------|
+| Laptop Pro 15 | LP-001 | 150 | $1,299 | $194,850 | West |
+| Desktop Ultra | DU-002 | 85 | $899 | $76,415 | East |
+| Tablet Max | TM-003 | 220 | $599 | $131,780 | Central |
+| Monitor 27" | MN-004 | 340 | $349 | $118,660 | West |
+| Keyboard Pro | KB-005 | 500 | $129 | $64,500 | East |
+| Mouse Wireless | MW-006 | 650 | $49 | $31,850 | Central |
+| Webcam HD | WC-007 | 280 | $79 | $22,120 | West |
+| Headset Premium | HS-008 | 195 | $149 | $29,055 | East |
+
+## Employee Performance Metrics
+
+Team productivity for Q4 2025:
+
+| Employee Name | Department | Projects Completed | Hours Logged | Efficiency Score | Rating |
+|---------------|------------|-------------------|--------------|------------------|--------|
+| Alice Johnson | Engineering | 12 | 480 | 95% | A+ |
+| Bob Smith | Marketing | 8 | 450 | 88% | A |
+| Carol White | Sales | 15 | 510 | 92% | A |
+| David Brown | Support | 45 | 520 | 87% | A |
+| Emma Davis | Engineering | 10 | 470 | 90% | A |
+| Frank Miller | Marketing | 7 | 440 | 85% | B+ |
+| Grace Lee | Sales | 13 | 495 | 91% | A |
+| Henry Wilson | Engineering | 11 | 485 | 94% | A+ |
+
+## Budget Allocation by Department
+
+Fiscal year 2025 budget breakdown:
+
+| Department | Q1 Budget | Q2 Budget | Q3 Budget | Q4 Budget | Total | Percentage |
+|------------|-----------|-----------|-----------|-----------|-------|------------|
+| Engineering | $450,000 | $480,000 | $510,000 | $540,000 | $1,980,000 | 35% |
+| Sales | $320,000 | $340,000 | $360,000 | $380,000 | $1,400,000 | 25% |
+| Marketing | $280,000 | $300,000 | $320,000 | $340,000 | $1,240,000 | 22% |
+| Operations | $180,000 | $190,000 | $200,000 | $210,000 | $780,000 | 14% |
+| HR | $80,000 | $85,000 | $90,000 | $95,000 | $350,000 | 6% |
+
+## Customer Demographics
+
+Analysis of our customer base:
+
+| Age Group | Count | Percentage | Avg Purchase | Retention Rate | Preferred Channel |
+|-----------|-------|------------|--------------|----------------|-------------------|
+| 18-24 | 3,200 | 16% | $450 | 65% | Mobile |
+| 25-34 | 6,800 | 34% | $750 | 78% | Web |
+| 35-44 | 5,400 | 27% | $950 | 82% | Web |
+| 45-54 | 3,000 | 15% | $1,200 | 85% | Store |
+| 55+ | 1,600 | 8% | $800 | 88% | Store |
+
+## Software License Usage
+
+Current software subscriptions and usage:
+
+| Software | License Type | Users | Monthly Cost | Annual Cost | Renewal Date |
+|----------|--------------|-------|--------------|-------------|--------------|
+| Microsoft 365 | Enterprise | 250 | $3,750 | $45,000 | 2026-03-15 |
+| Salesforce | Professional | 85 | $7,650 | $91,800 | 2026-06-01 |
+| Slack | Business+ | 250 | $3,125 | $37,500 | 2026-01-20 |
+| GitHub | Team | 120 | $4,800 | $57,600 | 2026-04-10 |
+| Jira | Standard | 150 | $2,250 | $27,000 | 2026-05-05 |
+| Adobe CC | All Apps | 45 | $2,475 | $29,700 | 2026-02-28 |
+
+## Training Program Results
+
+Employee training completion and scores:
+
+| Course Name | Participants | Completed | Pass Rate | Avg Score | Duration (hours) |
+|-------------|--------------|-----------|-----------|-----------|------------------|
+| Cybersecurity Basics | 180 | 175 | 97% | 88 | 8 |
+| Leadership Skills | 45 | 42 | 93% | 85 | 16 |
+| Data Analytics | 65 | 60 | 92% | 82 | 24 |
+| Sales Techniques | 90 | 88 | 98% | 90 | 12 |
+| Product Knowledge | 200 | 195 | 98% | 91 | 6 |
+| Agile Methodology | 75 | 70 | 93% | 84 | 16 |
+
+The tables above represent various aspects of our business operations and can be visualized in presentation slides.

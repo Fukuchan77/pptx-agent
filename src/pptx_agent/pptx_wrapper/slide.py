@@ -3,7 +3,10 @@
 import logging
 from typing import Any
 
+from pptx.chart.data import CategoryChartData, ChartData
+from pptx.enum.chart import XL_CHART_TYPE
 from pptx.slide import Slide
+from pptx.util import Length
 
 from pptx_agent.constants import EMU_PER_CHAR_WIDTH, EMU_PER_LINE_HEIGHT
 from pptx_agent.pptx_wrapper.placeholder_ops import find_placeholder
@@ -131,3 +134,51 @@ class SlideWrapper:
         except (AttributeError, ZeroDivisionError):
             # If we can't estimate, assume no overflow
             return False
+
+    def add_chart(  # noqa: PLR0913
+        self,
+        chart_type: XL_CHART_TYPE,
+        x: Length,
+        y: Length,
+        cx: Length,
+        cy: Length,
+        chart_data: ChartData | CategoryChartData,
+    ) -> Any:
+        """Add a chart to the slide.
+
+        Args:
+            chart_type: Type of chart to create (from XL_CHART_TYPE enum)
+            x: X coordinate (Length object, e.g., from Inches())
+            y: Y coordinate (Length object, e.g., from Inches())
+            cx: Width (Length object, e.g., from Inches())
+            cy: Height (Length object, e.g., from Inches())
+            chart_data: Chart data object (ChartData or CategoryChartData)
+
+        Returns:
+            Chart shape object
+        """
+        return self._slide.shapes.add_chart(chart_type, x, y, cx, cy, chart_data)
+
+    def add_table(  # noqa: PLR0913
+        self,
+        rows: int,
+        cols: int,
+        x: Length,
+        y: Length,
+        cx: Length,
+        cy: Length,
+    ) -> Any:
+        """Add a table to the slide.
+
+        Args:
+            rows: Number of rows
+            cols: Number of columns
+            x: X coordinate (Length object, e.g., from Inches())
+            y: Y coordinate (Length object, e.g., from Inches())
+            cx: Width (Length object, e.g., from Inches())
+            cy: Height (Length object, e.g., from Inches())
+
+        Returns:
+            Table shape object
+        """
+        return self._slide.shapes.add_table(rows, cols, x, y, cx, cy)

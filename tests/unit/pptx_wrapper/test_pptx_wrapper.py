@@ -230,6 +230,57 @@ class TestSlideWrapper:
         assert result["success"] is False
         assert len(result["warnings"]) > 0
 
+    def test_add_chart_returns_shape(
+        self, presentation_with_slide: tuple[PresentationWrapper, SlideWrapper]
+    ) -> None:
+        """Should add chart to slide and return chart shape."""
+        from pptx.chart.data import CategoryChartData
+        from pptx.enum.chart import XL_CHART_TYPE
+        from pptx.util import Inches
+
+        _, slide = presentation_with_slide
+
+        # Create chart data
+        chart_data = CategoryChartData()
+        chart_data.categories = ["Q1", "Q2", "Q3"]
+        chart_data.add_series("Sales", [100, 150, 120])
+
+        # Add chart to slide
+        chart_shape = slide.add_chart(
+            chart_type=XL_CHART_TYPE.BAR_CLUSTERED,
+            x=Inches(1),
+            y=Inches(2),
+            cx=Inches(8),
+            cy=Inches(5),
+            chart_data=chart_data,
+        )
+
+        # Should return a chart shape
+        assert chart_shape is not None
+        assert hasattr(chart_shape, "chart")
+
+    def test_add_table_returns_shape(
+        self, presentation_with_slide: tuple[PresentationWrapper, SlideWrapper]
+    ) -> None:
+        """Should add table to slide and return table shape."""
+        from pptx.util import Inches
+
+        _, slide = presentation_with_slide
+
+        # Add table to slide
+        table_shape = slide.add_table(
+            rows=3,
+            cols=4,
+            x=Inches(1),
+            y=Inches(2),
+            cx=Inches(8),
+            cy=Inches(4),
+        )
+
+        # Should return a table shape
+        assert table_shape is not None
+        assert hasattr(table_shape, "table")
+
 
 class TestChartWrapper:
     """Tests for ChartWrapper class."""

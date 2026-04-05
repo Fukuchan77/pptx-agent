@@ -1,0 +1,69 @@
+# Sales Performance Analysis
+
+## Quarterly Revenue Growth
+
+Our company has shown strong growth over the past four quarters:
+
+**Q1 2025**: $1.2M revenue
+**Q2 2025**: $1.5M revenue  
+**Q3 2025**: $1.8M revenue
+**Q4 2025**: $2.1M revenue
+
+The data shows a consistent upward trend with approximately 20-25% growth quarter over quarter.
+
+## Product Category Performance
+
+Breaking down by product category:
+
+- Software Sales: 45% of total revenue
+- Hardware Sales: 30% of total revenue
+- Services: 20% of total revenue
+- Training: 5% of total revenue
+
+Software continues to be our leading category, followed by hardware. The services segment shows potential for growth.
+
+## Regional Distribution
+
+Sales by region for 2025:
+
+1. North America: $3.2M (40%)
+2. Europe: $2.4M (30%)
+3. Asia Pacific: $1.6M (20%)
+4. Latin America: $0.8M (10%)
+
+North America remains our strongest market, but Asia Pacific shows the highest growth rate at 35% year-over-year.
+
+## Customer Acquisition Costs
+
+Marketing efficiency metrics:
+
+- January: $150 per customer
+- February: $140 per customer
+- March: $130 per customer
+- April: $125 per customer
+- May: $120 per customer
+- June: $115 per customer
+
+CAC has been decreasing steadily, indicating improved marketing efficiency.
+
+## Employee Productivity
+
+Average output per employee by department:
+
+Marketing: 8 projects/month
+Sales: 12 deals/month
+Engineering: 5 features/month
+Support: 45 tickets/day
+Operations: 10 processes/month
+
+## Technology Stack Usage
+
+Programming languages used in our projects:
+
+Python: 35%
+JavaScript: 25%
+Java: 20%
+Go: 12%
+Rust: 8%
+
+Python remains the dominant language, particularly for AI and data science projects.
