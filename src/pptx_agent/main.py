@@ -79,6 +79,19 @@ Examples:
     )
 
     parser.add_argument(
+        "-l",
+        "--language",
+        type=str,
+        required=False,
+        choices=["en", "ja"],
+        metavar="LANG",
+        help=(
+            "Output language: 'en' for English, 'ja' for Japanese "
+            "(optional, auto-detected if not specified)"
+        ),
+    )
+
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="Enable verbose output including full tracebacks",
@@ -200,6 +213,7 @@ def main() -> int:
             template_path=str(template_path),
             output_path=str(output_path),
             template_manifest=template_manifest,
+            output_language=args.language,  # Pass language parameter (can be None)
         )
 
         # Success message

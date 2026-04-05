@@ -11,6 +11,7 @@ This module orchestrates the complete workflow from input text to .pptx file:
 
 import logging
 import time
+from typing import Literal
 
 from pptx_agent.agents.content_generator import generate_content
 from pptx_agent.agents.outline_generator import generate_outline
@@ -29,6 +30,7 @@ def generate_presentation(
     template_path: str,
     output_path: str,
     template_manifest: TemplateManifest | None = None,
+    output_language: Literal["en", "ja"] | None = None,
 ) -> str:
     """Generate a PowerPoint presentation from input text.
 
@@ -45,6 +47,8 @@ def generate_presentation(
         template_path: Path to PowerPoint template file
         output_path: Path where generated presentation should be saved
         template_manifest: Optional template manifest for validation
+        output_language: Optional explicit output language ('en' or 'ja').
+                        If None, language is auto-detected from input text.
 
     Returns:
         Path to the generated .pptx file (same as output_path)
@@ -68,6 +72,11 @@ def generate_presentation(
     # Stage 2: Generate outline
     start = time.time()
     outline = generate_outline(story)
+
+    # Override output_language if explicitly provided
+    if output_language is not None:
+        outline.output_language = output_language
+
     duration = time.time() - start
     logger.info("Stage: Outline Generation completed in %.2fs", duration)
 

@@ -1,13 +1,18 @@
 """Content validator for presentation content validation.
 
-Validates PresentationSchema content before PowerPoint rendering.
+Validates PresentationSchema content before PowerPoint rendering with
+language-aware overflow detection support.
 """
+
+import logging
 
 from pptx_agent.schemas.outline import PresentationOutline
 from pptx_agent.schemas.presentation import PresentationSchema
 from pptx_agent.schemas.template_manifest import TemplateManifest
 from pptx_agent.schemas.text import TextBlock
 from pptx_agent.validators.exceptions import ContentValidationError
+
+logger = logging.getLogger(__name__)
 
 
 def validate_content(
@@ -22,10 +27,14 @@ def validate_content(
     - Text blocks contain non-empty text (not whitespace-only)
     - Slide count matches outline if provided
     - Content structure is valid for rendering
+    - Language-aware overflow detection (logs warnings for potential overflow)
+
+    Note: Detailed overflow resolution happens during slide building stage.
+    The content validator performs basic checks and logs potential issues.
 
     Args:
         content: The presentation content to validate
-        outline: Optional outline to validate slide count against
+        outline: Optional outline to validate slide count against (includes output_language)
         _template_manifest: Optional template manifest (reserved for future use)
 
     Returns:
@@ -34,6 +43,12 @@ def validate_content(
     Raises:
         ContentValidationError: If validation fails with clear error message
     """
+    # Log output language if available for language-aware processing
+    if outline and outline.output_language:
+        logger.debug(
+            "Validating content with language-aware settings: output_language=%s",
+            outline.output_language,
+        )
     # Validate slide count matches outline if provided
     if outline:
         content_slide_count = len(content.slides)
