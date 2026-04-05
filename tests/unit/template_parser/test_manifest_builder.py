@@ -174,3 +174,53 @@ class TestManifestBuilder:
         # Act & Assert
         with pytest.raises(ValueError, match="at least one layout"):
             builder.build_manifest(template_metadata, template_name="Empty Template")
+
+    def test_smartart_node_count_none_when_no_smartart(self) -> None:
+        """RED: Test that layouts without SmartArt have node_count=None."""
+        # Arrange
+        placeholder = PlaceholderMetadata(name="Title 1", type="TITLE", max_chars=100)
+        layout_metadata = LayoutMetadata(
+            name="Title Slide",
+            placeholders=[placeholder],
+            has_smartart=False,
+        )
+
+        builder = ManifestBuilder()
+
+        # Act
+        layout_info = builder._build_layout_info(layout_metadata)  # type: ignore[reportPrivateUsage]
+
+        # Assert
+        assert layout_info.smartart_node_count is None
+
+    def test_smartart_node_count_set_when_smartart_present(self) -> None:
+        """RED: Test that layouts with SmartArt have node_count set."""
+        # Arrange
+        placeholder_org = PlaceholderMetadata(name="SmartArt 1", type="ORG_CHART", max_chars=1)
+        layout_metadata = LayoutMetadata(
+            name="SmartArt Layout",
+            placeholders=[placeholder_org],
+            has_smartart=True,
+            smartart_node_count=5,  # Layout has SmartArt with 5 nodes
+        )
+
+        builder = ManifestBuilder()
+
+        # Act
+        layout_info = builder._build_layout_info(layout_metadata)  # type: ignore[reportPrivateUsage]
+
+        # Assert
+        assert layout_info.smartart_node_count == 5
+
+    def test_layout_info_has_smartart_node_count_field(self) -> None:
+        """RED: Test that LayoutInfo has smartart_node_count field."""
+        # Test that LayoutInfo schema supports smartart_node_count
+        placeholder = PlaceholderInfo(name="Title", type="TITLE", max_chars=100)
+        layout_info = LayoutInfo(
+            name="Test Layout",
+            placeholders=[placeholder],
+            supports_smartart=True,
+            smartart_node_count=3,
+        )
+
+        assert layout_info.smartart_node_count == 3

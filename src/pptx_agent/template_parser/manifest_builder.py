@@ -83,6 +83,7 @@ class ManifestBuilder:
             supports_charts=supports_charts,
             supports_tables=supports_tables,
             supports_smartart=supports_smartart,
+            smartart_node_count=layout_meta.smartart_node_count,
         )
 
     def _build_placeholder_info(self, placeholder_meta: PlaceholderMetadata) -> PlaceholderInfo:

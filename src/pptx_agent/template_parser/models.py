@@ -26,11 +26,19 @@ class LayoutMetadata(BaseModel):
     Attributes:
         name: Name of the layout (e.g., "Title Slide", "Title and Content")
         placeholders: List of placeholders in this layout
+        has_smartart: Whether this layout contains SmartArt diagrams
+        smartart_node_count: Number of nodes in SmartArt diagram (if present)
     """
 
     name: str = Field(..., description="Layout name")
     placeholders: list[PlaceholderMetadata] = Field(
         default_factory=list, description="List of placeholders"
+    )
+    has_smartart: bool = Field(
+        default=False, description="Whether layout contains SmartArt diagrams"
+    )
+    smartart_node_count: int | None = Field(
+        default=None, description="Number of nodes in SmartArt diagram (None if no SmartArt)"
     )
 
 

@@ -13,14 +13,14 @@ Future versions may integrate LLM-based content enrichment.
 
 import logging
 import re
-from typing import Literal
+from typing import Any, Literal
 
 from pptx_agent.schemas.outline import PresentationOutline, SlideContent
 from pptx_agent.schemas.presentation import PresentationSchema
 from pptx_agent.schemas.slide import ContentBlock, SlideSchema
 from pptx_agent.schemas.template_manifest import TemplateManifest
 from pptx_agent.schemas.text import TextBlock
-from pptx_agent.schemas.visual_assets import ChartBlock, TableBlock
+from pptx_agent.schemas.visual_assets import ChartBlock, SmartArtBlock, TableBlock
 
 logger = logging.getLogger(__name__)
 
@@ -160,6 +160,10 @@ def _generate_content_blocks(  # noqa: PLR0911
     # Check for table data (format: "table:header1|header2\nrow1|row2")
     if content.startswith("table:"):
         return [_parse_table_data(content, placeholder_name)]
+
+    # Check for SmartArt data (format: "smartart:diagram_type|node1,node2,node3")
+    if content.startswith("smartart:"):
+        return [_parse_smartart_data(content, placeholder_name)]
 
     # Check for mixed content (text + chart/table)
     if "chart:" in content:
@@ -428,3 +432,39 @@ def _parse_mixed_content(
         blocks.append(_parse_chart_data(chart_content, placeholder_name, title))
 
     return blocks
+
+
+def _parse_smartart_data(content: str, placeholder_name: str) -> SmartArtBlock:
+    """Parse SmartArt data from content string.
+
+    Format: "smartart:diagram_type|node1,node2,node3"
+    Example: "smartart:process|Planning,Design,Development,Testing"
+
+    Args:
+        content: Content string starting with "smartart:"
+        placeholder_name: Placeholder name for the SmartArt
+
+    Returns:
+        SmartArtBlock instance with parsed data
+    """
+    # Remove "smartart:" prefix
+    smartart_content = content[9:].strip()
+
+    # Split into diagram type and nodes
+    parts = smartart_content.split("|", 1)
+    diagram_type = parts[0].strip()
+    nodes_str = parts[1] if len(parts) > 1 else ""
+
+    # Parse nodes (comma-separated)
+    nodes: list[dict[str, Any]] = []
+    for raw_node in nodes_str.split(","):
+        node_text = raw_node.strip()
+        # Skip empty nodes
+        if node_text:
+            nodes.append({"text": node_text, "level": 0})
+
+    return SmartArtBlock(
+        placeholder_name=placeholder_name,
+        diagram_type=diagram_type,
+        nodes=nodes,
+    )

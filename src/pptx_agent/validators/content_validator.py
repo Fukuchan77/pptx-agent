@@ -10,7 +10,7 @@ from pptx_agent.schemas.outline import PresentationOutline
 from pptx_agent.schemas.presentation import PresentationSchema
 from pptx_agent.schemas.template_manifest import TemplateManifest
 from pptx_agent.schemas.text import TextBlock
-from pptx_agent.schemas.visual_assets import ChartBlock, TableBlock
+from pptx_agent.schemas.visual_assets import ChartBlock, SmartArtBlock, TableBlock
 from pptx_agent.validators.exceptions import ContentValidationError
 
 logger = logging.getLogger(__name__)
@@ -109,6 +109,53 @@ def _validate_table_block(block: TableBlock, slide_num: int, slide_title: str) -
             raise ContentValidationError(msg)
 
 
+def _validate_smartart_block(
+    block: SmartArtBlock,
+    slide_num: int,
+    slide_title: str,
+    layout_name: str,
+    manifest: TemplateManifest | None,
+) -> None:
+    """Validate SmartArtBlock content.
+
+    Args:
+        block: The SmartArtBlock to validate
+        slide_num: Slide number for error messages
+        slide_title: Slide title for error messages
+        layout_name: Layout name for looking up expected node count
+        manifest: Optional template manifest with layout information
+
+    Raises:
+        ContentValidationError: If node count doesn't match template requirement
+    """
+    # If no manifest provided, skip node count validation
+    if manifest is None:
+        return
+
+    # Look up layout in manifest
+    layout = manifest.get_layout_by_name(layout_name)
+    if layout is None:
+        # Layout not in manifest, can't validate
+        return
+
+    # Check if layout has SmartArt node count requirement
+    if layout.smartart_node_count is None:
+        # No specific node count required
+        return
+
+    # Validate node count matches template requirement
+    actual_count = len(block.nodes)
+    expected_count = layout.smartart_node_count
+
+    if actual_count != expected_count:
+        msg = (
+            f"Slide {slide_num} '{slide_title}' has SmartArt with "
+            f"{actual_count} nodes, but layout '{layout_name}' expects "
+            f"{expected_count} nodes"
+        )
+        raise ContentValidationError(msg)
+
+
 def validate_content(
     content: PresentationSchema,
     outline: PresentationOutline | None = None,
@@ -169,6 +216,10 @@ def validate_content(
                 _validate_chart_block(block, i, slide.title)
             elif isinstance(block, TableBlock):
                 _validate_table_block(block, i, slide.title)
+            elif isinstance(block, SmartArtBlock):
+                _validate_smartart_block(
+                    block, i, slide.title, slide.layout_name, _template_manifest
+                )
 
     # All validations passed, return the content
     return content

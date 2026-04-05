@@ -12,10 +12,11 @@ from pathlib import Path
 
 from pptx_agent.pptx_wrapper.chart_builder import add_chart_to_slide
 from pptx_agent.pptx_wrapper.presentation import PresentationWrapper
+from pptx_agent.pptx_wrapper.smartart_builder import add_smartart_to_slide
 from pptx_agent.pptx_wrapper.table_builder import add_table_to_slide
 from pptx_agent.schemas import PresentationSchema, SlideSchema
 from pptx_agent.schemas.text import TextBlock
-from pptx_agent.schemas.visual_assets import ChartBlock, TableBlock
+from pptx_agent.schemas.visual_assets import ChartBlock, SmartArtBlock, TableBlock
 from pptx_agent.validators.exceptions import InvalidFileError
 
 
@@ -144,7 +145,10 @@ def build_presentation(
             # Handle TableBlock
             elif isinstance(block, TableBlock):
                 add_table_to_slide(slide, block)
-            # Other block types (ImageBlock, SmartArtBlock) are future enhancements
+            # Handle SmartArtBlock
+            elif isinstance(block, SmartArtBlock):
+                add_smartart_to_slide(slide, block)
+            # Other block types (ImageBlock) are future enhancements
 
     # Embed metadata before saving
     _embed_metadata(prs, content, template_path)
@@ -226,6 +230,8 @@ def rebuild_slide_with_layout(
             add_chart_to_slide(slide, block)
         elif isinstance(block, TableBlock):
             add_table_to_slide(slide, block)
+        elif isinstance(block, SmartArtBlock):
+            add_smartart_to_slide(slide, block)
 
     # Save the modified presentation
     output_pathobj = Path(pptx_path)

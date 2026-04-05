@@ -61,7 +61,7 @@ def test_story_analysis_schema_validation_invalid_language():
             target_audience="General audience",
             key_message="Main message",
             tone="professional",
-            language="fr",  # Invalid - only 'en' and 'ja' allowed
+            language="fr",  # type: ignore[arg-type]  # Invalid - only 'en' and 'ja' allowed
         )
 
     assert "language" in str(exc_info.value).lower()

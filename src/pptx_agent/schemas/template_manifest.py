@@ -43,6 +43,7 @@ class LayoutInfo(BaseModel):
         supports_charts: Whether this layout supports chart insertion
         supports_tables: Whether this layout supports table insertion
         supports_smartart: Whether this layout supports SmartArt insertion
+        smartart_node_count: Number of nodes in SmartArt diagram (if present)
     """
 
     name: str = Field(min_length=1, description="Layout name")
@@ -50,6 +51,9 @@ class LayoutInfo(BaseModel):
     supports_charts: bool = Field(default=False, description="Supports charts")
     supports_tables: bool = Field(default=False, description="Supports tables")
     supports_smartart: bool = Field(default=False, description="Supports SmartArt")
+    smartart_node_count: int | None = Field(
+        default=None, description="Number of nodes in SmartArt diagram (None if no SmartArt)"
+    )
 
 
 class TemplateManifest(BaseModel):

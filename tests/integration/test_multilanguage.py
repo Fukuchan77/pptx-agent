@@ -91,9 +91,9 @@ def test_japanese_input_produces_japanese_output(sample_story_ja: str, template_
         has_japanese = False
         for slide in prs.slides:
             for shape in slide.shapes:
-                if hasattr(shape, "text") and shape.text:
+                if hasattr(shape, "text") and shape.text:  # type: ignore[attr-defined]
                     # Check if text contains Japanese characters
-                    detected_lang = detect_language(shape.text)
+                    detected_lang = detect_language(shape.text)  # type: ignore[attr-defined]
                     if detected_lang == "ja":
                         has_japanese = True
                         break
@@ -179,8 +179,8 @@ def test_mixed_language_content_preserves_technical_terms(template_path: str):
         all_text = ""
         for slide in prs.slides:
             for shape in slide.shapes:
-                if hasattr(shape, "text") and shape.text:
-                    all_text += shape.text + " "
+                if hasattr(shape, "text") and shape.text:  # type: ignore[attr-defined]
+                    all_text += shape.text + " "  # type: ignore[attr-defined]
 
         # Should contain some English technical terms
         has_english_terms = any(
@@ -255,7 +255,7 @@ def test_language_specific_capacity_ratios_applied(sample_story_ja: str, templat
         first_slide = prs.slides[0]
         has_content = False
         for shape in first_slide.shapes:
-            if hasattr(shape, "text") and shape.text.strip():
+            if hasattr(shape, "text") and shape.text.strip():  # type: ignore[attr-defined]
                 has_content = True
                 break
         assert has_content, "First slide should have text content"

@@ -26,6 +26,15 @@ class SlideWrapper:
         """
         self._slide = slide
 
+    @property
+    def slide(self) -> Slide:
+        """Return the underlying python-pptx Slide object.
+
+        Returns:
+            The wrapped Slide object
+        """
+        return self._slide
+
     def set_title(self, text: str) -> None:
         """Update title placeholder.
 
@@ -157,7 +166,7 @@ class SlideWrapper:
         Returns:
             Chart shape object
         """
-        return self._slide.shapes.add_chart(chart_type, x, y, cx, cy, chart_data)
+        return self._slide.shapes.add_chart(chart_type, x, y, cx, cy, chart_data)  # type: ignore[arg-type]
 
     def add_table(  # noqa: PLR0913
         self,

@@ -103,14 +103,21 @@ class TemplateParser:
 
         # Extract placeholders
         placeholders = []
+        has_smartart = False
+
         for shape in slide_layout.shapes:
             if shape.is_placeholder:
                 placeholder_metadata = self._parse_placeholder(shape)
                 placeholders.append(placeholder_metadata)
 
+            # Check if this shape is a SmartArt diagram
+            if self._is_smartart_shape(shape):
+                has_smartart = True
+
         return LayoutMetadata(
             name=layout_name,
             placeholders=placeholders,
+            has_smartart=has_smartart,
         )
 
     def _parse_placeholder(self, shape: Any) -> PlaceholderMetadata:
@@ -195,3 +202,24 @@ class TemplateParser:
             )
             # Default estimate if dimensions unavailable
             return DEFAULT_PLACEHOLDER_CHARS
+
+    def _is_smartart_shape(self, shape: Any) -> bool:
+        """Check if a shape is a SmartArt diagram.
+
+        SmartArt diagrams are represented as graphicFrame elements in PowerPoint XML.
+        This method detects them by checking the element tag.
+
+        Args:
+            shape: python-pptx Shape object
+
+        Returns:
+            True if shape is a SmartArt diagram, False otherwise
+        """
+        try:
+            # SmartArt is typically a graphicFrame element
+            if hasattr(shape, "element") and hasattr(shape.element, "tag"):
+                return shape.element.tag.endswith("}graphicFrame")
+            return False  # noqa: TRY300
+        except (AttributeError, Exception):
+            # If we can't determine, assume it's not SmartArt
+            return False

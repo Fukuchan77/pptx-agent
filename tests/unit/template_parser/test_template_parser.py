@@ -273,3 +273,67 @@ class TestTemplateParser:
         # PermissionError should propagate, not be caught
         with pytest.raises(PermissionError):
             parser._estimate_max_chars(shape)  # type: ignore[reportPrivateUsage]
+
+    def test_detect_smartart_in_layout(self):
+        """RED: Test detection of SmartArt shapes in layouts."""
+        parser = TemplateParser()
+
+        # Create a mock shape that simulates a SmartArt graphic frame
+        class MockElement:
+            tag = "{http://schemas.openxmlformats.org/presentationml/2006/main}graphicFrame"
+
+        class MockShape:
+            is_placeholder = False
+            element = MockElement()
+
+        # Test detection
+        has_smartart = parser._is_smartart_shape(MockShape())  # type: ignore[reportPrivateUsage]
+        assert has_smartart is True
+
+    def test_detect_non_smartart_shape(self):
+        """RED: Test that non-SmartArt shapes are not detected as SmartArt."""
+        parser = TemplateParser()
+
+        # Create a mock shape that is not a SmartArt
+        class MockElement:
+            tag = "{http://schemas.openxmlformats.org/presentationml/2006/main}sp"  # Regular shape
+
+        class MockShape:
+            is_placeholder = False
+            element = MockElement()
+
+        # Test detection
+        has_smartart = parser._is_smartart_shape(MockShape())  # type: ignore[reportPrivateUsage]
+        assert has_smartart is False
+
+    def test_layout_metadata_has_smartart_field(self):
+        """RED: Test that LayoutMetadata can store SmartArt presence info."""
+        # After parser enhancement, LayoutMetadata should track if layout has SmartArt
+        layout = LayoutMetadata(
+            name="SmartArt Layout",
+            placeholders=[],
+            has_smartart=True,  # New field for T065
+        )
+
+        assert layout.has_smartart is True
+
+    def test_parse_layout_detects_smartart(self, tmp_path: Path):
+        """RED: Test that _parse_layout detects SmartArt shapes."""
+        parser = TemplateParser()
+
+        # This test will need a real template with SmartArt
+        # For now, define expected behavior: parser should detect SmartArt presence
+        # and set has_smartart=True in LayoutMetadata
+
+        # Create simple template without SmartArt
+        template_path = tmp_path / "test_no_smartart.pptx"
+        prs = Presentation()
+        prs.save(str(template_path))
+
+        metadata = parser.parse_template(str(template_path))
+
+        # Check that layouts have has_smartart attribute
+        for layout in metadata.layouts:
+            assert hasattr(layout, "has_smartart")
+            # Default template shouldn't have SmartArt
+            assert layout.has_smartart is False

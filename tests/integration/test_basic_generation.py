@@ -118,7 +118,7 @@ def test_generate_presentation_with_japanese_story(sample_story_ja: str, templat
         first_slide = prs.slides[0]
         has_text = False
         for shape in first_slide.shapes:
-            if hasattr(shape, "text") and shape.text.strip():
+            if hasattr(shape, "text") and shape.text.strip():  # type: ignore[attr-defined]
                 has_text = True
                 break
 
@@ -183,7 +183,7 @@ def test_generated_file_opens_without_errors(sample_story_en: str, template_path
                 # Try to access shape properties
                 _ = shape.shape_type
                 if hasattr(shape, "text"):
-                    _ = shape.text
+                    _ = shape.text  # type: ignore[attr-defined]
 
         # If we got here, all slides are accessible
         assert True, "All slides should be accessible without errors"
@@ -325,7 +325,7 @@ def test_slides_have_content(sample_story_en: str, template_path: str):
         has_text = False
 
         for shape in first_slide.shapes:
-            if hasattr(shape, "text") and shape.text.strip():
+            if hasattr(shape, "text") and shape.text.strip():  # type: ignore[attr-defined]
                 has_text = True
                 break
 

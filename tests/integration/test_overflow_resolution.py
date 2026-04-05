@@ -235,7 +235,7 @@ def test_extreme_content_handling(overflow_extreme: str, template_path: str) -> 
         first_slide = prs.slides[0]
         has_text = False
         for shape in first_slide.shapes:
-            if hasattr(shape, "text") and shape.text.strip():
+            if hasattr(shape, "text") and shape.text.strip():  # type: ignore[attr-defined]
                 has_text = True
                 break
 

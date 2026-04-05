@@ -399,7 +399,7 @@ def test_file_opens_without_corruption(chart_data_input: str, template_path: str
                 _ = shape.name
 
                 if hasattr(shape, "text"):
-                    _ = shape.text
+                    _ = shape.text  # type: ignore[attr-defined]
 
         # If we got here, file is not corrupted
         assert True, "File should open without corruption"
