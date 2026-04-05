@@ -11,7 +11,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from pptx_agent.pptx_wrapper.presentation import PresentationWrapper
-from pptx_agent.schemas import PresentationSchema
+from pptx_agent.schemas import PresentationSchema, SlideSchema
 from pptx_agent.schemas.text import TextBlock
 from pptx_agent.validators.exceptions import InvalidFileError
 
@@ -150,3 +150,72 @@ def build_presentation(
 
     # Return output path
     return output_path
+
+
+def rebuild_slide_with_layout(
+    pptx_path: str,
+    slide_index: int,
+    new_layout: str,
+    slide_data: SlideSchema,
+) -> None:
+    """Rebuild a slide with a different layout.
+
+    This function is used for overflow resolution when a slide's content
+    doesn't fit in the current layout. It removes the existing slide and
+    creates a new one with the specified layout, preserving title and content.
+
+    Args:
+        pptx_path: Path to the PowerPoint file to modify
+        slide_index: Index of the slide to rebuild (0-based)
+        new_layout: Name of the new layout to use
+        slide_data: SlideSchema containing title and content to preserve
+
+    Raises:
+        IndexError: If slide_index is out of range
+        ValueError: If new_layout doesn't exist in the template
+        FileNotFoundError: If pptx_path doesn't exist
+    """
+    # Load the existing presentation
+    prs = PresentationWrapper()
+
+    try:
+        prs.load_template(pptx_path)
+    except InvalidFileError as e:
+        raise FileNotFoundError(str(e)) from e
+
+    # Validate slide index
+    slide_count = prs.slide_count()
+    if slide_index < 0 or slide_index >= slide_count:
+        msg = f"Slide index {slide_index} out of range (presentation has {slide_count} slides)"
+        raise IndexError(msg)
+
+    # Remove the old slide
+    prs.delete_slide(slide_index)
+
+    # Insert new slide at the same position
+    slide = prs.insert_slide(new_layout, slide_index)
+
+    # Restore title
+    try:
+        slide.set_title(slide_data.title)
+    except ValueError as e:
+        logger.warning(
+            "Failed to set title for rebuilt slide with layout '%s': %s (title: '%s')",
+            new_layout,
+            str(e),
+            slide_data.title,
+        )
+
+    # Restore content blocks
+    for block in slide_data.content:
+        if isinstance(block, TextBlock):
+            slide.add_text(
+                placeholder_name=block.placeholder_name,
+                text=block.text,
+                check_overflow=False,
+            )
+
+    # Save the modified presentation
+    output_pathobj = Path(pptx_path)
+    base_dir = str(output_pathobj.parent)
+    prs.save(pptx_path, base_dir=base_dir)

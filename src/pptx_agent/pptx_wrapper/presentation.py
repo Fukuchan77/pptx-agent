@@ -84,6 +84,57 @@ class PresentationWrapper:
         slide = self._prs.slides.add_slide(layout)
         return SlideWrapper(slide)
 
+    def insert_slide(self, layout_name: str, index: int) -> SlideWrapper:
+        """Insert slide at specified position with specified layout.
+
+        Args:
+            layout_name: Name of the slide layout to use
+            index: Position to insert the slide (0-based)
+
+        Returns:
+            SlideWrapper instance for the new slide
+
+        Raises:
+            ValueError: If template not loaded or layout not found
+            IndexError: If index is out of range
+        """
+        if self._prs is None:
+            msg = "Template must be loaded before inserting slides"
+            raise ValueError(msg)
+
+        # Validate index
+        slide_count = len(self._prs.slides)
+        if index < 0 or index > slide_count:
+            msg = f"Slide index {index} out of range (valid range: 0 to {slide_count})"
+            raise IndexError(msg)
+
+        # Find layout by name
+        layout = None
+        for slide_layout in self._prs.slide_layouts:
+            if slide_layout.name == layout_name:
+                layout = slide_layout
+                break
+
+        if layout is None:
+            msg = f"Layout '{layout_name}' not found in template"
+            raise ValueError(msg)
+
+        # Add slide at end first
+        slide = self._prs.slides.add_slide(layout)
+
+        # If not at end, move to correct position
+        if index < slide_count:
+            # Access slide ID list from XML
+            slide_id_list = self._prs.slides._sldIdLst  # noqa: SLF001  # type: ignore[reportPrivateUsage]
+            # Get reference to the last element (newly added slide)
+            last_slide_id = slide_id_list[-1]
+            # Remove it from the list
+            slide_id_list.remove(last_slide_id)
+            # Insert at the correct position
+            slide_id_list.insert(index, last_slide_id)
+
+        return SlideWrapper(slide)
+
     def get_layouts(self) -> list[str]:
         """Return list of available layout names.
 
@@ -98,6 +149,45 @@ class PresentationWrapper:
             raise ValueError(msg)
 
         return [layout.name for layout in self._prs.slide_layouts]
+
+    def delete_slide(self, slide_index: int) -> None:
+        """Delete slide at specified index.
+
+        Args:
+            slide_index: Index of slide to delete (0-based)
+
+        Raises:
+            ValueError: If template not loaded
+            IndexError: If slide_index is out of range
+        """
+        if self._prs is None:
+            msg = "Template must be loaded before deleting slides"
+            raise ValueError(msg)
+
+        slides = self._prs.slides
+        if slide_index < 0 or slide_index >= len(slides):
+            msg = f"Slide index {slide_index} out of range (presentation has {len(slides)} slides)"
+            raise IndexError(msg)
+
+        # Access slide ID list from XML (private member access required for slide deletion)
+        slide_id_list = self._prs.slides._sldIdLst  # noqa: SLF001  # type: ignore[reportPrivateUsage]
+        # Remove slide at index
+        slide_id_list.remove(slide_id_list[slide_index])
+
+    def slide_count(self) -> int:
+        """Return the number of slides in the presentation.
+
+        Returns:
+            Number of slides
+
+        Raises:
+            ValueError: If template not loaded
+        """
+        if self._prs is None:
+            msg = "Template must be loaded"
+            raise ValueError(msg)
+
+        return len(self._prs.slides)
 
     def save(self, output_path: str, base_dir: str | None = None) -> None:
         """Save presentation to file with path validation.

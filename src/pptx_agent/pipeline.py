@@ -15,6 +15,7 @@ from typing import Literal
 
 from pptx_agent.agents.content_generator import generate_content
 from pptx_agent.agents.outline_generator import generate_outline
+from pptx_agent.agents.overflow_resolver import resolve_overflow
 from pptx_agent.agents.story_analyzer import analyze_story
 from pptx_agent.pptx_wrapper.slide_builder import build_presentation
 from pptx_agent.schemas.template_manifest import TemplateManifest
@@ -97,6 +98,24 @@ def generate_presentation(
     validated_content = validate_content(content, validated_outline, template_manifest)
     duration = time.time() - start
     logger.info("Stage: Content Validation completed in %.2fs", duration)
+
+    # Stage 5.5: Check for overflow and apply resolution strategies
+    if template_manifest is not None:
+        start = time.time()
+        for slide in validated_outline.slides:
+            resolution = resolve_overflow(
+                slide, template_manifest, validated_outline.output_language
+            )
+            if resolution.overflow_detected:
+                logger.info(
+                    "Overflow detected in slide %d '%s': %.1f%% overflow, strategy: %s",
+                    slide.slide_number,
+                    slide.title,
+                    resolution.overflow_percentage,
+                    resolution.strategy,
+                )
+        duration = time.time() - start
+        logger.info("Stage: Overflow Resolution completed in %.2fs", duration)
 
     # Stage 6: Build presentation
     start = time.time()

@@ -116,6 +116,8 @@ class TestGeneratePresentation:
             mock_analyze.return_value = mock_story
 
             mock_outline = MagicMock(spec=PresentationOutline)
+            mock_outline.slides = []  # Empty slides list for overflow resolution
+            mock_outline.output_language = "en"
             mock_gen_outline.return_value = mock_outline
             mock_val_outline.return_value = mock_outline
 
@@ -521,3 +523,64 @@ class TestGeneratePresentation:
 
             # Verify validate_and_sanitize was called
             mock_validate.assert_called_once_with(short_input)
+
+    def test_pipeline_detects_and_resolves_overflow(self, tmp_path: Path) -> None:
+        """Test that pipeline detects content overflow and calls overflow resolver."""
+        # Arrange
+        input_text = "Test content that will generate slides with overflow"
+        template_path = "templates/basic-template.pptx"
+        output_path = str(tmp_path / "output.pptx")
+
+        # Create a mock manifest with layout capacity
+        mock_manifest = MagicMock(spec=TemplateManifest)
+
+        with (
+            patch("pptx_agent.pipeline.analyze_story") as mock_analyze,
+            patch("pptx_agent.pipeline.generate_outline") as mock_gen_outline,
+            patch("pptx_agent.pipeline.validate_outline") as mock_val_outline,
+            patch("pptx_agent.pipeline.generate_content") as mock_gen_content,
+            patch("pptx_agent.pipeline.validate_content") as mock_val_content,
+            patch("pptx_agent.pipeline.resolve_overflow") as mock_resolve_overflow,
+            patch("pptx_agent.pipeline.build_presentation") as mock_build,
+        ):
+            # Setup mocks
+            mock_analyze.return_value = MagicMock(spec=StoryAnalysis)
+
+            mock_outline = PresentationOutline(
+                title="Test",
+                slides=[
+                    SlideContent(
+                        slide_number=1,
+                        layout_name="Content",
+                        title="Test Slide",
+                        content="This is some very long content that exceeds capacity",
+                    )
+                ],
+                output_language="en",
+            )
+            mock_gen_outline.return_value = mock_outline
+            mock_val_outline.return_value = mock_outline
+
+            mock_content = MagicMock(spec=PresentationSchema)
+            mock_gen_content.return_value = mock_content
+            mock_val_content.return_value = mock_content
+
+            # Mock overflow resolver to return a resolution
+            from pptx_agent.agents.overflow_resolver import OverflowResolution, OverflowStrategy
+
+            mock_resolution = OverflowResolution(
+                strategy=OverflowStrategy.FONT_REDUCTION,
+                overflow_detected=True,
+                overflow_percentage=15.0,
+            )
+            mock_resolve_overflow.return_value = mock_resolution
+
+            mock_build.return_value = output_path
+
+            # Act
+            generate_presentation(
+                input_text, template_path, output_path, template_manifest=mock_manifest
+            )
+
+            # Assert - overflow resolver should be called during validation
+            assert mock_resolve_overflow.called, "Overflow resolver was not called"

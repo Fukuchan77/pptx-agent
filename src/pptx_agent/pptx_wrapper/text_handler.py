@@ -9,6 +9,10 @@ from pptx_agent.constants import PERCENTAGE_MULTIPLIER
 # Length of ellipsis string ("...")
 ELLIPSIS_LENGTH = 3
 
+# Font reduction constraints
+FONT_REDUCTION_MAX_OVERFLOW = 30  # Maximum overflow percentage for font reduction (30%)
+DEFAULT_MIN_FONT_SIZE = 8.0  # Default minimum font size in points
+
 
 class TextHandler:
     """Handler for text fitting and overflow detection.
@@ -117,3 +121,96 @@ class TextHandler:
         # Truncate and add ellipsis
         truncated_length = max_capacity - ELLIPSIS_LENGTH
         return text[:truncated_length] + "..."
+
+    def calculate_font_reduction(
+        self,
+        text: str,
+        max_capacity: int,
+        current_font_size: float | None = None,
+        min_font_size: float | None = None,
+    ) -> float | None:
+        """Calculate font size reduction factor to fit text within capacity.
+
+        Args:
+            text: The text to fit
+            max_capacity: Maximum character capacity
+            current_font_size: Current font size in points (optional, for min size check)
+            min_font_size: Minimum allowed font size in points (default: 8.0)
+
+        Returns:
+            Reduction factor (0.0-1.0) if feasible, None if not feasible or not needed
+        """
+        text_length = len(text)
+
+        # Text already fits
+        if text_length <= max_capacity:
+            return None
+
+        # Calculate overflow percentage
+        overflow_percentage = self.get_overflow_percentage(text, max_capacity)
+
+        # Font reduction only feasible for reasonable overflow
+        if overflow_percentage > FONT_REDUCTION_MAX_OVERFLOW:
+            return None
+
+        # Calculate required reduction factor
+        reduction_factor = max_capacity / text_length
+
+        # Check if reduction would violate minimum font size
+        if current_font_size is not None:
+            min_size = min_font_size if min_font_size is not None else DEFAULT_MIN_FONT_SIZE
+            reduced_size = current_font_size * reduction_factor
+            if reduced_size < min_size:
+                return None
+
+        return reduction_factor
+
+    def is_font_reduction_feasible(self, text: str, max_capacity: int) -> bool:
+        """Check if font reduction is a feasible strategy for the given text.
+
+        Args:
+            text: The text to check
+            max_capacity: Maximum character capacity
+
+        Returns:
+            True if font reduction is feasible, False otherwise
+        """
+        text_length = len(text)
+
+        # Text already fits - no reduction needed
+        if text_length <= max_capacity:
+            return False
+
+        # Calculate overflow percentage
+        overflow_percentage = self.get_overflow_percentage(text, max_capacity)
+
+        # Font reduction only feasible for reasonable overflow (up to 30%)
+        return overflow_percentage <= FONT_REDUCTION_MAX_OVERFLOW
+
+    def calculate_font_reduction_with_language(
+        self,
+        text: str,
+        max_capacity: int,
+        language_ratio: float,
+        current_font_size: float | None = None,
+        min_font_size: float | None = None,
+    ) -> float | None:
+        """Calculate font reduction with language-specific capacity adjustment.
+
+        Args:
+            text: The text to fit
+            max_capacity: Maximum character capacity
+            language_ratio: Language-specific capacity multiplier (0.0-1.0)
+            current_font_size: Current font size in points (optional)
+            min_font_size: Minimum allowed font size in points (default: 8.0)
+
+        Returns:
+            Reduction factor (0.0-1.0) if feasible, None if not feasible or not needed
+        """
+        # Calculate effective capacity with language ratio
+        effective_capacity = int(max_capacity * language_ratio)
+
+        # Use standard calculation with adjusted capacity
+        return self.calculate_font_reduction(
+            text, effective_capacity, current_font_size, min_font_size
+        )
