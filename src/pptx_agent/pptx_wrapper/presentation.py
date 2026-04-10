@@ -1,5 +1,6 @@
 """Presentation-level wrapper for python-pptx."""
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from pptx import Presentation as PresentationFactory
@@ -7,7 +8,7 @@ from pptx import Presentation as PresentationFactory
 if TYPE_CHECKING:
     from pptx.presentation import Presentation
 
-from pptx_agent.validators.file_validator import validate_output_path, validate_template_path
+from pptx_agent.validators.file_validator import validate_template_path
 
 from .slide import SlideWrapper
 
@@ -189,25 +190,21 @@ class PresentationWrapper:
 
         return len(self._prs.slides)
 
-    def save(self, output_path: str, base_dir: str | None = None) -> None:
-        """Save presentation to file with path validation.
+    def save(self, output_path: str) -> None:
+        """Save presentation to file.
 
         Args:
             output_path: Path where presentation should be saved
-            base_dir: Base directory for output files (optional, defaults to ./output)
 
         Raises:
             ValueError: If template not loaded
-            PathTraversalError: If path is outside allowed directory
         """
         if self._prs is None:
             msg = "Template must be loaded before saving"
             raise ValueError(msg)
 
-        # Validate and resolve output path
-        output = validate_output_path(output_path, base_dir)
-
-        # Create parent directory if needed
+        # Convert to Path and ensure parent directory exists
+        output = Path(output_path).resolve()
         output.parent.mkdir(parents=True, exist_ok=True)
 
         # Save presentation

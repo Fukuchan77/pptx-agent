@@ -154,11 +154,7 @@ def build_presentation(
     _embed_metadata(prs, content, template_path)
 
     # Save presentation
-    # Output path is always absolute (resolved by caller), extract base directory for validation
-    output_pathobj = Path(output_path)
-    base_dir = str(output_pathobj.parent)
-
-    prs.save(output_path, base_dir=base_dir)
+    prs.save(output_path)
 
     # Return output path
     return output_path
@@ -234,6 +230,4 @@ def rebuild_slide_with_layout(
             add_smartart_to_slide(slide, block)
 
     # Save the modified presentation
-    output_pathobj = Path(pptx_path)
-    base_dir = str(output_pathobj.parent)
-    prs.save(pptx_path, base_dir=base_dir)
+    prs.save(pptx_path)

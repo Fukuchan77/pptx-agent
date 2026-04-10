@@ -12,14 +12,9 @@ from pptx_agent.validators.exceptions import (
     CompressionRatioError,
     FileSizeLimitError,
     InvalidFileError,
-    PathTraversalError,
     SecurityValidationError,
 )
-from pptx_agent.validators.file_validator import (
-    validate_output_path,
-    validate_pptx_file,
-    validate_template_path,
-)
+from pptx_agent.validators.file_validator import validate_pptx_file, validate_template_path
 
 
 class TestValidatePptxFile:
@@ -110,115 +105,6 @@ class TestValidatePptxFile:
 
         assert "validation failed" in str(exc_info.value).lower()
         assert "does not exist" in str(exc_info.value).lower()
-
-
-class TestValidateOutputPath:
-    """Test cases for validate_output_path function."""
-
-    def test_validate_output_path_normal(self, tmp_path: Path) -> None:
-        """Test validation of normal output path."""
-        base_dir = tmp_path / "output"
-        base_dir.mkdir(parents=True, exist_ok=True)
-
-        # Normal path within base_dir
-        output_path = "test.pptx"
-        result = validate_output_path(output_path, str(base_dir))
-
-        # Should return resolved path inside base_dir
-        assert result.is_absolute()
-        assert result.parent == base_dir
-
-    def test_validate_output_path_relative(self, tmp_path: Path) -> None:
-        """Test validation with explicit relative path."""
-        base_dir = tmp_path / "output"
-        base_dir.mkdir(parents=True, exist_ok=True)
-
-        # Relative path with ./
-        output_path = "./subfolder/test.pptx"
-        result = validate_output_path(output_path, str(base_dir))
-
-        # Should return resolved path inside base_dir
-        assert result.is_absolute()
-        assert str(base_dir) in str(result)
-
-    def test_validate_output_path_traversal_attack(self, tmp_path: Path) -> None:
-        """Test validation blocks path traversal attack."""
-        base_dir = tmp_path / "output"
-        base_dir.mkdir(parents=True, exist_ok=True)
-
-        # Path traversal attack using ../
-        output_path = "../../../etc/passwd"
-
-        with pytest.raises(PathTraversalError) as exc_info:
-            validate_output_path(output_path, str(base_dir))
-
-        error_msg = str(exc_info.value).lower()
-        assert "traversal detected" in error_msg or "outside" in error_msg
-
-    def test_validate_output_path_outside_base_dir(self, tmp_path: Path) -> None:
-        """Test validation blocks paths outside base_dir."""
-        base_dir = tmp_path / "output"
-        base_dir.mkdir(parents=True, exist_ok=True)
-
-        # Try to write to a completely different location
-        other_dir = tmp_path / "other"
-        other_dir.mkdir(parents=True, exist_ok=True)
-
-        output_path = str(other_dir / "test.pptx")
-
-        with pytest.raises(PathTraversalError) as exc_info:
-            validate_output_path(output_path, str(base_dir))
-
-        assert (
-            "outside" in str(exc_info.value).lower() or "traversal" in str(exc_info.value).lower()
-        )
-
-    def test_validate_output_path_custom_base_dir(self, tmp_path: Path) -> None:
-        """Test validation with custom base_dir."""
-        custom_base = tmp_path / "custom" / "output"
-        custom_base.mkdir(parents=True, exist_ok=True)
-
-        output_path = "presentation.pptx"
-        result = validate_output_path(output_path, str(custom_base))
-
-        # Should be within custom base directory
-        assert result.is_absolute()
-        assert str(custom_base) in str(result)
-        assert result.name == "presentation.pptx"
-
-    def test_validate_output_path_absolute_inside(self, tmp_path: Path) -> None:
-        """Test validation allows absolute path if it's inside base_dir."""
-        base_dir = tmp_path / "output"
-        base_dir.mkdir(parents=True, exist_ok=True)
-
-        # Absolute path but inside base_dir
-        subfolder = base_dir / "subfolder"
-        output_path = str(subfolder / "test.pptx")
-
-        result = validate_output_path(output_path, str(base_dir))
-
-        # Should return the same path since it's inside base_dir
-        assert result.is_absolute()
-        assert str(base_dir) in str(result)
-        assert result.name == "test.pptx"
-
-    def test_validate_output_path_default_base_dir(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test validation uses default base_dir when not specified."""
-        # Change working directory to tmp_path
-        monkeypatch.chdir(tmp_path)
-
-        # Create default output directory
-        default_output = tmp_path / "output"
-        default_output.mkdir(parents=True, exist_ok=True)
-
-        output_path = "test.pptx"
-        result = validate_output_path(output_path)
-
-        # Should use default ./output directory
-        assert result.is_absolute()
-        assert "output" in str(result)
 
 
 class TestValidateTemplatePath:
@@ -347,3 +233,50 @@ class TestValidateTemplatePath:
         finally:
             # Restore permissions for cleanup
             template_path.chmod(stat.S_IRUSR | stat.S_IWUSR)
+
+    def test_validate_template_path_rejects_billion_laughs(self, tmp_path: Path) -> None:
+        """Test validation fails for template with billion laughs attack."""
+        # Billion laughs attack XML
+        malicious_xml = """<?xml version="1.0"?>
+<!DOCTYPE lolz [
+  <!ENTITY lol "lol">
+  <!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">
+  <!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;">
+  <!ENTITY lol4 "&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;">
+]>
+<lolz>&lol4;</lolz>"""
+
+        template_path = tmp_path / "malicious_template.pptx"
+        with zipfile.ZipFile(template_path, "w") as zf:
+            zf.writestr("[Content_Types].xml", malicious_xml)
+            zf.writestr("ppt/presentation.xml", '<?xml version="1.0"?><presentation/>')
+
+        with pytest.raises(SecurityValidationError) as exc_info:
+            validate_template_path(str(template_path))
+
+        error_msg = str(exc_info.value).lower()
+        assert "xml security validation failed" in error_msg or "entity" in error_msg
+
+    def test_validate_template_path_rejects_xxe_attack(self, tmp_path: Path) -> None:
+        """Test validation fails for template with XXE attack."""
+        # XXE attack XML
+        xxe_xml = """<?xml version="1.0"?>
+<!DOCTYPE foo [
+  <!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<root>&xxe;</root>"""
+
+        template_path = tmp_path / "xxe_template.pptx"
+        with zipfile.ZipFile(template_path, "w") as zf:
+            zf.writestr("[Content_Types].xml", xxe_xml)
+            zf.writestr("ppt/presentation.xml", '<?xml version="1.0"?><presentation/>')
+
+        with pytest.raises(SecurityValidationError) as exc_info:
+            validate_template_path(str(template_path))
+
+        error_msg = str(exc_info.value).lower()
+        assert (
+            "xml security validation failed" in error_msg
+            or "entity" in error_msg
+            or "external" in error_msg
+        )

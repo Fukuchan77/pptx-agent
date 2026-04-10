@@ -212,10 +212,10 @@ def test_metadata_is_embedded(sample_story_en: str, template_path: str):
 
         # Should have some metadata set (at minimum, one of these)
         has_metadata = (
-            core_props.created is not None
-            or core_props.modified is not None
-            or core_props.comments is not None
-            or core_props.title is not None
+            core_props.created is not None  # type: ignore[reportUnnecessaryComparison]  # pyright: ignore[reportAttributeAccessIssue]
+            or core_props.modified is not None  # type: ignore[reportUnnecessaryComparison]  # pyright: ignore[reportAttributeAccessIssue]
+            or core_props.comments is not None  # type: ignore[reportUnnecessaryComparison]  # pyright: ignore[reportAttributeAccessIssue]
+            or core_props.title is not None  # type: ignore[reportUnnecessaryComparison]  # pyright: ignore[reportAttributeAccessIssue]
         )
 
         assert has_metadata, "Presentation should have metadata embedded"

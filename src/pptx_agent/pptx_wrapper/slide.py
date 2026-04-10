@@ -3,7 +3,7 @@
 import logging
 from typing import Any
 
-from pptx.chart.data import CategoryChartData, ChartData
+from pptx.chart.data import ChartData
 from pptx.enum.chart import XL_CHART_TYPE
 from pptx.slide import Slide
 from pptx.util import Length
@@ -151,7 +151,7 @@ class SlideWrapper:
         y: Length,
         cx: Length,
         cy: Length,
-        chart_data: ChartData | CategoryChartData,
+        chart_data: ChartData,
     ) -> Any:
         """Add a chart to the slide.
 
@@ -166,7 +166,7 @@ class SlideWrapper:
         Returns:
             Chart shape object
         """
-        return self._slide.shapes.add_chart(chart_type, x, y, cx, cy, chart_data)  # type: ignore[arg-type]
+        return self._slide.shapes.add_chart(chart_type, x, y, cx, cy, chart_data)
 
     def add_table(  # noqa: PLR0913
         self,

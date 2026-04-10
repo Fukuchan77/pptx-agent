@@ -22,6 +22,7 @@ from pptx_agent.schemas.template_manifest import TemplateManifest
 from pptx_agent.validators.content_validator import validate_content
 from pptx_agent.validators.input_validator import validate_and_sanitize
 from pptx_agent.validators.outline_validator import validate_outline
+from pptx_agent.validators.security import detect_prompt_injection
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +64,15 @@ def generate_presentation(
 
     # Stage 0: Validate and sanitize input
     input_text = validate_and_sanitize(input_text)
+
+    # Security: Detect and handle prompt injection attempts
+    security_result = detect_prompt_injection(input_text)
+    if security_result.has_threats:
+        logger.warning(
+            "Prompt injection patterns detected in input. Patterns: %s. Using sanitized version.",
+            security_result.detected_patterns,
+        )
+        input_text = security_result.sanitized_text
 
     # Stage 1: Analyze story
     start = time.time()

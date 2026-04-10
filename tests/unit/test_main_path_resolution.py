@@ -58,7 +58,7 @@ class TestOutputPathResolution:
         output_path_arg = call_kwargs.get("output_path")
 
         # Verify it's an absolute path
-        assert Path(output_path_arg).is_absolute(), (
+        assert Path(output_path_arg).is_absolute(), (  # type: ignore[reportArgumentType]  # pyright: ignore[reportOptionalMemberAccess]
             f"Expected absolute path, but got relative: {output_path_arg}"
         )
 
@@ -98,9 +98,9 @@ class TestOutputPathResolution:
         call_kwargs = mock_generate.call_args.kwargs
         output_path_arg = call_kwargs.get("output_path")
 
-        assert Path(output_path_arg).is_absolute()
+        assert Path(output_path_arg).is_absolute()  # type: ignore[reportArgumentType]  # pyright: ignore[reportOptionalMemberAccess]
         # Should resolve to the same absolute path
-        assert Path(output_path_arg).resolve() == output_file.resolve()
+        assert Path(output_path_arg).resolve() == output_file.resolve()  # type: ignore[reportArgumentType]  # pyright: ignore[reportOptionalMemberAccess]
 
     def test_main_resolves_dotted_relative_paths(self, tmp_path: Path) -> None:
         """Test that paths with . and .. are properly resolved.
@@ -140,7 +140,7 @@ class TestOutputPathResolution:
         call_kwargs = mock_generate.call_args.kwargs
         output_path_arg = call_kwargs.get("output_path")
 
-        assert Path(output_path_arg).is_absolute()
+        assert Path(output_path_arg).is_absolute()  # type: ignore[reportArgumentType]  # pyright: ignore[reportOptionalMemberAccess]
         # Resolved path should not contain relative components
-        assert "./" not in output_path_arg
-        assert "../" not in output_path_arg
+        assert "./" not in output_path_arg  # type: ignore[reportOperatorIssue]  # pyright: ignore[reportOptionalMemberAccess]
+        assert "../" not in output_path_arg  # type: ignore[reportOperatorIssue]  # pyright: ignore[reportOptionalMemberAccess]

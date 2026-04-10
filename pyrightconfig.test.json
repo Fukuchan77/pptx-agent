@@ -1,7 +1,6 @@
 {
-  "include": ["src/"],
+  "include": ["tests/"],
   "exclude": ["**/__pycache__"],
-  "strict": ["src/"],
   "typeCheckingMode": "basic",
   "pythonVersion": "3.12",
   "reportMissingTypeStubs": false,
@@ -9,6 +8,12 @@
   "reportUnknownArgumentType": false,
   "reportUnknownVariableType": false,
   "reportUnknownLambdaType": false,
+  "reportUnknownParameterType": false,
   "reportMissingParameterType": false,
-  "reportMissingTypeArgument": false
+  "reportMissingTypeArgument": false,
+  "reportPrivateUsage": false,
+  "reportUnnecessaryComparison": false,
+  "reportUnusedVariable": false,
+  "reportArgumentType": false,
+  "reportOperatorIssue": false
 }

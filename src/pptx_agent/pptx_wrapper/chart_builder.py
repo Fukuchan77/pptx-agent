@@ -5,9 +5,9 @@ using python-pptx chart capabilities.
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
-from pptx.chart.data import CategoryChartData
+from pptx.chart.data import CategoryChartData, ChartData
 from pptx.enum.chart import XL_CHART_TYPE
 from pptx.util import Inches
 
@@ -63,7 +63,8 @@ def add_chart_to_slide(slide: SlideWrapper, chart_block: ChartBlock) -> None:
     cy = Inches(5)
 
     # Add chart to slide using public method
-    chart_shape = slide.add_chart(chart_type, x, y, cx, cy, chart_data)
+    # Cast to ChartData since CategoryChartData is a subclass
+    chart_shape = slide.add_chart(chart_type, x, y, cx, cy, cast("ChartData", chart_data))
 
     # Set chart title if provided
     if chart_block.title:

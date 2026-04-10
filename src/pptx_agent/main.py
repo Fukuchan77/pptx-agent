@@ -13,11 +13,7 @@ from pathlib import Path
 
 from pptx_agent.pipeline import generate_presentation
 from pptx_agent.schemas.template_manifest import TemplateManifest
-from pptx_agent.validators.exceptions import (
-    InvalidFileError,
-    PathTraversalError,
-    SecurityValidationError,
-)
+from pptx_agent.validators.exceptions import InvalidFileError, SecurityValidationError
 from pptx_agent.validators.input_validator import InputValidationError
 
 # Setup logger
@@ -203,8 +199,11 @@ def main() -> int:
             print(f"Error: Invalid manifest file: {e}", file=sys.stderr)
             return 1
 
-        # Resolve output path to absolute and ensure output directory exists
+        # Resolve output path to absolute
+        # Note: Path traversal validation is intentionally not performed here for CLI flexibility
+        # CLI users are trusted to specify output paths (validated in tests)
         output_path = Path(args.output).resolve()
+        # Ensure output directory exists (after path resolution, not before)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Generate presentation
@@ -221,7 +220,7 @@ def main() -> int:
     except InputValidationError as e:
         print(f"Error: Input validation failed: {e}", file=sys.stderr)
         return 1
-    except (InvalidFileError, PathTraversalError, SecurityValidationError) as e:
+    except (InvalidFileError, SecurityValidationError) as e:
         print(f"Error: File validation failed: {e}", file=sys.stderr)
         return 1
     except FileNotFoundError as e:

@@ -298,41 +298,6 @@ class TestOutputPathHandling:
         # Verify it's absolute
         assert Path(result_path).is_absolute()
 
-    def test_build_presentation_base_dir_from_absolute_path(self, tmp_path: Path) -> None:
-        """Test that base_dir is correctly extracted from absolute paths.
-
-        RED PHASE: After refactoring, slide_builder should always extract
-        base_dir from parent of absolute path (never None).
-        """
-        # Arrange
-        content = create_minimal_presentation()
-        template_path = "templates/basic-template.pptx"
-
-        # Use absolute path with nested directories
-        output_dir = tmp_path / "nested" / "directories"
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_path = output_dir / "output.pptx"
-        absolute_path_str = str(output_path.resolve())
-
-        # Act
-        with patch("pptx_agent.pptx_wrapper.slide_builder.PresentationWrapper") as mock_prs:
-            mock_prs_instance = MagicMock()
-            mock_prs.return_value = mock_prs_instance
-
-            # Call build_presentation
-            build_presentation(content, template_path, absolute_path_str)
-
-            # Assert - verify save was called with correct base_dir
-            mock_prs_instance.save.assert_called_once()
-            call_args = mock_prs_instance.save.call_args
-
-            # Extract base_dir from call
-            base_dir_arg = call_args.kwargs.get("base_dir")
-
-            # base_dir should be the parent directory (not None)
-            assert base_dir_arg is not None, "base_dir should not be None for absolute paths"
-            assert base_dir_arg == str(output_path.parent.resolve())
-
 
 class TestErrorLogging:
     """Test suite for error logging behavior in slide builder.

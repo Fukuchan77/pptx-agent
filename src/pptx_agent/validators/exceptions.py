@@ -17,9 +17,5 @@ class CompressionRatioError(Exception):
     """Raised when compression ratio is suspicious (potential ZIP bomb)."""
 
 
-class PathTraversalError(Exception):
-    """Raised when path traversal attack is detected."""
-
-
 class SecurityValidationError(Exception):
     """Raised when security validation fails (symlinks, malicious XML, etc.)."""

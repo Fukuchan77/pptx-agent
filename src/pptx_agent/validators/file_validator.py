@@ -1,6 +1,5 @@
 """File validation module for PPTX files."""
 
-import os
 import re
 import zipfile
 from pathlib import Path
@@ -9,7 +8,6 @@ from pptx_agent.validators.exceptions import (
     CompressionRatioError,
     FileSizeLimitError,
     InvalidFileError,
-    PathTraversalError,
     SecurityValidationError,
 )
 
@@ -87,51 +85,6 @@ def validate_pptx_file(file_path: Path | str) -> None:
     except zipfile.BadZipFile as e:
         msg = f"File format validation failed: file is not a valid ZIP/PPTX file. Details: {e}"
         raise InvalidFileError(msg) from e
-
-
-def validate_output_path(output_path: str, base_dir: str | None = None) -> Path:
-    """Validate output path against path traversal attacks.
-
-    Args:
-        output_path: Path where file should be saved
-        base_dir: Base directory for output files (default: ./output or PPTX_OUTPUT_DIR env var)
-
-    Returns:
-        Resolved absolute Path object inside base_dir
-
-    Raises:
-        PathTraversalError: If path is outside base_dir or contains path traversal
-
-    """
-    # Determine base directory
-    if base_dir is None:
-        # Check environment variable first, fallback to default ./output
-        env_base_dir = os.environ.get("PPTX_OUTPUT_DIR")
-        base_dir = env_base_dir or str(Path.cwd() / "output")
-
-    # Convert to Path objects and resolve to absolute paths
-    base_path = Path(base_dir).resolve()
-    output = Path(output_path)
-
-    # If output is relative, resolve it relative to base_dir
-    if not output.is_absolute():
-        output = base_path / output
-
-    # Resolve to absolute path
-    output = output.resolve()
-
-    # Check if output is inside base_dir using is_relative_to (Python 3.9+) or string comparison
-    try:
-        # Check if output path is relative to base_path
-        output.relative_to(base_path)
-    except ValueError:
-        msg = (
-            f"Path traversal detected: output path '{output}' is outside allowed base "
-            f"directory '{base_path}'. Expected: path within base directory."
-        )
-        raise PathTraversalError(msg) from None
-
-    return output
 
 
 def validate_file_extension(file_path: Path | str) -> None:
@@ -298,6 +251,7 @@ def validate_template_path(template_path: str) -> Path:
     - Has .pptx extension
     - Does not contain symlinks
     - Exists and is a valid PPTX file
+    - Has no malicious XML patterns (XXE, Billion Laughs)
     - Is readable
 
     Args:
@@ -308,7 +262,8 @@ def validate_template_path(template_path: str) -> Path:
 
     Raises:
         InvalidFileError: If file does not exist, has wrong extension, or is not a valid PPTX
-        SecurityValidationError: If path contains symlinks
+        SecurityValidationError: If path contains symlinks or malicious XML patterns
+            (XXE, entity expansion)
         FileSizeLimitError: If file size exceeds limits
         CompressionRatioError: If compression ratio is suspicious
 
@@ -332,6 +287,9 @@ def validate_template_path(template_path: str) -> Path:
 
     # Validate PPTX file structure and size
     validate_pptx_file(path)
+
+    # Validate PPTX internal XML structure (XXE, Billion Laughs protection)
+    validate_pptx_structure(path)
 
     # Return absolute path
     return path.resolve()

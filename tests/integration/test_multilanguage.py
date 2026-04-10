@@ -190,6 +190,7 @@ def test_mixed_language_content_preserves_technical_terms(template_path: str):
         # Should also contain Japanese characters
         detected_lang = detect_language(all_text)
 
+        assert has_english_terms, "Mixed content should preserve English technical terms"
         assert detected_lang == "ja", "Mixed content should be detected as primarily Japanese"
         # Note: Technical terms preservation depends on content generation implementation
 

@@ -33,8 +33,8 @@ class TestAddSmartArtToSlide:
             ],
         )
 
-        # Act & Assert - Should raise ValueError (placeholder not found)
-        with pytest.raises(ValueError, match="SmartArt placeholder .* not found"):
+        # Act & Assert - Should raise NotImplementedError (SmartArt not yet implemented)
+        with pytest.raises(NotImplementedError, match="SmartArt manipulation requires"):
             add_smartart_to_slide(slide, smartart_block)
 
     def test_add_smartart_hierarchy_diagram(self):
@@ -56,8 +56,8 @@ class TestAddSmartArtToSlide:
             ],
         )
 
-        # Act & Assert - Should raise ValueError (placeholder not found)
-        with pytest.raises(ValueError, match="SmartArt placeholder .* not found"):
+        # Act & Assert - Should raise NotImplementedError (SmartArt not yet implemented)
+        with pytest.raises(NotImplementedError, match="SmartArt manipulation requires"):
             add_smartart_to_slide(slide, smartart_block)
 
     def test_add_smartart_calls_wrapper_with_correct_params(self):
@@ -111,7 +111,6 @@ class TestAddSmartArtToSlide:
             nodes=[{"text": "Node 1", "level": 0}],
         )
 
-        # Act & Assert - Should raise ValueError because placeholder not found
-        # (before it can raise NotImplementedError)
-        with pytest.raises(ValueError, match="SmartArt placeholder .* not found"):
+        # Act & Assert - Should raise NotImplementedError per FR-039 specification
+        with pytest.raises(NotImplementedError, match="SmartArt manipulation requires"):
             add_smartart_to_slide(slide, smartart_block)

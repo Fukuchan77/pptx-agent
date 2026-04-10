@@ -93,7 +93,7 @@ class TestCLIEntryPoint:
         # Assert
         assert exit_code != 0
 
-    def test_help_message_display(self, capsys: pytest.CaptureFixture) -> None:
+    def test_help_message_display(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test that help message is displayed correctly."""
         # Arrange
         test_args = ["main.py", "--help"]
@@ -220,7 +220,9 @@ class TestCLIEntryPoint:
         call_args = mock_generate.call_args
         assert call_args is not None  # Manifest parameter should be passed
 
-    def test_error_message_clarity(self, tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
+    def test_error_message_clarity(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         """Test that error messages are clear and user-friendly."""
         # Arrange - empty input file
         input_file = tmp_path / "input.txt"
@@ -280,7 +282,7 @@ class TestCLIEntryPoint:
         assert exit_code != 0
 
     def test_success_message_with_output_path(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """Test that success message includes output path."""
         # Arrange
@@ -343,7 +345,7 @@ class TestCLIEntryPoint:
         assert exit_code == 0
 
     def test_verbose_mode_shows_traceback(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """Test that verbose mode shows full traceback on exception."""
         # Arrange
@@ -380,7 +382,7 @@ class TestCLIEntryPoint:
         assert "RuntimeError" in error_output
 
     def test_normal_mode_shows_simple_error(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """Test that normal mode (without --verbose) shows simple error message."""
         # Arrange

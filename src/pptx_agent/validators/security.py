@@ -15,7 +15,7 @@ INJECTION_PATTERNS = [
     r"forget\s+(?:your\s+)?instructions?",
     r"system\s+prompt",
     r"you\s+are\s+now",
-    r"override",
+    r"override\s+(?:(?:previous|all|the|your)\s+)?(?:instructions?|rules?|prompts?|settings?)",
     r"new\s+instructions?",
 ]
 
@@ -97,4 +97,10 @@ def sanitize_input(text: str, patterns: list[str]) -> str:
     sanitized = re.sub(r"\s+", " ", sanitized)
 
     # Clean up leading/trailing whitespace and multiple periods/punctuation
-    return sanitized.strip()
+    sanitized = sanitized.strip()
+
+    # Capitalize first letter to maintain sentence structure after removal
+    if sanitized and sanitized[0].islower():
+        sanitized = sanitized[0].upper() + sanitized[1:]
+
+    return sanitized

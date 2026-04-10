@@ -17,7 +17,6 @@ from pptx_agent.pptx_wrapper import (
     ImageWrapper,
     PresentationWrapper,
     SlideWrapper,
-    SmartArtWrapper,
     TableWrapper,
 )
 from pptx_agent.validators.exceptions import InvalidFileError
@@ -86,7 +85,7 @@ class TestPresentationWrapper:
         wrapper.load_template(template_path)
 
         output_path = tmp_path / "output.pptx"
-        wrapper.save(str(output_path), base_dir=str(tmp_path))
+        wrapper.save(str(output_path))
 
         assert output_path.exists()
         assert output_path.stat().st_size > 0
@@ -252,7 +251,7 @@ class TestSlideWrapper:
             y=Inches(2),
             cx=Inches(8),
             cy=Inches(5),
-            chart_data=chart_data,
+            chart_data=chart_data,  # type: ignore[reportArgumentType]
         )
 
         # Should return a chart shape
@@ -614,35 +613,3 @@ class TestSmartArtWrapper:
         layouts = wrapper.get_layouts()
         slide = wrapper.add_slide(layouts[0])
         return wrapper, slide
-
-    @pytest.mark.skip("SmartArt XML manipulation - complex, may defer")
-    def test_populate_smartart_basic(
-        self, presentation_with_slide: tuple[PresentationWrapper, SlideWrapper]
-    ) -> None:
-        """Should populate SmartArt with node data."""
-        _, slide = presentation_with_slide
-
-        nodes = [
-            {"text": "Node 1", "level": 0},
-            {"text": "Node 2", "level": 1},
-            {"text": "Node 3", "level": 1},
-        ]
-
-        SmartArtWrapper.populate_smartart(slide._slide, placeholder_name="SmartArt", nodes=nodes)  # type: ignore[reportPrivateUsage]
-        assert True
-
-    @pytest.mark.skip("SmartArt XML manipulation - complex, may defer")
-    def test_populate_smartart_invalid_placeholder(
-        self, presentation_with_slide: tuple[PresentationWrapper, SlideWrapper]
-    ) -> None:
-        """Should raise error for invalid placeholder."""
-        _, slide = presentation_with_slide
-
-        nodes = [{"text": "Node 1", "level": 0}]
-
-        with pytest.raises((ValueError, AttributeError)):
-            SmartArtWrapper.populate_smartart(
-                slide._slide,  # type: ignore[reportPrivateUsage]
-                placeholder_name="NonexistentSmartArt",
-                nodes=nodes,
-            )

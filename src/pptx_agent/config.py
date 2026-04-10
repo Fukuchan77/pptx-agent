@@ -165,5 +165,5 @@ def get_config() -> Config:
         with _config_lock:
             # Double-check inside lock to prevent race condition
             if _config is None:
-                _config = Config()  # type: ignore[call-arg]
+                _config = Config.model_validate({})
     return _config
