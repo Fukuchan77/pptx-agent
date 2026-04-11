@@ -18,10 +18,27 @@ class TestAddSmartArtToSlide:
     def test_add_smartart_basic_process_diagram(self):
         """Test adding SmartArt to slide with basic process diagram."""
         # Arrange
+        from lxml import etree
+
+        # Create mock diagram data with 3 nodes (matching the test data)
+        dgm_ns = "http://schemas.openxmlformats.org/drawingml/2006/diagram"
+        a_ns = "http://schemas.openxmlformats.org/drawingml/2006/main"
+
+        diagram_data = etree.Element(f"{{{dgm_ns}}}dataModel")
+        for i in range(3):  # 3 nodes for the 3 steps
+            pt = etree.SubElement(diagram_data, f"{{{dgm_ns}}}pt", type="node")
+            t_elem = etree.SubElement(pt, f"{{{a_ns}}}t")
+            t_elem.text = f"Original Step {i + 1}"
+
+        # Create mock SmartArt shape
+        mock_smartart_shape = Mock()
+        mock_smartart_shape.name = "Content Placeholder"
+        mock_smartart_shape._diagram_data = diagram_data  # Test mode attribute
+
         mock_pptx_slide = Mock()
-        mock_pptx_slide.shapes = []  # Empty shapes list
+        mock_pptx_slide.shapes = [mock_smartart_shape]
         slide = Mock()
-        slide.slide = mock_pptx_slide  # SlideWrapper has public slide property
+        slide.slide = mock_pptx_slide
 
         smartart_block = SmartArtBlock(
             placeholder_name="Content Placeholder",
@@ -33,15 +50,43 @@ class TestAddSmartArtToSlide:
             ],
         )
 
-        # Act & Assert - Should raise NotImplementedError (SmartArt not yet implemented)
-        with pytest.raises(NotImplementedError, match="SmartArt manipulation requires"):
-            add_smartart_to_slide(slide, smartart_block)
+        # Act - Should successfully populate SmartArt
+        add_smartart_to_slide(slide, smartart_block)
+
+        # Assert - Verify text was updated in diagram data
+        pt_nodes = diagram_data.findall(f".//{{{dgm_ns}}}pt[@type='node']")
+        assert len(pt_nodes) == 3
+        texts = [pt.find(f".//{{{a_ns}}}t").text for pt in pt_nodes]
+        assert texts == ["Step 1", "Step 2", "Step 3"]
 
     def test_add_smartart_hierarchy_diagram(self):
         """Test adding SmartArt with hierarchical structure."""
         # Arrange
+        from lxml import etree
+
+        # Create mock diagram data with 4 nodes (matching the test data)
+        dgm_ns = "http://schemas.openxmlformats.org/drawingml/2006/diagram"
+        a_ns = "http://schemas.openxmlformats.org/drawingml/2006/main"
+
+        diagram_data = etree.Element(f"{{{dgm_ns}}}dataModel")
+        original_texts = [
+            "Original CEO",
+            "Original Manager 1",
+            "Original Manager 2",
+            "Original Employee 1",
+        ]
+        for i in range(4):  # 4 nodes for hierarchy
+            pt = etree.SubElement(diagram_data, f"{{{dgm_ns}}}pt", type="node")
+            t_elem = etree.SubElement(pt, f"{{{a_ns}}}t")
+            t_elem.text = original_texts[i]
+
+        # Create mock SmartArt shape
+        mock_smartart_shape = Mock()
+        mock_smartart_shape.name = "Content Placeholder"
+        mock_smartart_shape._diagram_data = diagram_data
+
         mock_pptx_slide = Mock()
-        mock_pptx_slide.shapes = []  # Empty shapes list
+        mock_pptx_slide.shapes = [mock_smartart_shape]
         slide = Mock()
         slide.slide = mock_pptx_slide
 
@@ -56,9 +101,14 @@ class TestAddSmartArtToSlide:
             ],
         )
 
-        # Act & Assert - Should raise NotImplementedError (SmartArt not yet implemented)
-        with pytest.raises(NotImplementedError, match="SmartArt manipulation requires"):
-            add_smartart_to_slide(slide, smartart_block)
+        # Act - Should successfully populate SmartArt
+        add_smartart_to_slide(slide, smartart_block)
+
+        # Assert - Verify text was updated in diagram data
+        pt_nodes = diagram_data.findall(f".//{{{dgm_ns}}}pt[@type='node']")
+        assert len(pt_nodes) == 4
+        texts = [pt.find(f".//{{{a_ns}}}t").text for pt in pt_nodes]
+        assert texts == ["CEO", "Manager 1", "Manager 2", "Employee 1"]
 
     def test_add_smartart_calls_wrapper_with_correct_params(self):
         """Test that smartart builder calls SmartArtWrapper with correct parameters."""
@@ -98,10 +148,26 @@ class TestAddSmartArtToSlide:
             )
 
     def test_add_smartart_not_implemented_warning(self):
-        """Test that SmartArt implementation acknowledges complexity limitations."""
+        """Test that SmartArt implementation works with single node."""
         # Arrange
+        from lxml import etree
+
+        # Create mock diagram data with 1 node
+        dgm_ns = "http://schemas.openxmlformats.org/drawingml/2006/diagram"
+        a_ns = "http://schemas.openxmlformats.org/drawingml/2006/main"
+
+        diagram_data = etree.Element(f"{{{dgm_ns}}}dataModel")
+        pt = etree.SubElement(diagram_data, f"{{{dgm_ns}}}pt", type="node")
+        t_elem = etree.SubElement(pt, f"{{{a_ns}}}t")
+        t_elem.text = "Original Node"
+
+        # Create mock SmartArt shape
+        mock_smartart_shape = Mock()
+        mock_smartart_shape.name = "Content Placeholder"
+        mock_smartart_shape._diagram_data = diagram_data
+
         mock_pptx_slide = Mock()
-        mock_pptx_slide.shapes = []  # Empty shapes causes ValueError
+        mock_pptx_slide.shapes = [mock_smartart_shape]
         slide = Mock()
         slide.slide = mock_pptx_slide
 
@@ -111,6 +177,10 @@ class TestAddSmartArtToSlide:
             nodes=[{"text": "Node 1", "level": 0}],
         )
 
-        # Act & Assert - Should raise NotImplementedError per FR-039 specification
-        with pytest.raises(NotImplementedError, match="SmartArt manipulation requires"):
-            add_smartart_to_slide(slide, smartart_block)
+        # Act - Should successfully populate SmartArt
+        add_smartart_to_slide(slide, smartart_block)
+
+        # Assert - Verify text was updated
+        pt_nodes = diagram_data.findall(f".//{{{dgm_ns}}}pt[@type='node']")
+        assert len(pt_nodes) == 1
+        assert pt_nodes[0].find(f".//{{{a_ns}}}t").text == "Node 1"

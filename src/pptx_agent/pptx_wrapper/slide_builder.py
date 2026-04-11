@@ -12,11 +12,12 @@ from pathlib import Path
 
 from pptx_agent.pptx_wrapper.chart_builder import add_chart_to_slide
 from pptx_agent.pptx_wrapper.presentation import PresentationWrapper
+from pptx_agent.pptx_wrapper.shapes import ImageWrapper
 from pptx_agent.pptx_wrapper.smartart_builder import add_smartart_to_slide
 from pptx_agent.pptx_wrapper.table_builder import add_table_to_slide
 from pptx_agent.schemas import PresentationSchema, SlideSchema
 from pptx_agent.schemas.text import TextBlock
-from pptx_agent.schemas.visual_assets import ChartBlock, SmartArtBlock, TableBlock
+from pptx_agent.schemas.visual_assets import ChartBlock, ImageBlock, SmartArtBlock, TableBlock
 from pptx_agent.validators.exceptions import InvalidFileError
 
 
@@ -34,6 +35,30 @@ def _get_version() -> str:
 
 # Logger for this module
 logger = logging.getLogger(__name__)
+
+
+# Supported image formats (FR-CG-072)
+SUPPORTED_IMAGE_FORMATS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".tif"}
+
+
+def _validate_image_format(image_path: str) -> None:
+    """Validate that image file has a supported format.
+
+    Args:
+        image_path: Path to image file
+
+    Raises:
+        ValueError: If image format is not supported
+    """
+    path = Path(image_path)
+    suffix = path.suffix.lower()
+
+    if suffix not in SUPPORTED_IMAGE_FORMATS:
+        msg = (
+            f"Unsupported image format: '{suffix}'. "
+            f"Supported formats: {', '.join(sorted(SUPPORTED_IMAGE_FORMATS))}"
+        )
+        raise ValueError(msg)
 
 
 def _embed_metadata(
@@ -148,7 +173,16 @@ def build_presentation(
             # Handle SmartArtBlock
             elif isinstance(block, SmartArtBlock):
                 add_smartart_to_slide(slide, block)
-            # Other block types (ImageBlock) are future enhancements
+            # Handle ImageBlock
+            elif isinstance(block, ImageBlock):
+                image_path = block.image_path or block.image_url or ""
+                _validate_image_format(image_path)
+                ImageWrapper.add_image(
+                    slide.slide,
+                    block.placeholder_name,
+                    image_path,
+                    block.alt_text,
+                )
 
     # Embed metadata before saving
     _embed_metadata(prs, content, template_path)
@@ -228,6 +262,15 @@ def rebuild_slide_with_layout(
             add_table_to_slide(slide, block)
         elif isinstance(block, SmartArtBlock):
             add_smartart_to_slide(slide, block)
+        elif isinstance(block, ImageBlock):
+            image_path = block.image_path or block.image_url or ""
+            _validate_image_format(image_path)
+            ImageWrapper.add_image(
+                slide.slide,
+                block.placeholder_name,
+                image_path,
+                block.alt_text,
+            )
 
     # Save the modified presentation
     prs.save(pptx_path)
