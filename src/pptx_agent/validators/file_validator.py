@@ -197,9 +197,8 @@ def validate_pptx_structure(file_path: Path | str) -> None:
     if isinstance(file_path, str):
         file_path = Path(file_path)
 
-    # 正規表現パターンによる悪意のあるXMLの検出
-    # 注意: これはCLIツール用の簡易的な検出です。
-    # Webサービス化する場合はdefusedxmlライブラリの使用を推奨します。
+    # Regex-based malicious XML detection (fast pre-check for CLI use).
+    # See docstring for security design rationale and future considerations.
     entity_pattern = re.compile(rb"<!ENTITY", re.IGNORECASE)
     doctype_pattern = re.compile(rb"<!DOCTYPE", re.IGNORECASE)
     system_pattern = re.compile(rb"SYSTEM\s+", re.IGNORECASE)
@@ -235,6 +234,10 @@ def validate_pptx_structure(file_path: Path | str) -> None:
                             "Expected: XML without external entity references."
                         )
                         raise SecurityValidationError(msg)
+
+                    # TODO: Integrate defusedxml-based validation (validate_xml_safety
+                    # from security.py) for defense-in-depth.  Tracked as a follow-up
+                    # task; see cross-validation report P1-#2 (2026-04-11).
 
     except zipfile.BadZipFile as e:
         msg = (
@@ -283,6 +286,8 @@ def validate_template_path(template_path: str) -> Path:
         raise InvalidFileError(msg)
 
     # Validate no symlinks
+    # This provides security against symlink attacks without being overly restrictive
+    # for CLI usage where users explicitly specify template paths
     validate_no_symlinks(path)
 
     # Validate PPTX file structure and size

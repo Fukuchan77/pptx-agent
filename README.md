@@ -9,6 +9,7 @@ An AI-powered tool that generates professional PowerPoint presentations from tex
 - **[User Guide](docs/user-guide.md)** - Complete installation, configuration, and usage instructions
 - **[Developer Guide](docs/developer-guide.md)** - Architecture, development workflow, and contribution guidelines
 - **[API Reference](docs/api-reference.md)** - Technical API documentation
+- **[Architecture Decision Records (ADR)](docs/adr/)** - Record of important architectural decisions and technical choices
 - **[Deployment Guide](docs/deployment.md)** - Production deployment instructions _(coming soon)_
 
 ## ✨ Features

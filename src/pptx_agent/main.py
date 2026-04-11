@@ -11,6 +11,7 @@ import sys
 import traceback
 from pathlib import Path
 
+from pptx_agent.config import validate_templates
 from pptx_agent.pipeline import generate_presentation
 from pptx_agent.schemas.template_manifest import TemplateManifest
 from pptx_agent.validators.exceptions import InvalidFileError, SecurityValidationError
@@ -91,6 +92,12 @@ Examples:
         "--verbose",
         action="store_true",
         help="Enable verbose output including full tracebacks",
+    )
+
+    parser.add_argument(
+        "--generate-templates",
+        action="store_true",
+        help="Automatically generate missing template files instead of raising an error",
     )
 
     return parser
@@ -174,6 +181,17 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
+        # Validate templates on startup
+        try:
+            validate_templates(auto_generate=args.generate_templates)
+        except FileNotFoundError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+        except RuntimeError as e:
+            # Handle template generation failures
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+
         # Validate and read input files
         try:
             input_text = _validate_and_read_input(args.input)

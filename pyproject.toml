@@ -9,6 +9,7 @@ dependencies = [
     "pydantic-ai-litellm>=0.2.3",
     "python-pptx>=1.0.2",
     "pydantic-settings>=2.13.0",
+    "defusedxml>=0.7.1",
 ]
 
 [project.optional-dependencies]
@@ -140,7 +141,7 @@ pythonpath = ["src"]
 
 [tool.coverage.run]
 source = ["src"]
-omit = ["tests/*", "**/__pycache__/*", "src/pptx_agent/config.py"]
+omit = ["tests/*", "**/__pycache__/*"]
 
 [tool.coverage.report]
 exclude_lines = [
