@@ -454,3 +454,38 @@ class TestConfigProviderFallback:
         )  # type: ignore[call-arg]
 
         assert config.enable_fallback is False
+
+    def test_openai_fallback_requires_openai_api_key(self) -> None:
+        """OpenAI fallback provider should require OPENAI_API_KEY."""
+        config = Config(
+            llm_provider="watsonx",
+            llm_model="test-model",
+            watsonx_url="https://us-south.ml.cloud.ibm.com",
+            watsonx_apikey="test-api-key",
+            watsonx_project_id="test-project-id",
+            openai_api_key="sk-test-openai-key",
+            environment="production",
+            enable_fallback=True,
+            fallback_provider="openai",
+            fallback_model="gpt-4",
+        )  # type: ignore[call-arg]
+
+        assert config.enable_fallback is True
+        assert config.fallback_provider == "openai"
+
+    def test_openai_fallback_disables_when_key_missing(self) -> None:
+        """OpenAI fallback should disable when OPENAI_API_KEY is missing."""
+        config = Config(
+            llm_provider="watsonx",
+            llm_model="test-model",
+            watsonx_url="https://us-south.ml.cloud.ibm.com",
+            watsonx_apikey="test-api-key",
+            watsonx_project_id="test-project-id",
+            environment="production",
+            enable_fallback=True,
+            fallback_provider="openai",
+            fallback_model="gpt-4",
+        )  # type: ignore[call-arg]
+
+        # Should disable fallback when openai_api_key is not provided
+        assert config.enable_fallback is False

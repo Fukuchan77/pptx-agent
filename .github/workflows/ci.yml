@@ -164,7 +164,7 @@ jobs:
         run: uv sync --all-extras
 
       - name: Run integration tests
-        run: uv run pytest tests/integration/ -v --tb=short
+        run: uv run pytest tests/integration/ -v --tb=short --no-cov
         env:
           # Use test/mock LLM provider for integration tests
           LLM_PROVIDER: openai

@@ -19,18 +19,20 @@ MIN_API_KEY_LENGTH = 10
 class Config(BaseSettings):
     """Application configuration from environment variables.
 
-    Supports two LLM providers:
+    Supports three LLM providers:
     - watsonx (dev environment)
     - anthropic (production environment)
+    - openai (OpenAI endpoint)
 
     Environment variables:
-        LLM_PROVIDER: 'watsonx' or 'anthropic'
+        LLM_PROVIDER: 'watsonx', 'anthropic', or 'openai'
         LLM_MODEL: Model name/ID
-        LLM_API_BASE: API base URL (for watsonx dev)
+        LLM_API_BASE: API base URL (for local endpoint)
         WATSONX_URL: Watsonx API URL
         WATSONX_APIKEY: Watsonx API key
         WATSONX_PROJECT_ID: Watsonx project ID
         ANTHROPIC_API_KEY: Anthropic API key (for Claude)
+        OPENAI_API_KEY: OpenAI API key
         ENVIRONMENT: 'development' or 'production' (default: development)
         MAX_RETRIES: Maximum HTTP retries (default: auto-set based on environment)
         REQUEST_TIMEOUT: Request timeout in seconds (default: auto-set based on environment)
@@ -44,7 +46,7 @@ class Config(BaseSettings):
     )
 
     # Common settings
-    llm_provider: Literal["watsonx", "anthropic"]
+    llm_provider: Literal["watsonx", "anthropic", "openai"]
     llm_model: str
     llm_api_base: str | None = None
 
@@ -81,7 +83,10 @@ class Config(BaseSettings):
     # Anthropic settings (required when provider=anthropic)
     anthropic_api_key: str | None = None
 
-    @field_validator("watsonx_apikey", "anthropic_api_key", mode="before")
+    # OpenAI settings (required when provider=openai and not using local endpoint)
+    openai_api_key: str | None = None
+
+    @field_validator("watsonx_apikey", "anthropic_api_key", "openai_api_key", mode="before")
     @classmethod
     def validate_api_key_not_empty(cls, v: str | None) -> str | None:
         """Validate that API keys have minimum length to prevent obviously invalid values.
@@ -95,10 +100,18 @@ class Config(BaseSettings):
         Raises:
             ValueError: If the API key is too short (less than MIN_API_KEY_LENGTH characters)
         """
-        if v is not None and len(v.strip()) < MIN_API_KEY_LENGTH:
-            msg = "API key appears to be invalid (too short)"
-            raise ValueError(msg)
-        return v.strip() if v is not None else None
+        if v is not None:
+            stripped = v.strip()
+            if len(stripped) < MIN_API_KEY_LENGTH:
+                msg = "API key appears to be invalid (too short)"
+                raise ValueError(msg)
+
+            placeholder_prefixes = ("your-", "sk-xxx", "placeholder")
+            if any(stripped.lower().startswith(p) for p in placeholder_prefixes):
+                msg = "API key appears to be a placeholder value — update .env with your actual key"
+                raise ValueError(msg)
+            return stripped
+        return None
 
     def model_post_init(self, __context: Any) -> None:
         """Validate provider-specific required fields and set environment-based defaults."""
@@ -120,6 +133,20 @@ class Config(BaseSettings):
             if self.fallback_model is None:
                 self.fallback_model = "claude-3-5-sonnet-20241022"
 
+        # Validate fallback configuration details
+        if self.enable_fallback and self.fallback_provider:
+            fallback_key_map = {
+                "anthropic": self.anthropic_api_key,
+                "openai": self.openai_api_key,
+            }
+            key = fallback_key_map.get(self.fallback_provider)
+            if key is None and self.fallback_provider != "watsonx":
+                logger.warning(
+                    "Fallback provider '%s' configured but API key is not set",
+                    self.fallback_provider,
+                )
+                self.enable_fallback = False
+
         # Validate provider-specific required fields
         if self.llm_provider == "watsonx":
             if not all([self.watsonx_url, self.watsonx_apikey, self.watsonx_project_id]):
@@ -137,6 +164,14 @@ class Config(BaseSettings):
                 self.llm_provider,
             )
             msg = "Required configuration for anthropic provider is incomplete"
+            raise ValueError(msg)
+        elif self.llm_provider == "openai" and not self.openai_api_key and not self.llm_api_base:
+            # For openai, require either the API key or a custom base URL (e.g. Ollama)
+            logger.warning(
+                "Configuration validation failed for provider: %s",
+                self.llm_provider,
+            )
+            msg = "Required configuration for openai provider is incomplete"
             raise ValueError(msg)
 
 

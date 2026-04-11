@@ -1,3 +1,5 @@
+[English](README.md) | [日本語](README_ja.md)
+
 # AI PowerPoint Presentation Generator
 
 An AI-powered tool that generates professional PowerPoint presentations from text or Markdown input using Large Language Models (LLMs).
@@ -53,12 +55,15 @@ cp .env.template .env
 
 The tool supports multiple LLM providers. Configure your preferred provider in `.env`:
 
-**Development (OpenAI/Claude via local endpoint):**
+**OpenAI (via local endpoint or API):**
 
 ```bash
 LLM_PROVIDER=openai
-LLM_MODEL=gpt-4
-LLM_API_BASE=http://localhost:11434/v1
+LLM_MODEL=gpt-4o
+# For OpenAI API:
+OPENAI_API_KEY=your-api-key
+# Or for local endpoint (e.g. Ollama):
+# LLM_API_BASE=http://localhost:11434/v1
 ```
 
 **Production (IBM watsonx.ai):**
@@ -84,12 +89,12 @@ Generate your first presentation in 3 steps:
 uv sync --all-extras
 
 # 2. Configure (add your API key to .env)
-echo "LLM_PROVIDER=anthropic" >> .env
-echo "ANTHROPIC_API_KEY=your-key-here" >> .env
+echo "LLM_PROVIDER=openai" >> .env
+echo "OPENAI_API_KEY=your-key-here" >> .env
 
 # 3. Generate
 uv run python -m pptx_agent.main \
-  --input examples/sample-input.txt \
+  --input examples/01-business-quarterly-review.txt \
   --template templates/basic-template.pptx \
   --output my-presentation.pptx
 ```
@@ -100,7 +105,7 @@ uv run python -m pptx_agent.main \
 
 ```bash
 uv run python -m pptx_agent.main \
-  --input input.txt \
+  --input examples/01-business-quarterly-review.txt \
   --template templates/basic-template.pptx \
   --output output.pptx
 ```
@@ -109,7 +114,7 @@ uv run python -m pptx_agent.main \
 
 ```bash
 uv run python -m pptx_agent.main \
-  --input content-ja.txt \
+  --input examples/03-python-programming-basics-ja.txt \
   --template templates/japanese-template.pptx \
   --output presentation-ja.pptx \
   --language ja
@@ -119,17 +124,17 @@ uv run python -m pptx_agent.main \
 
 ```bash
 uv run python -m pptx_agent.main \
-  --input proposal.md \
-  --template templates/corporate-template.pptx \
-  --manifest templates/corporate-manifest.json \
-  --output proposal.pptx
+  --input examples/01-business-quarterly-review.txt \
+  --template templates/basic-template.pptx \
+  --output proposal.pptx \
+  --manifest basic-manifest.json
 ```
 
 ### Verbose Mode (Debugging)
 
 ```bash
 uv run python -m pptx_agent.main \
-  --input input.txt \
+  --input examples/01-business-quarterly-review.txt \
   --template templates/basic-template.pptx \
   --output output.pptx \
   --verbose
@@ -267,4 +272,4 @@ We welcome contributions! Please see:
 
 - Built with [python-pptx](https://python-pptx.readthedocs.io/)
 - LLM integration via [Pydantic AI](https://ai.pydantic.dev/)
-- Uses [LiteLLM](https://litellm.ai/) for multi-provider support
+- Uses Pydantic AI's multi-provider support (OpenAI, Anthropic, etc.)

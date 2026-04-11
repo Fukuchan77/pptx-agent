@@ -1,3 +1,5 @@
+[English](user-guide.md) | [日本語](user-guide_ja.md)
+
 # AI PowerPoint Presentation Generator - User Guide
 
 ## Table of Contents
@@ -58,7 +60,7 @@ The AI PowerPoint Presentation Generator is a command-line tool that automatical
 3. Generate your first presentation:
    ```bash
    uv run python -m pptx_agent.main \
-     --input examples/sample-input.txt \
+     --input examples/01-business-quarterly-review.txt \
      --template templates/basic-template.pptx \
      --output my-presentation.pptx
    ```
@@ -160,7 +162,7 @@ ENVIRONMENT=production
 
 ```env
 LLM_PROVIDER=openai
-LLM_MODEL=gpt-4
+LLM_MODEL=gpt-4o
 LLM_API_BASE=http://localhost:11434/v1
 ENVIRONMENT=development
 ```
@@ -555,4 +557,11 @@ ANTHROPIC_API_KEY=your-actual-api-key-here
 
 ### Q: What about speaker notes?
 
-**A**: Speaker notes are generated automatically for every slide by default,
+**A**: Speaker notes are generated automatically for every slide by default, summarizing the key points of the slide content to assist the presenter.
+
+## Best Practices
+
+1. **Structuring Input**: Organize your input document with clear headings, bullet points, and distinct sections.
+2. **Template Validation**: Run your template through the template parser script once to ensure layouts are detected properly.
+3. **Review Extracted Stats**: Run in `--verbose` mode to see what the agent extracts before checking the final PPTX.
+4. **Iterative Refinement**: Provide the LLM with enough content context so that slide layouts can be correctly determined avoiding heavy overflow reduction.

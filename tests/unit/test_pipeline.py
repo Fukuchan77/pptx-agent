@@ -92,7 +92,7 @@ class TestGeneratePresentation:
             mock_analyze.assert_called_once_with(input_text)
             mock_gen_outline.assert_called_once_with(mock_story)
             mock_val_outline.assert_called_once_with(mock_outline, None)
-            mock_gen_content.assert_called_once_with(mock_outline)
+            mock_gen_content.assert_called_once_with(mock_outline, None)
             mock_val_content.assert_called_once_with(mock_content, mock_outline, None)
             mock_build.assert_called_once_with(mock_content, template_path, output_path)
 
@@ -135,6 +135,7 @@ class TestGeneratePresentation:
 
             # Assert
             assert result_path == output_path
+            mock_gen_content.assert_called_once_with(mock_outline, template_manifest)
             mock_val_outline.assert_called_once_with(mock_outline, template_manifest)
             mock_val_content.assert_called_once_with(mock_content, mock_outline, template_manifest)
 

@@ -210,7 +210,7 @@ print(f"Generated {len(content.slides)} slides")
 
 **Module**: `pptx_agent.agents.overflow_resolver`
 
-#### `resolve_overflow(slide: SlideContent, manifest: TemplateManifest, language: Literal["en", "ja"]) -> OverflowResolution`
+#### `resolve_overflow(slide: SlideContent, manifest: TemplateManifest, language: Literal["en", "ja"] | None = None) -> OverflowResolution`
 
 Analyzes text overflow and determines resolution strategy.
 
@@ -222,11 +222,12 @@ Analyzes text overflow and determines resolution strategy.
 
 **Returns**:
 
-- `OverflowResolution`: Resolution result containing:
+  - `strategy` (`OverflowStrategy`): Recommended strategy
   - `overflow_detected` (`bool`): Whether overflow was detected
   - `overflow_percentage` (`float`): Percentage of overflow
-  - `strategy` (`OverflowStrategy`): Recommended strategy
-  - `alternative_layout` (`str | None`): Alternative layout name if applicable
+  - `suggested_layout` (`str | None`): Alternative layout name if applicable
+  - `split_point` (`int | None`): Best character index to split at
+  - `target_length` (`int | None`): Target length for summarization
 
 **Example**:
 
@@ -287,7 +288,6 @@ Content for a single slide.
 
 **Validators**:
 
-- Title length: ≤60 characters
 - Slide number: ≥1
 
 ### PresentationSchema
@@ -300,6 +300,7 @@ Complete presentation schema.
 
 - `title` (`str`): Presentation title
 - `slides` (`list[SlideSchema]`): List of detailed slides
+- `metadata` (`dict[str, Any]`): Optional metadata
 
 ### SlideSchema
 
@@ -309,14 +310,10 @@ Detailed slide schema.
 
 **Fields**:
 
-- `slide_number` (`int`): Slide number
 - `layout_name` (`str`): Layout name
 - `title` (`str`): Slide title
-- `text_blocks` (`list[TextBlock]`): Text content blocks
-- `chart_block` (`ChartBlock | None`): Optional chart
-- `table_block` (`TableBlock | None`): Optional table
-- `smartart_block` (`SmartArtBlock | None`): Optional SmartArt
-- `notes` (`str`): Speaker notes
+- `content` (`list[ContentBlock]`): Content blocks (TextBlock, ImageBlock, ChartBlock, TableBlock, SmartArtBlock)
+- `notes` (`str | None`): Speaker notes
 
 ### TextBlock
 
@@ -327,8 +324,22 @@ Text content block.
 **Fields**:
 
 - `placeholder_name` (`str`): Target placeholder name
-- `content` (`str`): Text content
-- `bullet_points` (`list[str] | None`): Optional bullet points
+- `text` (`str`): Text content
+- `language` (`Literal["en", "ja"]`): Language code
+- `max_capacity` (`int | None`): Optional maximal char capacity
+
+### ImageBlock
+
+**Module**: `pptx_agent.schemas.visual_assets`
+
+Image content block.
+
+**Fields**:
+
+- `placeholder_name` (`str`): Target placeholder name
+- `image_url` (`str | None`): Image URL
+- `image_path` (`str | None`): Local image path
+- `alt_text` (`str`): Alternative text
 
 ### ChartBlock
 
@@ -372,7 +383,6 @@ Table specification.
 - `placeholder_name` (`str`): Target placeholder
 - `headers` (`list[str]`): Table headers
 - `rows` (`list[list[str]]`): Table data rows
-- `has_header_row` (`bool`): Whether first row is header
 
 **Example**:
 
@@ -385,8 +395,7 @@ table = TableBlock(
     rows=[
         ["Widget A", "$10", "100"],
         ["Widget B", "$15", "50"]
-    ],
-    has_header_row=True
+    ]
 )
 ```
 
@@ -399,8 +408,8 @@ SmartArt specification.
 **Fields**:
 
 - `placeholder_name` (`str`): Target placeholder
-- `layout_type` (`str`): SmartArt layout type
-- `nodes` (`list[str]`): Node text content
+- `diagram_type` (`str`): SmartArt layout type
+- `nodes` (`list[dict[str, Any]]`): Node data (text and level)
 
 ### TemplateManifest
 
@@ -431,16 +440,16 @@ print(f"Layouts: {[l.name for l in manifest.layouts]}")
 
 **Module**: `pptx_agent.validators.input_validator`
 
-#### `validate_and_sanitize(text: str, max_length: int = 30000, min_length: int = 10, log_level: str = "INFO") -> str`
+#### `validate_and_sanitize(text: str, min_length: int = 10, max_length: int = 30000, field_name: str = "text") -> str`
 
 Validates and sanitizes input text.
 
 **Parameters**:
 
 - `text` (`str`): Input text to validate
-- `max_length` (`int`): Maximum allowed length (default: 30000)
-- `min_length` (`int`): Minimum required length (default: 10)
-- `log_level` (`str`): Logging level (default: "INFO")
+- `min_length` (`int`): Minimum required length
+- `max_length` (`int`): Maximum allowed length
+- `field_name` (`str`): Name of field for error message
 
 **Returns**:
 
@@ -484,15 +493,15 @@ Validates outline against template constraints.
 
 **Module**: `pptx_agent.validators.content_validator`
 
-#### `validate_content(content: PresentationSchema, outline: PresentationOutline, manifest: TemplateManifest | None = None) -> PresentationSchema`
+#### `validate_content(content: PresentationSchema, outline: PresentationOutline | None = None, _template_manifest: TemplateManifest | None = None) -> PresentationSchema`
 
 Validates generated content against business rules.
 
 **Parameters**:
 
 - `content` (`PresentationSchema`): Content to validate
-- `outline` (`PresentationOutline`): Original outline
-- `manifest` (`TemplateManifest | None`): Optional template manifest
+- `outline` (`PresentationOutline | None`): Original outline
+- `_template_manifest` (`TemplateManifest | None`): Optional template manifest
 
 **Returns**:
 
@@ -539,4 +548,16 @@ Validates template path for security and validity.
 
 ### Security Validator
 
-**Module**: `pptx_agent.validators.
+**Module**: `pptx_agent.validators.security`
+
+#### `detect_prompt_injection(text: str) -> SecurityValidationResult`
+
+Detect prompt injection attempts in input text.
+
+**Parameters**:
+
+- `text` (`str`): Input text to check
+
+**Returns**:
+
+- `SecurityValidationResult`: Detection results and sanitized text

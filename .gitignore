@@ -67,6 +67,7 @@ site/
 # Project specific
 *.pptx
 !templates/*.pptx
+!tests/fixtures/*.pptx
 .env.local
 .env.*.local
 

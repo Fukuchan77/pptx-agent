@@ -304,8 +304,8 @@ from pptx_agent.template_parser.parser import TemplateParser
 
 @lru_cache(maxsize=10)
 def get_cached_manifest(template_path: str):
-    parser = TemplateParser(template_path)
-    return parser.build_manifest()
+    parser = TemplateParser()
+    return parser.parse_template(template_path)
 ```
 
 ### Concurrency
@@ -353,7 +353,13 @@ For high-volume scenarios:
 
    @app.task
    def generate_async(input_text, template_path, output_path):
-       return generate_presentation(input_text, template_path, output_path)
+       return generate_presentation(
+           input_text=input_text,
+           template_path=template_path,
+           output_path=output_path,
+           template_manifest=None,
+           output_language="en",
+       )
    ```
 
 3. **Load Balancing**:
@@ -525,6 +531,4 @@ ls -lh /tmp/test-output.pptx
 
 # 4. Check logs
 tail -f logs/app.log
-
-#
 ```

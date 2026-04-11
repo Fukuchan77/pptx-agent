@@ -4,7 +4,11 @@ This module provides functionality to parse PPTX templates and extract
 information about layouts, placeholders, and their characteristics.
 """
 
+import argparse
+import json
 import logging
+import sys
+from pathlib import Path
 from typing import Any, ClassVar
 
 from pptx import Presentation
@@ -220,6 +224,46 @@ class TemplateParser:
             if hasattr(shape, "element") and hasattr(shape.element, "tag"):
                 return shape.element.tag.endswith("}graphicFrame")
             return False  # noqa: TRY300
-        except (AttributeError, Exception):
-            # If we can't determine, assume it's not SmartArt
+        except Exception:
             return False
+
+
+def main() -> None:
+    """CLI entry point for TemplateParser."""
+    parser = argparse.ArgumentParser(
+        description="Extract layout and placeholder metadata from a PowerPoint template."
+    )
+    parser.add_argument(
+        "--template",
+        required=True,
+        help="Path to the input .pptx template file",
+    )
+    parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to the output JSON manifest file",
+    )
+
+    args = parser.parse_args()
+
+    try:
+        template_parser = TemplateParser()
+        metadata = template_parser.parse_template(args.template)
+
+        # Serialize to JSON and write to output file
+        output_path = Path(args.output)
+        # Using parents=True as a convenience for CLI users to auto-create output directories
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with output_path.open("w", encoding="utf-8") as f:
+            json.dump(metadata.model_dump(), f, indent=2, ensure_ascii=False)
+
+        logger.info("Successfully generated template manifest at: %s", args.output)
+
+    except Exception:
+        logger.exception("Error parsing template")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

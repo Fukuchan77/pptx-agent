@@ -99,7 +99,7 @@ def generate_presentation(
 
     # Stage 4: Generate content
     start = time.time()
-    content = generate_content(validated_outline)
+    content = generate_content(validated_outline, template_manifest)
     duration = time.time() - start
     logger.info("Stage: Content Generation completed in %.2fs", duration)
 

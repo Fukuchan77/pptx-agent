@@ -174,6 +174,7 @@ pptx-agent/
 │   │   ├── text_handler.py   # Text fitting
 │   │   ├── chart_builder.py  # Chart creation
 │   │   ├── table_builder.py  # Table creation
+│   │   ├── smartart.py       # SmartArt processing
 │   │   ├── smartart_builder.py   # SmartArt manipulation
 │   │   ├── shapes.py         # Shape wrappers
 │   │   ├── placeholder_ops.py    # Placeholder operations
@@ -473,4 +474,4 @@ mise run test-cov
 3. **Implementation**: Write minimal code to pass tests
 4. **Validation**: Add validators if needed
 5. **Integration**: Wire into pipeline
-   6
+6. **Documentation**: Update API reference and relevant guides
