@@ -102,14 +102,21 @@ ignore = [
     "PLR0912", # Too many branches (tests can be complex)
     "PLR0913", # Too many arguments (test fixtures)
     "S110",    # try-except-pass (acceptable in tests)
+    "N806",    # Variable in function should be lowercase (allow uppercase for mock constants)
+    "E501",    # Line too long (acceptable for test function names and long mock assertions)
+    "ASYNC240", # Async Path operations (acceptable in tests)
+    "SIM102",  # Nested if statements (acceptable in test helper functions)
 ]
 "src/pptx_agent/config.py" = ["PLW0603", "PYI063", "ANN001"]  # Global singleton, pydantic hooks
-"src/pptx_agent/main.py" = ["T201", "PLR0911"]  # CLI uses print, many error returns
+"src/pptx_agent/main.py" = ["T201", "PLR0911", "PLR0912"]  # CLI uses print, many error returns, complex routing
+"src/pptx_agent/pipeline.py" = ["PLR0913"]  # Core pipeline needs many arguments
+"src/pptx_agent/agents/*.py" = ["ARG001"]  # Unused args like use_llm or manifest required for API parity
 "src/pptx_agent/pptx_wrapper/shapes.py" = ["SLF001", "S110", "SIM105"]  # Private XML access, defensive error handling
 "src/pptx_agent/pptx_wrapper/slide.py" = ["PLR0912", "S110"]  # Complex placeholder matching logic
-"src/pptx_agent/pptx_wrapper/smartart.py" = ["ARG004", "SIM102", "TRY301", "B904"]  # NotImplementedError stub
+"src/pptx_agent/pptx_wrapper/smartart.py" = ["ARG004", "SIM102", "TRY301", "B904", "PLR0912", "PLR0915", "SLF001"]  # NotImplementedError stub, complex XML parsing
 "src/pptx_agent/template_parser/parser.py" = ["ANN001"]  # python-pptx types not annotatable
 "src/pptx_agent/validators.py" = ["ARG001"]  # Future expansion placeholder
+"src/pptx_agent/validators/*.py" = ["ARG001", "TD", "FIX", "PLR0911", "PLR0912"]  # Security module complexity, TODOs
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

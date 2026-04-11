@@ -72,7 +72,8 @@ def test_analyze_story_function_exists():
     assert callable(analyze_story)
 
 
-def test_analyze_story_with_english_text():
+@pytest.mark.asyncio
+async def test_analyze_story_with_english_text():
     """Test analyze_story with English text input."""
     text = """
     Introduction to Machine Learning
@@ -86,7 +87,7 @@ def test_analyze_story_with_english_text():
     reinforcement learning.
     """
 
-    result = analyze_story(text)
+    result = await analyze_story(text, use_llm=False)
 
     assert isinstance(result, StoryAnalysis)
     assert result.language == "en"
@@ -96,7 +97,8 @@ def test_analyze_story_with_english_text():
     assert len(result.tone) > 0
 
 
-def test_analyze_story_with_japanese_text():
+@pytest.mark.asyncio
+async def test_analyze_story_with_japanese_text():
     """Test analyze_story with Japanese text input."""
     text = """
     機械学習入門
@@ -108,7 +110,7 @@ def test_analyze_story_with_japanese_text():
     重要な概念には、教師あり学習、教師なし学習、強化学習が含まれます。
     """
 
-    result = analyze_story(text)
+    result = await analyze_story(text, use_llm=False)
 
     assert isinstance(result, StoryAnalysis)
     assert result.language == "ja"
@@ -118,7 +120,8 @@ def test_analyze_story_with_japanese_text():
     assert len(result.tone) > 0
 
 
-def test_analyze_story_with_markdown_format():
+@pytest.mark.asyncio
+async def test_analyze_story_with_markdown_format():
     """Test analyze_story with Markdown formatted text."""
     text = """
     # Project Overview
@@ -135,14 +138,15 @@ def test_analyze_story_with_markdown_format():
     *Business stakeholders* and technical teams
     """
 
-    result = analyze_story(text)
+    result = await analyze_story(text, use_llm=False)
 
     assert isinstance(result, StoryAnalysis)
     assert result.language == "en"
     assert "project" in result.topic.lower() or "customer" in result.topic.lower()
 
 
-def test_analyze_story_with_empty_input():
+@pytest.mark.asyncio
+async def test_analyze_story_with_empty_input():
     """Test analyze_story with empty input.
 
     Note: This tests the defensive validation in analyze_story().
@@ -150,12 +154,13 @@ def test_analyze_story_with_empty_input():
     but analyze_story() maintains its own check as a defensive measure.
     """
     with pytest.raises(InputValidationError, match=r"(?i)(empty|blank)") as exc_info:
-        analyze_story("")
+        await analyze_story("", use_llm=False)
 
     assert "empty" in str(exc_info.value).lower() or "blank" in str(exc_info.value).lower()
 
 
-def test_analyze_story_with_whitespace_only():
+@pytest.mark.asyncio
+async def test_analyze_story_with_whitespace_only():
     """Test analyze_story with whitespace-only input.
 
     Note: This tests the defensive validation in analyze_story().
@@ -163,22 +168,24 @@ def test_analyze_story_with_whitespace_only():
     but analyze_story() maintains its own check as a defensive measure.
     """
     with pytest.raises(InputValidationError, match=r"(?i)(empty|blank)") as exc_info:
-        analyze_story("   \n\t  ")
+        await analyze_story("   \n\t  ", use_llm=False)
 
     assert "empty" in str(exc_info.value).lower() or "blank" in str(exc_info.value).lower()
 
 
-def test_analyze_story_with_very_short_text():
+@pytest.mark.asyncio
+async def test_analyze_story_with_very_short_text():
     """Test analyze_story with very short text (edge case)."""
     text = "Sales report"
 
-    result = analyze_story(text)
+    result = await analyze_story(text, use_llm=False)
 
     assert isinstance(result, StoryAnalysis)
     assert len(result.topic) > 0
 
 
-def test_analyze_story_with_very_long_text():
+@pytest.mark.asyncio
+async def test_analyze_story_with_very_long_text():
     """Test analyze_story with very long text (>10000 chars)."""
     # Create a long text by repeating content
     base_text = """
@@ -188,13 +195,14 @@ def test_analyze_story_with_very_long_text():
     """
     long_text = base_text * 100  # Creates text > 10000 chars
 
-    result = analyze_story(long_text)
+    result = await analyze_story(long_text, use_llm=False)
 
     assert isinstance(result, StoryAnalysis)
     assert result.language == "en"
 
 
-def test_analyze_story_detects_tone_formal():
+@pytest.mark.asyncio
+async def test_analyze_story_detects_tone_formal():
     """Test that analyze_story can detect formal tone."""
     text = """
     Quarterly Financial Report
@@ -204,13 +212,14 @@ def test_analyze_story_detects_tone_formal():
     Stakeholders are advised to review the detailed findings presented herein.
     """
 
-    result = analyze_story(text)
+    result = await analyze_story(text, use_llm=False)
 
     # Tone should be detected as formal/professional
     assert "formal" in result.tone.lower() or "professional" in result.tone.lower()
 
 
-def test_analyze_story_detects_tone_casual():
+@pytest.mark.asyncio
+async def test_analyze_story_detects_tone_casual():
     """Test that analyze_story can detect casual tone."""
     text = """
     Hey Team! Let's Talk About Our Awesome Project
@@ -220,7 +229,7 @@ def test_analyze_story_detects_tone_casual():
     Can't wait to show you what we've built!
     """
 
-    result = analyze_story(text)
+    result = await analyze_story(text, use_llm=False)
 
     # Tone should be detected as casual/informal
     assert (
@@ -230,7 +239,8 @@ def test_analyze_story_detects_tone_casual():
     )
 
 
-def test_analyze_story_with_mixed_language_defaults_to_dominant():
+@pytest.mark.asyncio
+async def test_analyze_story_with_mixed_language_defaults_to_dominant():
     """Test analyze_story with mixed English and Japanese text."""
     # Text with both English and Japanese, but mostly English
     text = """
@@ -241,13 +251,14 @@ def test_analyze_story_with_mixed_language_defaults_to_dominant():
     This presentation covers the fundamentals of AI technology.
     """
 
-    result = analyze_story(text)
+    result = await analyze_story(text, use_llm=False)
 
     # Should detect dominant language (English in this case)
     assert result.language == "en"
 
 
-def test_analyze_story_extracts_target_audience():
+@pytest.mark.asyncio
+async def test_analyze_story_extracts_target_audience():
     """Test that analyze_story extracts target audience from context."""
     text = """
     Beginner's Guide to Python Programming
@@ -257,7 +268,7 @@ def test_analyze_story_extracts_target_audience():
     Perfect for students and career changers looking to enter tech.
     """
 
-    result = analyze_story(text)
+    result = await analyze_story(text, use_llm=False)
 
     # Should identify beginners/students as target audience
     assert (
@@ -265,7 +276,8 @@ def test_analyze_story_extracts_target_audience():
     )
 
 
-def test_analyze_story_extracts_key_message():
+@pytest.mark.asyncio
+async def test_analyze_story_extracts_key_message():
     """Test that analyze_story extracts the key message."""
     text = """
     Digital Transformation Success Story
@@ -275,7 +287,7 @@ def test_analyze_story_extracts_key_message():
     The key takeaway: investing in modern technology pays off.
     """
 
-    result = analyze_story(text)
+    result = await analyze_story(text, use_llm=False)
 
     # Key message should relate to cost reduction, performance, or technology investment
     key_msg_lower = result.key_message.lower()
@@ -312,7 +324,8 @@ def test_story_analysis_schema_suggested_structure_optional():
     assert analysis.suggested_structure is None or analysis.suggested_structure == ""
 
 
-def test_analyze_story_preserves_uppercase_in_key_message():
+@pytest.mark.asyncio
+async def test_analyze_story_preserves_uppercase_in_key_message():
     """Test that uppercase letters (AI, API, CEO, etc.) are preserved in key message extraction.
 
     Regression test for bug where sentence_lower.split() loses original case information.
@@ -324,7 +337,7 @@ def test_analyze_story_preserves_uppercase_in_key_message():
     Key message: The AI API enables seamless integration. The CEO announced the new SDK release.
     """
 
-    result = analyze_story(text)
+    result = await analyze_story(text, use_llm=False)
 
     # The key message should preserve uppercase acronyms
     expected = "AI API"
@@ -333,7 +346,8 @@ def test_analyze_story_preserves_uppercase_in_key_message():
     )
 
 
-def test_analyze_story_preserves_multiple_uppercase_words():
+@pytest.mark.asyncio
+async def test_analyze_story_preserves_multiple_uppercase_words():
     """Test that multiple uppercase words are preserved in indicator-based extraction."""
     text = """
     Product Launch
@@ -341,7 +355,7 @@ def test_analyze_story_preserves_multiple_uppercase_words():
     The key takeaway: Our new REST API supports JSON and XML formats for IoT devices.
     """
 
-    result = analyze_story(text)
+    result = await analyze_story(text, use_llm=False)
 
     # Should preserve REST, API, JSON, XML, IoT
     key_msg = result.key_message
@@ -352,7 +366,8 @@ def test_analyze_story_preserves_multiple_uppercase_words():
     assert "IoT" in key_msg, f"Expected 'IoT' preserved, got: {key_msg}"
 
 
-def test_analyze_story_preserves_case_with_conclusion_indicator():
+@pytest.mark.asyncio
+async def test_analyze_story_preserves_case_with_conclusion_indicator():
     """Test case preservation with 'conclusion' indicator."""
     text = """
     Research Summary
@@ -360,7 +375,7 @@ def test_analyze_story_preserves_case_with_conclusion_indicator():
     Conclusion: The ML model achieved 95% accuracy on the MNIST dataset using CNN architecture.
     """
 
-    result = analyze_story(text)
+    result = await analyze_story(text, use_llm=False)
 
     # Should preserve ML, MNIST, CNN
     key_msg = result.key_message
@@ -369,7 +384,8 @@ def test_analyze_story_preserves_case_with_conclusion_indicator():
     assert "CNN" in key_msg, f"Expected 'CNN' preserved, got: {key_msg}"
 
 
-def test_target_audience_no_false_positive_for_all_substring():
+@pytest.mark.asyncio
+async def test_target_audience_no_false_positive_for_all_substring():
     """Test 'all' substring in words like 'install', 'wall' doesn't trigger false match.
 
     RED Phase: This test documents the false positive behavior.
@@ -381,19 +397,20 @@ def test_target_audience_no_false_positive_for_all_substring():
     # These should all return "General audience" as default (not via false match)
     # After fix: Will still return "General audience" but via default path, not keyword match
     text_install = "Please install the software on your computer."
-    result = analyze_story(text_install)
+    result = await analyze_story(text_install, use_llm=False)
     assert result.target_audience.lower() == "general audience"
 
     text_wall = "The wall needs repainting this month."
-    result2 = analyze_story(text_wall)
+    result2 = await analyze_story(text_wall, use_llm=False)
     assert result2.target_audience.lower() == "general audience"
 
     text_finally = "Finally we conclude this report."
-    result3 = analyze_story(text_finally)
+    result3 = await analyze_story(text_finally, use_llm=False)
     assert result3.target_audience.lower() == "general audience"
 
 
-def test_target_audience_no_false_positive_for_intro_substring():
+@pytest.mark.asyncio
+async def test_target_audience_no_false_positive_for_intro_substring():
     """Test 'intro' substring in 'introduce', 'introducing' doesn't trigger false match.
 
     RED Phase: This test exposes the bug where "intro" in text_lower causes
@@ -407,7 +424,7 @@ def test_target_audience_no_false_positive_for_intro_substring():
     # Currently: returns "Beginner audience" because "intro" in "introduce" matches
 
     text_introduce = "We introduce the new feature today."
-    result = analyze_story(text_introduce)
+    result = await analyze_story(text_introduce, use_llm=False)
     # Should NOT be "Beginner audience" after fix
     assert "beginner" not in result.target_audience.lower(), (
         f"FALSE POSITIVE BUG: 'introduce' incorrectly matched 'intro', "
@@ -415,7 +432,7 @@ def test_target_audience_no_false_positive_for_intro_substring():
     )
 
     text_introducing = "Introducing our new platform this week."
-    result2 = analyze_story(text_introducing)
+    result2 = await analyze_story(text_introducing, use_llm=False)
     # Should NOT be "Beginner audience" after fix
     assert "beginner" not in result2.target_audience.lower(), (
         f"FALSE POSITIVE BUG: 'introducing' incorrectly matched 'intro', "
@@ -423,45 +440,48 @@ def test_target_audience_no_false_positive_for_intro_substring():
     )
 
 
-def test_target_audience_correct_match_for_all():
+@pytest.mark.asyncio
+async def test_target_audience_correct_match_for_all():
     """Test that legitimate 'all' and 'everyone' keywords are correctly detected.
 
     This ensures our fix doesn't break valid matches.
     """
     text_all = "This presentation is for all users in the organization."
-    result_all = analyze_story(text_all)
+    result_all = await analyze_story(text_all, use_llm=False)
     assert "general" in result_all.target_audience.lower(), (
         f"'for all users' should match general audience, got: {result_all.target_audience}"
     )
 
     text_everyone = "Everyone can benefit from this training."
-    result_everyone = analyze_story(text_everyone)
+    result_everyone = await analyze_story(text_everyone, use_llm=False)
     assert "general" in result_everyone.target_audience.lower(), (
         f"'everyone' should match general audience, got: {result_everyone.target_audience}"
     )
 
 
-def test_target_audience_correct_match_for_intro():
+@pytest.mark.asyncio
+async def test_target_audience_correct_match_for_intro():
     """Test that legitimate 'intro' keyword is correctly detected.
 
     This ensures our fix doesn't break valid matches.
     """
     text_intro = "This is an intro level course."
-    result = analyze_story(text_intro)
+    result = await analyze_story(text_intro, use_llm=False)
     # Should match "beginner" because "intro" is a valid keyword in the beginner list
     assert "beginner" in result.target_audience.lower(), (
         f"'intro level' should match beginner audience, got: {result.target_audience}"
     )
 
     text_introduction = "This introduction covers the basics."
-    result2 = analyze_story(text_introduction)
+    result2 = await analyze_story(text_introduction, use_llm=False)
     # "introduction" is a valid keyword in the beginner list
     assert "beginner" in result2.target_audience.lower(), (
         f"'introduction' should match beginner audience, got: {result2.target_audience}"
     )
 
 
-def test_target_audience_no_false_positive_for_expert_substring():
+@pytest.mark.asyncio
+async def test_target_audience_no_false_positive_for_expert_substring():
     """Test 'expert' substring in 'experiment' doesn't trigger false match.
 
     RED Phase: This test exposes the bug where "expert" in text causes
@@ -471,7 +491,7 @@ def test_target_audience_no_false_positive_for_expert_substring():
     After fix: should return "General audience" as default.
     """
     text_experiment = "We conducted an experiment to test the hypothesis."
-    result = analyze_story(text_experiment)
+    result = await analyze_story(text_experiment, use_llm=False)
     # Should NOT be "Advanced audience" after fix
     assert "advanced" not in result.target_audience.lower(), (
         f"FALSE POSITIVE BUG: 'experiment' incorrectly matched 'expert', "
@@ -482,20 +502,21 @@ def test_target_audience_no_false_positive_for_expert_substring():
     )
 
 
-def test_target_audience_correct_match_for_expert():
+@pytest.mark.asyncio
+async def test_target_audience_correct_match_for_expert():
     """Test that legitimate 'expert' keyword is correctly detected.
 
     This ensures our fix doesn't break valid matches.
     """
     text_expert = "This course is designed for expert developers."
-    result = analyze_story(text_expert)
+    result = await analyze_story(text_expert, use_llm=False)
     # Should match "advanced" because "expert" is a valid keyword
     assert "advanced" in result.target_audience.lower(), (
         f"'expert' should match advanced audience, got: {result.target_audience}"
     )
 
     text_experienced = "For experienced professionals in the field."
-    result2 = analyze_story(text_experienced)
+    result2 = await analyze_story(text_experienced, use_llm=False)
     # "experienced" is also in the advanced keyword list
     assert "advanced" in result2.target_audience.lower(), (
         f"'experienced' should match advanced audience, got: {result2.target_audience}"

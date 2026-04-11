@@ -64,12 +64,12 @@ class SmartArtWrapper:
         # Check for test mode first: if shape has _diagram_data, use it directly
         # This allows tests to bypass the complex relationship navigation
         if hasattr(smartart_shape, "_diagram_data"):
-            diagram_data = smartart_shape._diagram_data
+            diagram_data = smartart_shape._diagram_data  # type: ignore[attr-defined]
             logger.debug("Using direct diagram data access (test mode)")
         else:
             # Production mode: Navigate through relationships to get diagram data
             # Access the underlying XML element
-            shape_elem = smartart_shape._element
+            shape_elem = smartart_shape._element  # type: ignore[attr-defined]
 
             # Find the graphicFrame element (SmartArt is represented as a graphicFrame)
             graphic_frame = shape_elem
@@ -113,7 +113,7 @@ class SmartArtWrapper:
                     raise ValueError(msg)
 
                 diagram_part = part_rels[data_rel_id].target_part
-                diagram_data = diagram_part._element
+                diagram_data = diagram_part._element  # type: ignore
 
             except (AttributeError, KeyError) as e:
                 # If we can't navigate the relationships, raise error

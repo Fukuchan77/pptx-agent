@@ -1,3 +1,4 @@
+# pyright: ignore[reportAttributeAccessIssue, reportUnknownParameterType, reportUnknownMemberType, reportMissingParameterType, reportUnusedVariable]
 """
 Unit tests for template validation script.
 
@@ -16,7 +17,9 @@ import pytest
 class TestTemplateValidationScript:
     """Tests for template validation and manual creation instructions."""
 
-    def test_generate_data_template_detects_missing_file(self, tmp_path, caplog):
+    def test_generate_data_template_detects_missing_file(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Test that script detects when data-template.pptx doesn't exist."""
         from scripts.generate_templates import generate_data_template
 
@@ -28,7 +31,9 @@ class TestTemplateValidationScript:
         assert "data-template.pptx does NOT exist" in caplog.text
         assert "MANUAL ACTION REQUIRED" in caplog.text
 
-    def test_generate_smartart_template_detects_missing_file(self, tmp_path, caplog):
+    def test_generate_smartart_template_detects_missing_file(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Test that script detects when smartart-template.pptx doesn't exist."""
         from scripts.generate_templates import generate_smartart_template
 
@@ -40,7 +45,7 @@ class TestTemplateValidationScript:
         assert "smartart-template.pptx does NOT exist" in caplog.text
         assert "MANUAL ACTION REQUIRED" in caplog.text
 
-    def test_validation_uses_existing_templates(self, tmp_path):
+    def test_validation_uses_existing_templates(self, tmp_path: Path) -> None:
         """Test that script can validate existing templates."""
         # Copy existing basic-template.pptx to test location
         import shutil
@@ -60,7 +65,9 @@ class TestTemplateValidationScript:
 class TestManualCreationDocumentation:
     """Tests that verify manual creation instructions are clear."""
 
-    def test_data_template_instructions_include_required_layouts(self, tmp_path, caplog):
+    def test_data_template_instructions_include_required_layouts(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Test that manual creation instructions list all required layouts."""
         from scripts.generate_templates import generate_data_template
 
@@ -73,7 +80,9 @@ class TestManualCreationDocumentation:
         assert "Data Analysis" in caplog.text
         assert "Two Column Data" in caplog.text
 
-    def test_smartart_template_instructions_include_required_layouts(self, tmp_path, caplog):
+    def test_smartart_template_instructions_include_required_layouts(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Test that manual creation instructions list all required SmartArt layouts."""
         from scripts.generate_templates import generate_smartart_template
 
@@ -90,7 +99,9 @@ class TestManualCreationDocumentation:
 class TestMainFunction:
     """Tests for main CLI entry point."""
 
-    def test_main_provides_instructions_for_both_templates(self, tmp_path, monkeypatch, caplog):
+    def test_main_provides_instructions_for_both_templates(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Test that main() provides instructions for both templates."""
         from scripts.generate_templates import main
 
@@ -103,7 +114,9 @@ class TestMainFunction:
         assert "data-template.pptx" in caplog.text
         assert "smartart-template.pptx" in caplog.text
 
-    def test_main_explains_plan_b_execution(self, tmp_path, monkeypatch, caplog):
+    def test_main_explains_plan_b_execution(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Test that main() explains Plan B (manual creation)."""
         from scripts.generate_templates import main
 

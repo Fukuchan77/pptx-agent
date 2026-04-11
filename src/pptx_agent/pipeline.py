@@ -27,12 +27,14 @@ from pptx_agent.validators.security import detect_prompt_injection
 logger = logging.getLogger(__name__)
 
 
-def generate_presentation(
+async def generate_presentation(
     input_text: str,
     template_path: str,
     output_path: str,
     template_manifest: TemplateManifest | None = None,
     output_language: Literal["en", "ja"] | None = None,
+    *,
+    use_llm: bool = True,
 ) -> str:
     """Generate a PowerPoint presentation from input text.
 
@@ -51,6 +53,8 @@ def generate_presentation(
         template_manifest: Optional template manifest for validation
         output_language: Optional explicit output language ('en' or 'ja').
                         If None, language is auto-detected from input text.
+        use_llm: If True, use LLM agents for generation. If False, use heuristic fallback
+                 for testing/debugging (default: True).
 
     Returns:
         Path to the generated .pptx file (same as output_path)
@@ -76,13 +80,13 @@ def generate_presentation(
 
     # Stage 1: Analyze story
     start = time.time()
-    story = analyze_story(input_text)
+    story = await analyze_story(input_text, use_llm=use_llm)
     duration = time.time() - start
     logger.info("Stage: Story Analysis completed in %.2fs", duration)
 
     # Stage 2: Generate outline
     start = time.time()
-    outline = generate_outline(story)
+    outline = await generate_outline(story, manifest=template_manifest, use_llm=use_llm)
 
     # Override output_language if explicitly provided
     if output_language is not None:
@@ -99,7 +103,7 @@ def generate_presentation(
 
     # Stage 4: Generate content
     start = time.time()
-    content = generate_content(validated_outline, template_manifest)
+    content = await generate_content(validated_outline, template_manifest, use_llm=use_llm)
     duration = time.time() - start
     logger.info("Stage: Content Generation completed in %.2fs", duration)
 

@@ -56,7 +56,8 @@ def cycle_input() -> str:
     return fixture_path.read_text(encoding="utf-8")
 
 
-def test_generate_presentation_with_process_flow_content(
+@pytest.mark.asyncio
+async def test_generate_presentation_with_process_flow_content(
     process_flow_input: str, template_path: str
 ):
     """Test complete pipeline with process flow content for SmartArt generation.
@@ -71,10 +72,11 @@ def test_generate_presentation_with_process_flow_content(
         output_path = str(Path(tmpdir) / "output_process_flow.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=process_flow_input,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify file was created
@@ -88,7 +90,10 @@ def test_generate_presentation_with_process_flow_content(
         assert len(prs.slides) <= 30, "Presentation should not exceed 30 slides"
 
 
-def test_generate_presentation_with_hierarchy_content(hierarchy_input: str, template_path: str):
+@pytest.mark.asyncio
+async def test_generate_presentation_with_hierarchy_content(
+    hierarchy_input: str, template_path: str
+):
     """Test complete pipeline with hierarchical content for SmartArt generation.
 
     Validates:
@@ -101,10 +106,11 @@ def test_generate_presentation_with_hierarchy_content(hierarchy_input: str, temp
         output_path = str(Path(tmpdir) / "output_hierarchy.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=hierarchy_input,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify file was created
@@ -118,7 +124,8 @@ def test_generate_presentation_with_hierarchy_content(hierarchy_input: str, temp
         assert len(prs.slides) <= 30, "Presentation should not exceed 30 slides"
 
 
-def test_generate_presentation_with_cycle_content(cycle_input: str, template_path: str):
+@pytest.mark.asyncio
+async def test_generate_presentation_with_cycle_content(cycle_input: str, template_path: str):
     """Test complete pipeline with cyclical process content for SmartArt generation.
 
     Validates:
@@ -131,10 +138,11 @@ def test_generate_presentation_with_cycle_content(cycle_input: str, template_pat
         output_path = str(Path(tmpdir) / "output_cycle.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=cycle_input,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify file was created
@@ -148,7 +156,10 @@ def test_generate_presentation_with_cycle_content(cycle_input: str, template_pat
         assert len(prs.slides) <= 30, "Presentation should not exceed 30 slides"
 
 
-def test_presentation_with_smartart_contains_shapes(process_flow_input: str, template_path: str):
+@pytest.mark.asyncio
+async def test_presentation_with_smartart_contains_shapes(
+    process_flow_input: str, template_path: str
+):
     """Test that generated presentation with SmartArt contains various shape types.
 
     Validates:
@@ -160,10 +171,11 @@ def test_presentation_with_smartart_contains_shapes(process_flow_input: str, tem
         output_path = str(Path(tmpdir) / "output_smartart_shapes.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=process_flow_input,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Open and inspect shapes
@@ -184,7 +196,8 @@ def test_presentation_with_smartart_contains_shapes(process_flow_input: str, tem
         assert total_shapes > 0, "Presentation should contain shapes"
 
 
-def test_mixed_content_with_smartart_and_text(template_path: str):
+@pytest.mark.asyncio
+async def test_mixed_content_with_smartart_and_text(template_path: str):
     """Test presentation with mixed SmartArt and text content.
 
     Validates:
@@ -241,10 +254,11 @@ for future initiatives. This learning cycle ensures organizational capability gr
         output_path = str(Path(tmpdir) / "output_mixed_smartart.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=mixed_input,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify file was created and is valid
@@ -255,7 +269,8 @@ for future initiatives. This learning cycle ensures organizational capability gr
         assert len(prs.slides) >= 3, "Presentation should have at least 3 slides"
 
 
-def test_organizational_structure_for_hierarchy_smartart(template_path: str):
+@pytest.mark.asyncio
+async def test_organizational_structure_for_hierarchy_smartart(template_path: str):
     """Test SmartArt generation with organizational structure content.
 
     Validates:
@@ -306,10 +321,11 @@ This structure enables efficient development and innovation.
         output_path = str(Path(tmpdir) / "output_org_structure.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=org_structure_input,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify successful generation
@@ -319,7 +335,8 @@ This structure enables efficient development and innovation.
         assert prs is not None, "Presentation should be readable"
 
 
-def test_workflow_cycle_for_cycle_smartart(template_path: str):
+@pytest.mark.asyncio
+async def test_workflow_cycle_for_cycle_smartart(template_path: str):
     """Test SmartArt generation with cyclical workflow content.
 
     Validates:
@@ -365,10 +382,11 @@ Then the cycle begins again with the next sprint planning session.
         output_path = str(Path(tmpdir) / "output_cycle_workflow.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=cycle_workflow_input,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify successful generation
@@ -378,7 +396,8 @@ Then the cycle begins again with the next sprint planning session.
         assert prs is not None, "Presentation should be readable"
 
 
-def test_file_opens_without_corruption_smartart(process_flow_input: str, template_path: str):
+@pytest.mark.asyncio
+async def test_file_opens_without_corruption_smartart(process_flow_input: str, template_path: str):
     """Test that generated files with SmartArt open without corruption.
 
     Validates:
@@ -390,10 +409,11 @@ def test_file_opens_without_corruption_smartart(process_flow_input: str, templat
         output_path = str(Path(tmpdir) / "output_smartart_no_corruption.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=process_flow_input,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Try to open and access all elements
@@ -415,7 +435,8 @@ def test_file_opens_without_corruption_smartart(process_flow_input: str, templat
         assert True, "File should open without corruption"
 
 
-def test_multiple_smartart_types_in_presentation(template_path: str):
+@pytest.mark.asyncio
+async def test_multiple_smartart_types_in_presentation(template_path: str):
     """Test presentation with multiple types of SmartArt content.
 
     Validates:
@@ -469,10 +490,11 @@ The cycle repeats, driving ongoing enhancement of our processes.
         output_path = str(Path(tmpdir) / "output_multi_smartart.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=multi_smartart_input,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify successful generation

@@ -70,7 +70,8 @@ def overflow_extreme() -> str:
     return fixture_path.read_text(encoding="utf-8")
 
 
-def test_overflow_resolution_stage_executes_with_manifest(
+@pytest.mark.asyncio
+async def test_overflow_resolution_stage_executes_with_manifest(
     overflow_moderate: str, template_path: str, caplog: LogCaptureFixture
 ) -> None:
     """Test that overflow resolution stage executes when manifest is provided.
@@ -117,11 +118,12 @@ def test_overflow_resolution_stage_executes_with_manifest(
         )
 
         # Generate presentation with manifest
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=overflow_moderate,
             template_path=template_path,
             output_path=output_path,
             template_manifest=manifest,
+            use_llm=False,
         )
 
         # Verify file was created
@@ -137,7 +139,8 @@ def test_overflow_resolution_stage_executes_with_manifest(
         )
 
 
-def test_overflow_resolution_without_manifest(
+@pytest.mark.asyncio
+async def test_overflow_resolution_without_manifest(
     overflow_minor: str, template_path: str, caplog: LogCaptureFixture
 ) -> None:
     """Test that pipeline works when manifest is not provided.
@@ -153,11 +156,12 @@ def test_overflow_resolution_without_manifest(
         output_path = str(Path(tmpdir) / "output_no_manifest.pptx")
 
         # Generate presentation WITHOUT manifest
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=overflow_minor,
             template_path=template_path,
             output_path=output_path,
             template_manifest=None,
+            use_llm=False,
         )
 
         # Verify file was created
@@ -173,7 +177,8 @@ def test_overflow_resolution_without_manifest(
         )
 
 
-def test_pipeline_generates_valid_presentation_with_large_content(
+@pytest.mark.asyncio
+async def test_pipeline_generates_valid_presentation_with_large_content(
     overflow_large: str, template_path: str
 ) -> None:
     """Test that pipeline generates valid presentations with large content.
@@ -187,10 +192,11 @@ def test_pipeline_generates_valid_presentation_with_large_content(
         output_path = str(Path(tmpdir) / "output_large_overflow.pptx")
 
         # Generate presentation with large content
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=overflow_large,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify file was created and is valid
@@ -205,7 +211,8 @@ def test_pipeline_generates_valid_presentation_with_large_content(
             assert slide.slide_layout is not None, f"Slide {i} should have layout"
 
 
-def test_extreme_content_handling(overflow_extreme: str, template_path: str) -> None:
+@pytest.mark.asyncio
+async def test_extreme_content_handling(overflow_extreme: str, template_path: str) -> None:
     """Test that pipeline handles extremely long content gracefully.
 
     Validates:
@@ -217,10 +224,11 @@ def test_extreme_content_handling(overflow_extreme: str, template_path: str) -> 
         output_path = str(Path(tmpdir) / "output_extreme_overflow.pptx")
 
         # Generate presentation with extreme content
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=overflow_extreme,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify file was created
@@ -242,7 +250,8 @@ def test_extreme_content_handling(overflow_extreme: str, template_path: str) -> 
         assert has_text, "Presentation should have text content"
 
 
-def test_multiple_content_lengths_in_single_presentation(template_path: str) -> None:
+@pytest.mark.asyncio
+async def test_multiple_content_lengths_in_single_presentation(template_path: str) -> None:
     """Test pipeline with content that generates multiple slides with varying lengths.
 
     Validates:
@@ -278,10 +287,11 @@ def test_multiple_content_lengths_in_single_presentation(template_path: str) -> 
         output_path = str(Path(tmpdir) / "output_mixed.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=mixed_input,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify file was created

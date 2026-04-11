@@ -27,7 +27,8 @@ from pptx_agent.validators.security import SecurityValidationResult
 class TestGeneratePresentation:
     """Tests for generate_presentation function."""
 
-    def test_end_to_end_pipeline_success(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_end_to_end_pipeline_success(self, tmp_path: Path) -> None:
         """Test complete pipeline execution from input text to .pptx file."""
         # Arrange
         input_text = "This is a test presentation about AI technology."
@@ -85,18 +86,21 @@ class TestGeneratePresentation:
             mock_build.return_value = output_path
 
             # Act
-            result_path = generate_presentation(input_text, template_path, output_path)
+            result_path = await generate_presentation(
+                input_text, template_path, output_path, use_llm=False
+            )
 
             # Assert
             assert result_path == output_path
-            mock_analyze.assert_called_once_with(input_text)
-            mock_gen_outline.assert_called_once_with(mock_story)
+            mock_analyze.assert_called_once_with(input_text, use_llm=False)
+            mock_gen_outline.assert_called_once_with(mock_story, manifest=None, use_llm=False)
             mock_val_outline.assert_called_once_with(mock_outline, None)
-            mock_gen_content.assert_called_once_with(mock_outline, None)
+            mock_gen_content.assert_called_once_with(mock_outline, None, use_llm=False)
             mock_val_content.assert_called_once_with(mock_content, mock_outline, None)
             mock_build.assert_called_once_with(mock_content, template_path, output_path)
 
-    def test_pipeline_with_template_manifest(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_pipeline_with_template_manifest(self, tmp_path: Path) -> None:
         """Test pipeline execution with template manifest provided."""
         # Arrange
         input_text = "Test content"
@@ -129,17 +133,18 @@ class TestGeneratePresentation:
             mock_build.return_value = output_path
 
             # Act
-            result_path = generate_presentation(
-                input_text, template_path, output_path, template_manifest
+            result_path = await generate_presentation(
+                input_text, template_path, output_path, template_manifest, use_llm=False
             )
 
             # Assert
             assert result_path == output_path
-            mock_gen_content.assert_called_once_with(mock_outline, template_manifest)
+            mock_gen_content.assert_called_once_with(mock_outline, template_manifest, use_llm=False)
             mock_val_outline.assert_called_once_with(mock_outline, template_manifest)
             mock_val_content.assert_called_once_with(mock_content, mock_outline, template_manifest)
 
-    def test_pipeline_propagates_analyze_story_error(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_pipeline_propagates_analyze_story_error(self, tmp_path: Path) -> None:
         """Test that errors from analyze_story propagate correctly."""
         # Arrange
         input_text = "Valid input text for testing error propagation from analyze_story"
@@ -155,9 +160,10 @@ class TestGeneratePresentation:
 
             # Act & Assert
             with pytest.raises(ValueError, match="Analysis failed"):
-                generate_presentation(input_text, template_path, output_path)
+                await generate_presentation(input_text, template_path, output_path, use_llm=False)
 
-    def test_pipeline_propagates_outline_validation_error(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_pipeline_propagates_outline_validation_error(self, tmp_path: Path) -> None:
         """Test that outline validation errors propagate correctly."""
         # Arrange
         input_text = "Test content"
@@ -175,9 +181,10 @@ class TestGeneratePresentation:
 
             # Act & Assert
             with pytest.raises(InvalidFileError, match="Slide count must be between 3 and 30"):
-                generate_presentation(input_text, template_path, output_path)
+                await generate_presentation(input_text, template_path, output_path, use_llm=False)
 
-    def test_pipeline_propagates_content_validation_error(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_pipeline_propagates_content_validation_error(self, tmp_path: Path) -> None:
         """Test that content validation errors propagate correctly."""
         # Arrange
         input_text = "Test content"
@@ -200,9 +207,10 @@ class TestGeneratePresentation:
 
             # Act & Assert
             with pytest.raises(InvalidFileError, match="Slide 1 has no content blocks"):
-                generate_presentation(input_text, template_path, output_path)
+                await generate_presentation(input_text, template_path, output_path, use_llm=False)
 
-    def test_pipeline_propagates_build_presentation_error(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_pipeline_propagates_build_presentation_error(self, tmp_path: Path) -> None:
         """Test that build_presentation errors propagate correctly."""
         # Arrange
         input_text = "Test content"
@@ -227,9 +235,10 @@ class TestGeneratePresentation:
 
             # Act & Assert
             with pytest.raises(FileNotFoundError, match="Template file not found"):
-                generate_presentation(input_text, template_path, output_path)
+                await generate_presentation(input_text, template_path, output_path, use_llm=False)
 
-    def test_pipeline_stages_execute_in_correct_order(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_pipeline_stages_execute_in_correct_order(self, tmp_path: Path) -> None:
         """Test that pipeline stages execute in the correct sequence."""
         # Arrange
         input_text = "Test content"
@@ -268,7 +277,7 @@ class TestGeneratePresentation:
             ),
         ):
             # Act
-            generate_presentation(input_text, template_path, output_path)
+            await generate_presentation(input_text, template_path, output_path, use_llm=False)
 
             # Assert - verify correct order
             assert call_order == [
@@ -280,7 +289,8 @@ class TestGeneratePresentation:
                 "build",
             ]
 
-    def test_pipeline_handles_empty_input_text(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_pipeline_handles_empty_input_text(self, tmp_path: Path) -> None:
         """Test pipeline handles empty input text appropriately."""
         # Arrange
         input_text = ""
@@ -291,9 +301,10 @@ class TestGeneratePresentation:
         with pytest.raises(
             InputValidationError, match="cannot be empty or contain only whitespace"
         ):
-            generate_presentation(input_text, template_path, output_path)
+            await generate_presentation(input_text, template_path, output_path, use_llm=False)
 
-    def test_pipeline_returns_correct_output_path(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_pipeline_returns_correct_output_path(self, tmp_path: Path) -> None:
         """Test that pipeline returns the correct output path."""
         # Arrange
         input_text = "Test content"
@@ -312,12 +323,15 @@ class TestGeneratePresentation:
             mock_build.return_value = output_path
 
             # Act
-            result = generate_presentation(input_text, template_path, output_path)
+            result = await generate_presentation(
+                input_text, template_path, output_path, use_llm=False
+            )
 
             # Assert
             assert result == output_path
 
-    def test_pipeline_logs_stage_execution_times(
+    @pytest.mark.asyncio
+    async def test_pipeline_logs_stage_execution_times(
         self, tmp_path: Path, caplog: LogCaptureFixture
     ) -> None:
         """Test that pipeline logs execution time for each stage."""
@@ -345,7 +359,7 @@ class TestGeneratePresentation:
             mock_build.return_value = output_path
 
             # Act
-            generate_presentation(input_text, template_path, output_path)
+            await generate_presentation(input_text, template_path, output_path, use_llm=False)
 
             # Assert - check that all 6 stages logged their execution time
             stage_names = [
@@ -372,7 +386,8 @@ class TestGeneratePresentation:
                 log_message = matching_logs[0].message
                 assert "s" in log_message, f"Timing format missing 's' in: {log_message}"
 
-    def test_pipeline_logs_total_execution_time(
+    @pytest.mark.asyncio
+    async def test_pipeline_logs_total_execution_time(
         self, tmp_path: Path, caplog: LogCaptureFixture
     ) -> None:
         """Test that pipeline logs total execution time."""
@@ -393,7 +408,7 @@ class TestGeneratePresentation:
             mock_build.return_value = output_path
 
             # Act
-            generate_presentation(input_text, template_path, output_path)
+            await generate_presentation(input_text, template_path, output_path, use_llm=False)
 
             # Assert - check that total execution time is logged
             total_time_logs = [
@@ -409,7 +424,8 @@ class TestGeneratePresentation:
             log_message = total_time_logs[0].message
             assert "s" in log_message, "Timing format missing 's'"
 
-    def test_pipeline_timing_format_is_readable(
+    @pytest.mark.asyncio
+    async def test_pipeline_timing_format_is_readable(
         self, tmp_path: Path, caplog: LogCaptureFixture
     ) -> None:
         """Test that timing logs use readable format with decimal places."""
@@ -430,7 +446,7 @@ class TestGeneratePresentation:
             mock_build.return_value = output_path
 
             # Act
-            generate_presentation(input_text, template_path, output_path)
+            await generate_presentation(input_text, template_path, output_path, use_llm=False)
 
             # Assert - check timing format uses decimal notation
             timing_logs = [record for record in caplog.records if "completed in" in record.message]
@@ -446,7 +462,8 @@ class TestGeneratePresentation:
 
             assert found_decimal, "No timing log found with decimal format (e.g., 0.12s)"
 
-    def test_pipeline_calls_validate_and_sanitize(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_pipeline_calls_validate_and_sanitize(self, tmp_path: Path) -> None:
         """Test that pipeline calls validate_and_sanitize before analyze_story."""
         # Arrange
         input_text = "This is a valid test input for presentation generation."
@@ -468,14 +485,15 @@ class TestGeneratePresentation:
             mock_build.return_value = output_path
 
             # Act
-            generate_presentation(input_text, template_path, output_path)
+            await generate_presentation(input_text, template_path, output_path, use_llm=False)
 
             # Assert - validate_and_sanitize should be called with input_text
             mock_validate.assert_called_once_with(input_text)
             # analyze_story should be called with the sanitized text
-            mock_analyze.assert_called_once_with(input_text)
+            mock_analyze.assert_called_once_with(input_text, use_llm=False)
 
-    def test_pipeline_sanitizes_control_characters(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_pipeline_sanitizes_control_characters(self, tmp_path: Path) -> None:
         """Test that pipeline properly sanitizes control characters from input."""
         # Arrange
         input_with_control = "Test\x00presentation\x01with\x02control\x03chars"
@@ -498,14 +516,17 @@ class TestGeneratePresentation:
             mock_build.return_value = output_path
 
             # Act
-            generate_presentation(input_with_control, template_path, output_path)
+            await generate_presentation(
+                input_with_control, template_path, output_path, use_llm=False
+            )
 
             # Assert - validate_and_sanitize was called with dirty input
             mock_validate.assert_called_once_with(input_with_control)
             # analyze_story was called with clean input
-            mock_analyze.assert_called_once_with(expected_sanitized)
+            mock_analyze.assert_called_once_with(expected_sanitized, use_llm=False)
 
-    def test_pipeline_rejects_too_short_input(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_pipeline_rejects_too_short_input(self, tmp_path: Path) -> None:
         """Test that pipeline rejects input shorter than 10 characters."""
         # Arrange
         short_input = "Short"  # 5 characters - too short
@@ -521,12 +542,13 @@ class TestGeneratePresentation:
 
             # Act & Assert
             with pytest.raises(InputValidationError, match="Input length validation failed"):
-                generate_presentation(short_input, template_path, output_path)
+                await generate_presentation(short_input, template_path, output_path)
 
             # Verify validate_and_sanitize was called
             mock_validate.assert_called_once_with(short_input)
 
-    def test_pipeline_detects_and_resolves_overflow(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_pipeline_detects_and_resolves_overflow(self, tmp_path: Path) -> None:
         """Test that pipeline detects content overflow and calls overflow resolver."""
         # Arrange
         input_text = "Test content that will generate slides with overflow"
@@ -580,14 +602,15 @@ class TestGeneratePresentation:
             mock_build.return_value = output_path
 
             # Act
-            generate_presentation(
+            await generate_presentation(
                 input_text, template_path, output_path, template_manifest=mock_manifest
             )
 
             # Assert - overflow resolver should be called during validation
             assert mock_resolve_overflow.called, "Overflow resolver was not called"
 
-    def test_pipeline_detects_prompt_injection_patterns(
+    @pytest.mark.asyncio
+    async def test_pipeline_detects_prompt_injection_patterns(
         self, tmp_path: Path, caplog: LogCaptureFixture
     ) -> None:
         """Test that pipeline detects and handles prompt injection attempts."""
@@ -630,14 +653,14 @@ class TestGeneratePresentation:
             mock_build.return_value = output_path
 
             # Act
-            generate_presentation(malicious_input, template_path, output_path)
+            await generate_presentation(malicious_input, template_path, output_path, use_llm=False)
 
             # Assert
             # detect_prompt_injection should be called with validated input
             mock_detect_injection.assert_called_once_with(malicious_input)
 
             # analyze_story should be called with sanitized text (not original)
-            mock_analyze.assert_called_once_with(mock_security_result.sanitized_text)
+            mock_analyze.assert_called_once_with(mock_security_result.sanitized_text, use_llm=False)
 
             # Check that warning was logged
             warning_logs = [
@@ -647,7 +670,10 @@ class TestGeneratePresentation:
             ]
             assert len(warning_logs) > 0, "No warning logged for prompt injection detection"
 
-    def test_pipeline_passes_clean_input_through_injection_check(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_pipeline_passes_clean_input_through_injection_check(
+        self, tmp_path: Path
+    ) -> None:
         """Test that pipeline passes clean input through injection check unchanged."""
         # Arrange
         clean_input = "This is a normal presentation about business strategy."
@@ -685,16 +711,19 @@ class TestGeneratePresentation:
             mock_build.return_value = output_path
 
             # Act
-            generate_presentation(clean_input, template_path, output_path)
+            await generate_presentation(clean_input, template_path, output_path, use_llm=False)
 
             # Assert
             # detect_prompt_injection should be called
             mock_detect_injection.assert_called_once_with(clean_input)
 
             # analyze_story should be called with same clean text
-            mock_analyze.assert_called_once_with(clean_input)
+            mock_analyze.assert_called_once_with(clean_input, use_llm=False)
 
-    def test_pipeline_injection_check_called_after_input_validation(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_pipeline_injection_check_called_after_input_validation(
+        self, tmp_path: Path
+    ) -> None:
         """Test that prompt injection check occurs after input validation but before LLM."""
         # Arrange
         input_text = "Valid presentation content."
@@ -732,7 +761,7 @@ class TestGeneratePresentation:
             mock_build.return_value = output_path
 
             # Act
-            generate_presentation(input_text, template_path, output_path)
+            await generate_presentation(input_text, template_path, output_path, use_llm=False)
 
             # Assert - verify correct order: validate -> detect_injection -> analyze
             assert call_order[:3] == [

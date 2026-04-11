@@ -56,7 +56,8 @@ def sample_story_md() -> str:
     return fixture_path.read_text(encoding="utf-8")
 
 
-def test_generate_presentation_with_english_story(sample_story_en: str, template_path: str):
+@pytest.mark.asyncio
+async def test_generate_presentation_with_english_story(sample_story_en: str, template_path: str):
     """Test complete pipeline with English sample story.
 
     Validates:
@@ -69,10 +70,11 @@ def test_generate_presentation_with_english_story(sample_story_en: str, template
         output_path = str(Path(tmpdir) / "output_en.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=sample_story_en,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify file was created
@@ -86,7 +88,8 @@ def test_generate_presentation_with_english_story(sample_story_en: str, template
         assert len(prs.slides) <= 30, "Presentation should not exceed 30 slides"
 
 
-def test_generate_presentation_with_japanese_story(sample_story_ja: str, template_path: str):
+@pytest.mark.asyncio
+async def test_generate_presentation_with_japanese_story(sample_story_ja: str, template_path: str):
     """Test complete pipeline with Japanese sample story.
 
     Validates:
@@ -99,10 +102,11 @@ def test_generate_presentation_with_japanese_story(sample_story_ja: str, templat
         output_path = str(Path(tmpdir) / "output_ja.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=sample_story_ja,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify file was created
@@ -125,7 +129,8 @@ def test_generate_presentation_with_japanese_story(sample_story_ja: str, templat
         assert has_text, "Should have text content in presentation"
 
 
-def test_generate_presentation_with_markdown_input(sample_story_md: str, template_path: str):
+@pytest.mark.asyncio
+async def test_generate_presentation_with_markdown_input(sample_story_md: str, template_path: str):
     """Test complete pipeline with Markdown formatted input.
 
     Validates:
@@ -137,10 +142,11 @@ def test_generate_presentation_with_markdown_input(sample_story_md: str, templat
         output_path = str(Path(tmpdir) / "output_md.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=sample_story_md,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify file was created
@@ -152,7 +158,8 @@ def test_generate_presentation_with_markdown_input(sample_story_md: str, templat
         assert len(prs.slides) >= 3, "Presentation should have at least 3 slides"
 
 
-def test_generated_file_opens_without_errors(sample_story_en: str, template_path: str):
+@pytest.mark.asyncio
+async def test_generated_file_opens_without_errors(sample_story_en: str, template_path: str):
     """Test that generated .pptx files open without errors.
 
     Validates:
@@ -164,10 +171,11 @@ def test_generated_file_opens_without_errors(sample_story_en: str, template_path
         output_path = str(Path(tmpdir) / "output_test.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=sample_story_en,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Try to open and access all slides
@@ -189,7 +197,8 @@ def test_generated_file_opens_without_errors(sample_story_en: str, template_path
         assert True, "All slides should be accessible without errors"
 
 
-def test_metadata_is_embedded(sample_story_en: str, template_path: str):
+@pytest.mark.asyncio
+async def test_metadata_is_embedded(sample_story_en: str, template_path: str):
     """Test that metadata is embedded in generated presentations.
 
     Validates FR-022: Metadata embedding (timestamp, model, version)
@@ -198,10 +207,11 @@ def test_metadata_is_embedded(sample_story_en: str, template_path: str):
         output_path = str(Path(tmpdir) / "output_metadata.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=sample_story_en,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Open presentation and check core properties
@@ -221,7 +231,8 @@ def test_metadata_is_embedded(sample_story_en: str, template_path: str):
         assert has_metadata, "Presentation should have metadata embedded"
 
 
-def test_speaker_notes_are_present(sample_story_en: str, template_path: str):
+@pytest.mark.asyncio
+async def test_speaker_notes_are_present(sample_story_en: str, template_path: str):
     """Test that speaker notes are generated for slides.
 
     Validates FR-024: Speaker notes generation for all slides
@@ -230,10 +241,11 @@ def test_speaker_notes_are_present(sample_story_en: str, template_path: str):
         output_path = str(Path(tmpdir) / "output_notes.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=sample_story_en,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Open presentation and check for speaker notes
@@ -252,7 +264,8 @@ def test_speaker_notes_are_present(sample_story_en: str, template_path: str):
         assert slides_with_notes_slide >= 0, "Notes slide structure should be present"
 
 
-def test_presentation_has_correct_slide_count(sample_story_en: str, template_path: str):
+@pytest.mark.asyncio
+async def test_presentation_has_correct_slide_count(sample_story_en: str, template_path: str):
     """Test that generated presentation has appropriate number of slides.
 
     Validates FR-019: Slide count constraints (3-30 slides)
@@ -261,10 +274,11 @@ def test_presentation_has_correct_slide_count(sample_story_en: str, template_pat
         output_path = str(Path(tmpdir) / "output_count.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=sample_story_en,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Check slide count
@@ -275,7 +289,8 @@ def test_presentation_has_correct_slide_count(sample_story_en: str, template_pat
         assert slide_count <= 30, "Presentation must not exceed 30 slides (FR-019)"
 
 
-def test_slides_have_layouts_assigned(sample_story_en: str, template_path: str):
+@pytest.mark.asyncio
+async def test_slides_have_layouts_assigned(sample_story_en: str, template_path: str):
     """Test that all slides have proper layouts assigned.
 
     Validates:
@@ -286,10 +301,11 @@ def test_slides_have_layouts_assigned(sample_story_en: str, template_path: str):
         output_path = str(Path(tmpdir) / "output_layouts.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=sample_story_en,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Check layouts
@@ -300,7 +316,8 @@ def test_slides_have_layouts_assigned(sample_story_en: str, template_path: str):
             assert slide.slide_layout.name is not None, f"Slide {i} layout must have a name"
 
 
-def test_slides_have_content(sample_story_en: str, template_path: str):
+@pytest.mark.asyncio
+async def test_slides_have_content(sample_story_en: str, template_path: str):
     """Test that slides have actual content populated.
 
     Validates:
@@ -311,10 +328,11 @@ def test_slides_have_content(sample_story_en: str, template_path: str):
         output_path = str(Path(tmpdir) / "output_content.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=sample_story_en,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Check content
@@ -332,7 +350,8 @@ def test_slides_have_content(sample_story_en: str, template_path: str):
         assert has_text, "First slide should have text content"
 
 
-def test_file_size_is_reasonable(sample_story_en: str, template_path: str):
+@pytest.mark.asyncio
+async def test_file_size_is_reasonable(sample_story_en: str, template_path: str):
     """Test that generated file size is reasonable.
 
     Validates:
@@ -343,10 +362,11 @@ def test_file_size_is_reasonable(sample_story_en: str, template_path: str):
         output_path = str(Path(tmpdir) / "output_size.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=sample_story_en,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Check file size
@@ -357,7 +377,8 @@ def test_file_size_is_reasonable(sample_story_en: str, template_path: str):
         assert file_size < 50_000_000, "File should be smaller than 50MB"
 
 
-def test_pipeline_handles_minimal_input(template_path: str):
+@pytest.mark.asyncio
+async def test_pipeline_handles_minimal_input(template_path: str):
     """Test pipeline with minimal valid input.
 
     Validates:
@@ -370,10 +391,11 @@ def test_pipeline_handles_minimal_input(template_path: str):
         output_path = str(Path(tmpdir) / "output_minimal.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=minimal_input,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify minimum requirements

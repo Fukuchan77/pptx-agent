@@ -5,6 +5,7 @@ from text input using the AI-powered pipeline.
 """
 
 import argparse
+import asyncio
 import json
 import logging
 import sys
@@ -224,13 +225,15 @@ def main() -> int:
         # Ensure output directory exists (after path resolution, not before)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Generate presentation
-        result_path = generate_presentation(
-            input_text=input_text,
-            template_path=str(template_path),
-            output_path=str(output_path),
-            template_manifest=template_manifest,
-            output_language=args.language,  # Pass language parameter (can be None)
+        # Generate presentation (async)
+        result_path = asyncio.run(
+            generate_presentation(
+                input_text=input_text,
+                template_path=str(template_path),
+                output_path=str(output_path),
+                template_manifest=template_manifest,
+                output_language=args.language,  # Pass language parameter (can be None)
+            )
         )
 
         # Success message

@@ -1,3 +1,4 @@
+# pyright: reportAttributeAccessIssue=false, reportUnknownParameterType=false, reportUnknownMemberType=false, reportUnusedVariable=false
 """Unit tests for SmartArt builder functionality.
 
 Tests the add_smartart_to_slide function that populates SmartArt diagrams

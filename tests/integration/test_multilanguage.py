@@ -61,7 +61,8 @@ def sample_story_ja() -> str:
     return fixture_path.read_text(encoding="utf-8")
 
 
-def test_japanese_input_produces_japanese_output(sample_story_ja: str, template_path: str):
+@pytest.mark.asyncio
+async def test_japanese_input_produces_japanese_output(sample_story_ja: str, template_path: str):
     """Test that Japanese input automatically produces Japanese output.
 
     Validates User Story 2, Scenario 1:
@@ -73,10 +74,11 @@ def test_japanese_input_produces_japanese_output(sample_story_ja: str, template_
         output_path = str(Path(tmpdir) / "output_ja_auto.pptx")
 
         # Generate presentation without specifying language (should auto-detect)
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=sample_story_ja,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify file was created
@@ -103,7 +105,10 @@ def test_japanese_input_produces_japanese_output(sample_story_ja: str, template_
         assert has_japanese, "Presentation should contain Japanese text"
 
 
-def test_english_input_with_explicit_japanese_output(sample_story_en: str, template_path: str):
+@pytest.mark.asyncio
+async def test_english_input_with_explicit_japanese_output(
+    sample_story_en: str, template_path: str
+):
     """Test English input with explicit Japanese output language.
 
     Validates User Story 2, Scenario 2:
@@ -119,11 +124,12 @@ def test_english_input_with_explicit_japanese_output(sample_story_en: str, templ
 
         # Generate presentation with explicit Japanese output language
         # This should fail initially because CLI doesn't support language parameter yet
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=sample_story_en,
             template_path=template_path,
             output_path=output_path,
             output_language="ja",  # Explicit language parameter
+            use_llm=False,
         )
 
         # Verify file was created
@@ -135,7 +141,8 @@ def test_english_input_with_explicit_japanese_output(sample_story_en: str, templ
         assert len(prs.slides) >= 3, "Presentation should have at least 3 slides"
 
 
-def test_mixed_language_content_preserves_technical_terms(template_path: str):
+@pytest.mark.asyncio
+async def test_mixed_language_content_preserves_technical_terms(template_path: str):
     """Test mixed Japanese-English content preserves technical terms.
 
     Validates User Story 2, Scenario 3:
@@ -162,10 +169,11 @@ def test_mixed_language_content_preserves_technical_terms(template_path: str):
         output_path = str(Path(tmpdir) / "output_mixed.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=mixed_content,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify file was created
@@ -195,7 +203,10 @@ def test_mixed_language_content_preserves_technical_terms(template_path: str):
         # Note: Technical terms preservation depends on content generation implementation
 
 
-def test_japanese_template_with_japanese_content(sample_story_ja: str, japanese_template_path: str):
+@pytest.mark.asyncio
+async def test_japanese_template_with_japanese_content(
+    sample_story_ja: str, japanese_template_path: str
+):
     """Test Japanese template with Japanese content.
 
     Validates:
@@ -211,10 +222,11 @@ def test_japanese_template_with_japanese_content(sample_story_ja: str, japanese_
         output_path = str(Path(tmpdir) / "output_ja_template.pptx")
 
         # Generate presentation with Japanese template
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=sample_story_ja,
             template_path=japanese_template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify file was created
@@ -226,7 +238,8 @@ def test_japanese_template_with_japanese_content(sample_story_ja: str, japanese_
         assert len(prs.slides) >= 3, "Presentation should have at least 3 slides"
 
 
-def test_language_specific_capacity_ratios_applied(sample_story_ja: str, template_path: str):
+@pytest.mark.asyncio
+async def test_language_specific_capacity_ratios_applied(sample_story_ja: str, template_path: str):
     """Test that language-specific capacity ratios are applied correctly.
 
     Validates:
@@ -238,10 +251,11 @@ def test_language_specific_capacity_ratios_applied(sample_story_ja: str, templat
         output_path = str(Path(tmpdir) / "output_capacity.pptx")
 
         # Generate presentation with Japanese input
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=sample_story_ja,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify file was created
@@ -266,7 +280,10 @@ def test_language_specific_capacity_ratios_applied(sample_story_ja: str, templat
         assert len(prs.slides) >= 3, "Presentation should have at least 3 slides"
 
 
-def test_explicit_language_parameter_overrides_detection(sample_story_en: str, template_path: str):
+@pytest.mark.asyncio
+async def test_explicit_language_parameter_overrides_detection(
+    sample_story_en: str, template_path: str
+):
     """Test that explicit language parameter overrides automatic detection.
 
     Validates:
@@ -278,11 +295,12 @@ def test_explicit_language_parameter_overrides_detection(sample_story_en: str, t
         output_path = str(Path(tmpdir) / "output_explicit_lang.pptx")
 
         # Generate presentation with explicit English output (should override any detection)
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=sample_story_en,
             template_path=template_path,
             output_path=output_path,
             output_language="en",  # Explicit parameter
+            use_llm=False,
         )
 
         # Verify file was created
@@ -311,7 +329,8 @@ def test_language_detection_accuracy(sample_story_en: str, sample_story_ja: str)
     assert ja_detected == "ja", "Japanese sample should be detected as 'ja'"
 
 
-def test_output_language_in_generated_metadata(sample_story_ja: str, template_path: str):
+@pytest.mark.asyncio
+async def test_output_language_in_generated_metadata(sample_story_ja: str, template_path: str):
     """Test that output language information is preserved in metadata.
 
     Validates:
@@ -322,10 +341,11 @@ def test_output_language_in_generated_metadata(sample_story_ja: str, template_pa
         output_path = str(Path(tmpdir) / "output_metadata_lang.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=sample_story_ja,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify file was created and is valid

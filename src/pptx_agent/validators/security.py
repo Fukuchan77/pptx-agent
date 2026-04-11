@@ -235,7 +235,7 @@ def validate_file_path(file_path: str, base_dir: str) -> bool:
 
             # Check parent directories for symlinks
             current = unresolved_path.parent
-            while current != base_path and current != current.parent:
+            while current not in (base_path, current.parent):
                 if current.is_symlink():
                     logger.warning("Path validation: Symlink detected in path: %s", decoded_path)
                     return False

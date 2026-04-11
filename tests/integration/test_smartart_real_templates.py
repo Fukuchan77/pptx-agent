@@ -31,7 +31,7 @@ def has_smartart_shape(slide: Slide) -> bool:
     """
     for shape in slide.shapes:
         if hasattr(shape, "_element"):
-            elem = shape._element
+            elem = shape._element  # type: ignore[attr-defined]
             if "graphicFrame" in str(elem.tag):
                 return True
     return False
@@ -49,7 +49,7 @@ def find_smartart_shape(slide: Slide, name_contains: str = "") -> Any:
     """
     for shape in slide.shapes:
         if hasattr(shape, "_element"):
-            elem = shape._element
+            elem = shape._element  # type: ignore[attr-defined]
             if "graphicFrame" in str(elem.tag):
                 if not name_contains or name_contains.lower() in shape.name.lower():
                     return shape
@@ -209,7 +209,7 @@ def test_smartart_all_types_in_real_template(template_with_smartart: str, tmp_pa
             smartart_count += sum(
                 1
                 for shape in slide.shapes
-                if hasattr(shape, "_element") and "graphicFrame" in str(shape._element.tag)
+                if hasattr(shape, "_element") and "graphicFrame" in str(shape._element.tag)  # type: ignore[attr-defined]
             )
             smartart_slides.append(slide)
 

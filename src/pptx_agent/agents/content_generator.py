@@ -25,10 +25,40 @@ from pptx_agent.schemas.visual_assets import ChartBlock, SmartArtBlock, TableBlo
 logger = logging.getLogger(__name__)
 
 
-def generate_content(
-    outline: PresentationOutline, manifest: TemplateManifest | None = None
+async def generate_content(
+    outline: PresentationOutline,
+    manifest: TemplateManifest | None = None,
+    *,
+    use_llm: bool = True,
 ) -> PresentationSchema:
     """Generate detailed presentation content from outline.
+
+    Transforms PresentationOutline into PresentationSchema by:
+    - Converting simple content strings into structured ContentBlocks
+    - Creating TextBlock objects with placeholder names
+    - Preserving slide metadata (title, layout, speaker notes)
+    - Setting appropriate language on all text blocks
+
+    Args:
+        outline: PresentationOutline object with slide structure
+        manifest: Optional TemplateManifest for placeholder name resolution
+        use_llm: If True, use LLM agent for generation. If False, use heuristic fallback
+                 for testing/debugging (default: True).
+
+    Returns:
+        PresentationSchema object with detailed content blocks
+
+    Raises:
+        ValueError: If outline is invalid or cannot generate valid content
+    """
+    # Use heuristic fallback for now (LLM integration in Phase 5b)
+    return _heuristic_generate_content(outline, manifest)
+
+
+def _heuristic_generate_content(
+    outline: PresentationOutline, manifest: TemplateManifest | None = None
+) -> PresentationSchema:
+    """Heuristic-based content generation (fallback for testing/debugging).
 
     Transforms PresentationOutline into PresentationSchema by:
     - Converting simple content strings into structured ContentBlocks

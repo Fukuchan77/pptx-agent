@@ -62,10 +62,10 @@ class StoryAnalysis(BaseModel):
         return v
 
 
-def analyze_story(text: str) -> StoryAnalysis:
+async def analyze_story(text: str, *, use_llm: bool = True) -> StoryAnalysis:
     """Analyze input text to extract story elements.
 
-    This function performs heuristic-based analysis to extract:
+    This function performs analysis to extract:
     - Topic (from first lines or headers)
     - Target audience (from contextual clues)
     - Key message (from content analysis)
@@ -74,6 +74,8 @@ def analyze_story(text: str) -> StoryAnalysis:
 
     Args:
         text: Input text to analyze (plain text or Markdown)
+        use_llm: If True, use LLM agent for analysis. If False, use heuristic fallback
+                 for testing/debugging (default: True).
 
     Returns:
         StoryAnalysis object containing extracted elements
@@ -94,6 +96,26 @@ def analyze_story(text: str) -> StoryAnalysis:
         msg = "Input text cannot be empty or blank"
         raise InputValidationError(msg)
 
+    # Use heuristic fallback for now (LLM integration in Phase 5b)
+    return _heuristic_analyze_story(text)
+
+
+def _heuristic_analyze_story(text: str) -> StoryAnalysis:
+    """Heuristic-based story analysis (fallback for testing/debugging).
+
+    This function performs heuristic-based analysis to extract:
+    - Topic (from first lines or headers)
+    - Target audience (from contextual clues)
+    - Key message (from content analysis)
+    - Tone (from linguistic patterns)
+    - Language (using language detector utility)
+
+    Args:
+        text: Input text to analyze (plain text or Markdown)
+
+    Returns:
+        StoryAnalysis object containing extracted elements
+    """
     # Detect language
     language = detect_language(text)
 

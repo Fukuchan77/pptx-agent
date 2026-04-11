@@ -7,13 +7,16 @@ Tests Phase 6 (User Story 4) functionality:
 - Data format validation
 """
 
+import pytest
+
 from pptx_agent.agents.content_generator import generate_content
 from pptx_agent.schemas.outline import PresentationOutline, SlideContent
 from pptx_agent.schemas.text import TextBlock
 from pptx_agent.schemas.visual_assets import ChartBlock, TableBlock
 
 
-def test_generate_content_with_chart_data():
+@pytest.mark.asyncio
+async def test_generate_content_with_chart_data():
     """Test that content generator creates ChartBlock when numerical data is present."""
     # Create outline with numerical data that should become a chart
     outline = PresentationOutline(
@@ -29,7 +32,7 @@ def test_generate_content_with_chart_data():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     # Verify ChartBlock was created
     chart_blocks = [b for b in result.slides[0].content if isinstance(b, ChartBlock)]
@@ -43,7 +46,8 @@ def test_generate_content_with_chart_data():
     assert "series" in chart.data
 
 
-def test_generate_content_with_table_data():
+@pytest.mark.asyncio
+async def test_generate_content_with_table_data():
     """Test that content generator creates TableBlock when tabular data is present."""
     # Create outline with tabular data
     outline = PresentationOutline(
@@ -59,7 +63,7 @@ def test_generate_content_with_table_data():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     # Verify TableBlock was created
     table_blocks = [b for b in result.slides[0].content if isinstance(b, TableBlock)]
@@ -72,7 +76,8 @@ def test_generate_content_with_table_data():
     assert table.num_cols == 3
 
 
-def test_generate_content_with_line_chart():
+@pytest.mark.asyncio
+async def test_generate_content_with_line_chart():
     """Test line chart generation."""
     outline = PresentationOutline(
         title="Revenue Trends",
@@ -87,14 +92,15 @@ def test_generate_content_with_line_chart():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     chart_blocks = [b for b in result.slides[0].content if isinstance(b, ChartBlock)]
     assert len(chart_blocks) > 0
     assert chart_blocks[0].chart_type == "line"
 
 
-def test_generate_content_with_pie_chart():
+@pytest.mark.asyncio
+async def test_generate_content_with_pie_chart():
     """Test pie chart generation."""
     outline = PresentationOutline(
         title="Market Share",
@@ -109,14 +115,15 @@ def test_generate_content_with_pie_chart():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     chart_blocks = [b for b in result.slides[0].content if isinstance(b, ChartBlock)]
     assert len(chart_blocks) > 0
     assert chart_blocks[0].chart_type == "pie"
 
 
-def test_generate_content_with_large_table():
+@pytest.mark.asyncio
+async def test_generate_content_with_large_table():
     """Test that large tables are handled (up to 20 rows x 10 columns per FR-026)."""
     # Create table with 15 rows and 5 columns (within limits)
     rows_data = "\n".join([f"Row{i}|Value{i}|Data{i}|Info{i}|Note{i}" for i in range(1, 16)])
@@ -135,7 +142,7 @@ def test_generate_content_with_large_table():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     table_blocks = [b for b in result.slides[0].content if isinstance(b, TableBlock)]
     assert len(table_blocks) > 0
@@ -143,7 +150,8 @@ def test_generate_content_with_large_table():
     assert table_blocks[0].num_cols == 5
 
 
-def test_generate_content_mixed_text_and_chart():
+@pytest.mark.asyncio
+async def test_generate_content_mixed_text_and_chart():
     """Test slide with both text content and chart."""
     outline = PresentationOutline(
         title="Analysis Report",
@@ -158,7 +166,7 @@ def test_generate_content_mixed_text_and_chart():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     # Should have both text and chart blocks
     text_blocks = [b for b in result.slides[0].content if isinstance(b, TextBlock)]
@@ -168,7 +176,8 @@ def test_generate_content_mixed_text_and_chart():
     assert len(text_blocks) + len(chart_blocks) > 0
 
 
-def test_generate_content_chart_in_japanese():
+@pytest.mark.asyncio
+async def test_generate_content_chart_in_japanese():
     """Test chart generation with Japanese labels."""
     outline = PresentationOutline(
         title="売上レポート",
@@ -183,14 +192,15 @@ def test_generate_content_chart_in_japanese():
         output_language="ja",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     chart_blocks = [b for b in result.slides[0].content if isinstance(b, ChartBlock)]
     assert len(chart_blocks) > 0
     assert chart_blocks[0].chart_type == "bar"
 
 
-def test_generate_content_table_in_japanese():
+@pytest.mark.asyncio
+async def test_generate_content_table_in_japanese():
     """Test table generation with Japanese content."""
     outline = PresentationOutline(
         title="製品比較",
@@ -205,14 +215,15 @@ def test_generate_content_table_in_japanese():
         output_language="ja",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     table_blocks = [b for b in result.slides[0].content if isinstance(b, TableBlock)]
     assert len(table_blocks) > 0
     assert table_blocks[0].num_cols == 3
 
 
-def test_generate_content_multiple_charts_in_presentation():
+@pytest.mark.asyncio
+async def test_generate_content_multiple_charts_in_presentation():
     """Test presentation with multiple slides containing charts."""
     outline = PresentationOutline(
         title="Business Review",
@@ -233,7 +244,7 @@ def test_generate_content_multiple_charts_in_presentation():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     # Verify both slides have charts
     chart_blocks_slide1 = [b for b in result.slides[0].content if isinstance(b, ChartBlock)]
@@ -243,7 +254,8 @@ def test_generate_content_multiple_charts_in_presentation():
     assert len(chart_blocks_slide2) > 0
 
 
-def test_generate_content_chart_without_prefix_fallback():
+@pytest.mark.asyncio
+async def test_generate_content_chart_without_prefix_fallback():
     """Test that regular numerical content without chart: prefix creates text blocks."""
     outline = PresentationOutline(
         title="Numbers",
@@ -258,7 +270,7 @@ def test_generate_content_chart_without_prefix_fallback():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     # Should create text blocks, not chart blocks (no chart: prefix)
     from pptx_agent.schemas.text import TextBlock
@@ -270,7 +282,8 @@ def test_generate_content_chart_without_prefix_fallback():
     assert len(text_blocks) > 0 or len(chart_blocks) > 0
 
 
-def test_generate_content_table_without_prefix_fallback():
+@pytest.mark.asyncio
+async def test_generate_content_table_without_prefix_fallback():
     """Test that structured text without table: prefix creates text blocks."""
     outline = PresentationOutline(
         title="Info",
@@ -285,7 +298,7 @@ def test_generate_content_table_without_prefix_fallback():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     from pptx_agent.schemas.text import TextBlock
 

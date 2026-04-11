@@ -10,6 +10,8 @@ Tests cover:
 
 from unittest.mock import patch
 
+import pytest
+
 from pptx_agent.agents.outline_generator import generate_outline
 from pptx_agent.agents.story_analyzer import StoryAnalysis
 from pptx_agent.schemas.outline import PresentationOutline
@@ -21,7 +23,8 @@ def test_generate_outline_function_exists():
     assert callable(generate_outline)
 
 
-def test_generate_outline_with_english_story():
+@pytest.mark.asyncio
+async def test_generate_outline_with_english_story():
     """Test generate_outline with English StoryAnalysis input."""
     story = StoryAnalysis(
         topic="Introduction to Machine Learning",
@@ -32,7 +35,7 @@ def test_generate_outline_with_english_story():
         suggested_structure="Introduction, Main Content, Conclusion",
     )
 
-    result = generate_outline(story)
+    result = await generate_outline(story, use_llm=False)
 
     assert isinstance(result, PresentationOutline)
     assert result.output_language == "en"
@@ -41,7 +44,8 @@ def test_generate_outline_with_english_story():
     assert len(result.slides) <= 30  # Maximum 30 slides per FR-019
 
 
-def test_generate_outline_with_japanese_story():
+@pytest.mark.asyncio
+async def test_generate_outline_with_japanese_story():
     """Test generate_outline with Japanese StoryAnalysis input."""
     story = StoryAnalysis(
         topic="機械学習入門",
@@ -52,7 +56,7 @@ def test_generate_outline_with_japanese_story():
         suggested_structure="導入, 本編, まとめ",
     )
 
-    result = generate_outline(story)
+    result = await generate_outline(story, use_llm=False)
 
     assert isinstance(result, PresentationOutline)
     assert result.output_language == "ja"
@@ -61,7 +65,8 @@ def test_generate_outline_with_japanese_story():
     assert len(result.slides) <= 30
 
 
-def test_generate_outline_slide_count_minimum():
+@pytest.mark.asyncio
+async def test_generate_outline_slide_count_minimum():
     """Test that outline generates at least 3 slides (FR-019)."""
     # Minimal story
     story = StoryAnalysis(
@@ -72,12 +77,13 @@ def test_generate_outline_slide_count_minimum():
         language="en",
     )
 
-    result = generate_outline(story)
+    result = await generate_outline(story, use_llm=False)
 
     assert len(result.slides) >= 3, "Outline must generate at least 3 slides per FR-019"
 
 
-def test_generate_outline_slide_count_maximum():
+@pytest.mark.asyncio
+async def test_generate_outline_slide_count_maximum():
     """Test that outline does not exceed 30 slides (FR-019)."""
     # Complex story with detailed structure
     story = StoryAnalysis(
@@ -89,12 +95,13 @@ def test_generate_outline_slide_count_maximum():
         suggested_structure="Multi-section structured presentation",
     )
 
-    result = generate_outline(story)
+    result = await generate_outline(story, use_llm=False)
 
     assert len(result.slides) <= 30, "Outline must not exceed 30 slides per FR-019"
 
 
-def test_generate_outline_slide_numbering():
+@pytest.mark.asyncio
+async def test_generate_outline_slide_numbering():
     """Test that slides have sequential numbering starting at 1."""
     story = StoryAnalysis(
         topic="Test Topic",
@@ -104,14 +111,15 @@ def test_generate_outline_slide_numbering():
         language="en",
     )
 
-    result = generate_outline(story)
+    result = await generate_outline(story, use_llm=False)
 
     # Verify sequential numbering
     for i, slide in enumerate(result.slides, start=1):
         assert slide.slide_number == i, "Slide numbering must be sequential starting at 1"
 
 
-def test_generate_outline_layout_types():
+@pytest.mark.asyncio
+async def test_generate_outline_layout_types():
     """Test that outline assigns appropriate layout types."""
     story = StoryAnalysis(
         topic="Project Overview",
@@ -122,7 +130,7 @@ def test_generate_outline_layout_types():
         suggested_structure="Introduction, Main Content, Conclusion",
     )
 
-    result = generate_outline(story)
+    result = await generate_outline(story, use_llm=False)
 
     # First slide should typically be title slide
     assert len(result.slides[0].layout_name) > 0
@@ -132,7 +140,8 @@ def test_generate_outline_layout_types():
         assert len(slide.layout_name) > 0, "Each slide must have a layout name"
 
 
-def test_generate_outline_slide_titles():
+@pytest.mark.asyncio
+async def test_generate_outline_slide_titles():
     """Test that all slides have titles."""
     story = StoryAnalysis(
         topic="Data Analysis Fundamentals",
@@ -142,14 +151,15 @@ def test_generate_outline_slide_titles():
         language="en",
     )
 
-    result = generate_outline(story)
+    result = await generate_outline(story, use_llm=False)
 
     # All slides must have titles
     for slide in result.slides:
         assert len(slide.title) > 0, "Each slide must have a non-empty title"
 
 
-def test_generate_outline_uses_story_topic():
+@pytest.mark.asyncio
+async def test_generate_outline_uses_story_topic():
     """Test that outline incorporates story topic into presentation title."""
     story = StoryAnalysis(
         topic="Cloud Computing Architecture",
@@ -159,7 +169,7 @@ def test_generate_outline_uses_story_topic():
         language="en",
     )
 
-    result = generate_outline(story)
+    result = await generate_outline(story, use_llm=False)
 
     # Presentation title should relate to the story topic
     title_lower = result.title.lower()
@@ -168,7 +178,8 @@ def test_generate_outline_uses_story_topic():
     )
 
 
-def test_generate_outline_respects_language():
+@pytest.mark.asyncio
+async def test_generate_outline_respects_language():
     """Test that outline output_language matches input story language."""
     # English story
     story_en = StoryAnalysis(
@@ -179,7 +190,7 @@ def test_generate_outline_respects_language():
         language="en",
     )
 
-    result_en = generate_outline(story_en)
+    result_en = await generate_outline(story_en, use_llm=False)
     assert result_en.output_language == "en"
 
     # Japanese story
@@ -191,11 +202,12 @@ def test_generate_outline_respects_language():
         language="ja",
     )
 
-    result_ja = generate_outline(story_ja)
+    result_ja = await generate_outline(story_ja, use_llm=False)
     assert result_ja.output_language == "ja"
 
 
-def test_generate_outline_with_structured_content():
+@pytest.mark.asyncio
+async def test_generate_outline_with_structured_content():
     """Test outline generation with suggested structure."""
     story = StoryAnalysis(
         topic="Business Strategy Review",
@@ -206,13 +218,14 @@ def test_generate_outline_with_structured_content():
         suggested_structure="Problem, Solution, Benefits",
     )
 
-    result = generate_outline(story)
+    result = await generate_outline(story, use_llm=False)
 
     # Should generate appropriate number of slides based on structure
     assert len(result.slides) >= 4  # At least: Title + Problem + Solution + Benefits
 
 
-def test_generate_outline_with_minimal_story():
+@pytest.mark.asyncio
+async def test_generate_outline_with_minimal_story():
     """Test outline generation with minimal StoryAnalysis input."""
     story = StoryAnalysis(
         topic="A",
@@ -222,7 +235,7 @@ def test_generate_outline_with_minimal_story():
         language="en",
     )
 
-    result = generate_outline(story)
+    result = await generate_outline(story, use_llm=False)
 
     # Should still generate valid outline even with minimal input
     assert isinstance(result, PresentationOutline)
@@ -230,7 +243,8 @@ def test_generate_outline_with_minimal_story():
     assert len(result.slides) <= 30
 
 
-def test_generate_outline_with_complex_story():
+@pytest.mark.asyncio
+async def test_generate_outline_with_complex_story():
     """Test outline generation with complex StoryAnalysis input."""
     story = StoryAnalysis(
         topic="Comprehensive Guide to Modern Software Development Practices and Methodologies",
@@ -244,7 +258,7 @@ def test_generate_outline_with_complex_story():
         suggested_structure="Multi-section structured presentation",
     )
 
-    result = generate_outline(story)
+    result = await generate_outline(story, use_llm=False)
 
     # Should handle complex input gracefully
     assert isinstance(result, PresentationOutline)
@@ -252,7 +266,8 @@ def test_generate_outline_with_complex_story():
     assert len(result.slides) <= 30
 
 
-def test_generate_outline_slide_content_not_empty():
+@pytest.mark.asyncio
+async def test_generate_outline_slide_content_not_empty():
     """Test that slides have content field (even if empty string is allowed)."""
     story = StoryAnalysis(
         topic="Test Topic",
@@ -262,14 +277,15 @@ def test_generate_outline_slide_content_not_empty():
         language="en",
     )
 
-    result = generate_outline(story)
+    result = await generate_outline(story, use_llm=False)
 
     # All slides should have content field defined (content can be empty string)
     for slide in result.slides:
         assert hasattr(slide, "content"), "Each slide must have a content field"
 
 
-def test_generate_outline_presentation_title_not_empty():
+@pytest.mark.asyncio
+async def test_generate_outline_presentation_title_not_empty():
     """Test that presentation title is not empty."""
     story = StoryAnalysis(
         topic="Important Topic",
@@ -279,12 +295,13 @@ def test_generate_outline_presentation_title_not_empty():
         language="en",
     )
 
-    result = generate_outline(story)
+    result = await generate_outline(story, use_llm=False)
 
     assert len(result.title.strip()) > 0, "Presentation title must not be empty"
 
 
-def test_generate_outline_with_formal_tone():
+@pytest.mark.asyncio
+async def test_generate_outline_with_formal_tone():
     """Test outline generation with formal tone story."""
     story = StoryAnalysis(
         topic="Quarterly Financial Report",
@@ -294,13 +311,14 @@ def test_generate_outline_with_formal_tone():
         language="en",
     )
 
-    result = generate_outline(story)
+    result = await generate_outline(story, use_llm=False)
 
     assert isinstance(result, PresentationOutline)
     assert len(result.slides) >= 3
 
 
-def test_generate_outline_with_casual_tone():
+@pytest.mark.asyncio
+async def test_generate_outline_with_casual_tone():
     """Test outline generation with casual tone story."""
     story = StoryAnalysis(
         topic="Fun Team Building Ideas",
@@ -310,13 +328,14 @@ def test_generate_outline_with_casual_tone():
         language="en",
     )
 
-    result = generate_outline(story)
+    result = await generate_outline(story, use_llm=False)
 
     assert isinstance(result, PresentationOutline)
     assert len(result.slides) >= 3
 
 
-def test_generate_outline_logs_entry_with_input_info():
+@pytest.mark.asyncio
+async def test_generate_outline_logs_entry_with_input_info():
     """Test that generate_outline logs input information at function entry."""
     story = StoryAnalysis(
         topic="Test Topic with some words",
@@ -327,7 +346,7 @@ def test_generate_outline_logs_entry_with_input_info():
     )
 
     with patch("pptx_agent.agents.outline_generator.logger") as mock_logger:
-        generate_outline(story)
+        await generate_outline(story, use_llm=False)
 
         # Verify INFO level log at entry with input text length (topic + key_message)
         input_text = story.topic + " " + story.key_message
@@ -338,7 +357,8 @@ def test_generate_outline_logs_entry_with_input_info():
         )
 
 
-def test_generate_outline_logs_exit_with_output_info():
+@pytest.mark.asyncio
+async def test_generate_outline_logs_exit_with_output_info():
     """Test that generate_outline logs output information at function exit."""
     story = StoryAnalysis(
         topic="Test Topic",
@@ -349,7 +369,7 @@ def test_generate_outline_logs_exit_with_output_info():
     )
 
     with patch("pptx_agent.agents.outline_generator.logger") as mock_logger:
-        result = generate_outline(story)
+        result = await generate_outline(story, use_llm=False)
 
         # Verify INFO level log at exit with output slide count
         mock_logger.info.assert_any_call(

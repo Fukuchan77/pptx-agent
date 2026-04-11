@@ -1,3 +1,4 @@
+# pyright: reportAttributeAccessIssue=false, reportUnknownParameterType=false, reportUnknownMemberType=false, reportUnusedVariable=false
 """Unit tests for SmartArt XML manipulation operations.
 
 Tests the populate_smartart method that performs direct XML manipulation

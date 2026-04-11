@@ -16,6 +16,7 @@ import logging
 from pptx_agent.agents.story_analyzer import StoryAnalysis
 from pptx_agent.constants import MAX_SLIDES, MIN_SLIDES
 from pptx_agent.schemas.outline import PresentationOutline, SlideContent
+from pptx_agent.schemas.template_manifest import TemplateManifest
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +34,37 @@ SECTION_DIVIDER_INTERVAL = 4  # Interval for section dividers
 OVERVIEW_SLIDE_NUMBER = 2  # Position of overview slide
 
 
-def generate_outline(story: StoryAnalysis) -> PresentationOutline:
+async def generate_outline(
+    story: StoryAnalysis,
+    manifest: TemplateManifest | None = None,
+    *,
+    use_llm: bool = True,
+) -> PresentationOutline:
     """Generate presentation outline from story analysis.
+
+    Creates a structured presentation outline with:
+    - Title slide
+    - Content slides based on story structure
+    - Conclusion slide
+
+    Args:
+        story: StoryAnalysis object containing topic, audience, message, tone, language
+        manifest: Optional template manifest for providing layout information
+        use_llm: If True, use LLM agent for generation. If False, use heuristic fallback
+                 for testing/debugging (default: True).
+
+    Returns:
+        PresentationOutline object with complete slide structure
+
+    Raises:
+        ValueError: If story is invalid or cannot generate valid outline
+    """
+    # Use heuristic fallback for now (LLM integration in Phase 5b)
+    return _heuristic_generate_outline(story)
+
+
+def _heuristic_generate_outline(story: StoryAnalysis) -> PresentationOutline:
+    """Heuristic-based outline generation (fallback for testing/debugging).
 
     Creates a structured presentation outline with:
     - Title slide

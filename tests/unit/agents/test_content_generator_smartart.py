@@ -8,6 +8,8 @@ Tests cover:
 - Integration with manifest-based placeholder names
 """
 
+import pytest
+
 from pptx_agent.agents.content_generator import generate_content
 from pptx_agent.schemas.outline import PresentationOutline, SlideContent
 from pptx_agent.schemas.template_manifest import LayoutInfo, PlaceholderInfo, TemplateManifest
@@ -15,7 +17,8 @@ from pptx_agent.schemas.text import TextBlock
 from pptx_agent.schemas.visual_assets import SmartArtBlock
 
 
-def test_generate_content_with_smartart_process():
+@pytest.mark.asyncio
+async def test_generate_content_with_smartart_process():
     """Test SmartArt process diagram generation from outline."""
     outline = PresentationOutline(
         title="Process Flow",
@@ -30,7 +33,7 @@ def test_generate_content_with_smartart_process():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     # Should have one slide with SmartArtBlock
     assert len(result.slides) == 1
@@ -45,7 +48,8 @@ def test_generate_content_with_smartart_process():
     assert block.nodes[4]["text"] == "Deployment"
 
 
-def test_generate_content_with_smartart_hierarchy():
+@pytest.mark.asyncio
+async def test_generate_content_with_smartart_hierarchy():
     """Test SmartArt hierarchy diagram generation."""
     outline = PresentationOutline(
         title="Organization",
@@ -60,7 +64,7 @@ def test_generate_content_with_smartart_hierarchy():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     block = result.slides[0].content[0]
     assert isinstance(block, SmartArtBlock)
@@ -68,7 +72,8 @@ def test_generate_content_with_smartart_hierarchy():
     assert len(block.nodes) == 5
 
 
-def test_generate_content_with_smartart_cycle():
+@pytest.mark.asyncio
+async def test_generate_content_with_smartart_cycle():
     """Test SmartArt cycle diagram generation."""
     outline = PresentationOutline(
         title="PDCA Cycle",
@@ -83,7 +88,7 @@ def test_generate_content_with_smartart_cycle():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     block = result.slides[0].content[0]
     assert isinstance(block, SmartArtBlock)
@@ -92,7 +97,8 @@ def test_generate_content_with_smartart_cycle():
     assert block.nodes[0]["text"] == "Plan"
 
 
-def test_generate_content_smartart_placeholder_name():
+@pytest.mark.asyncio
+async def test_generate_content_smartart_placeholder_name():
     """Test that SmartArt uses correct placeholder name."""
     outline = PresentationOutline(
         title="Test",
@@ -107,7 +113,7 @@ def test_generate_content_smartart_placeholder_name():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     block = result.slides[0].content[0]
     assert isinstance(block, SmartArtBlock)
@@ -115,7 +121,8 @@ def test_generate_content_smartart_placeholder_name():
     assert block.placeholder_name == "Content Placeholder"
 
 
-def test_generate_content_smartart_with_manifest():
+@pytest.mark.asyncio
+async def test_generate_content_smartart_with_manifest():
     """Test SmartArt placeholder name resolution from manifest."""
     manifest = TemplateManifest(
         template_name="test-template",
@@ -145,7 +152,7 @@ def test_generate_content_smartart_with_manifest():
         output_language="en",
     )
 
-    result = generate_content(outline, manifest=manifest)
+    result = await generate_content(outline, manifest=manifest, use_llm=False)
 
     block = result.slides[0].content[0]
     assert isinstance(block, SmartArtBlock)
@@ -153,7 +160,8 @@ def test_generate_content_smartart_with_manifest():
     assert block.placeholder_name == "SmartArt Area"
 
 
-def test_generate_content_smartart_node_level_default():
+@pytest.mark.asyncio
+async def test_generate_content_smartart_node_level_default():
     """Test that SmartArt nodes have level 0 by default."""
     outline = PresentationOutline(
         title="Test",
@@ -168,7 +176,7 @@ def test_generate_content_smartart_node_level_default():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     block = result.slides[0].content[0]
     assert isinstance(block, SmartArtBlock)
@@ -177,7 +185,8 @@ def test_generate_content_smartart_node_level_default():
         assert node["level"] == 0
 
 
-def test_generate_content_smartart_japanese():
+@pytest.mark.asyncio
+async def test_generate_content_smartart_japanese():
     """Test SmartArt generation with Japanese content."""
     outline = PresentationOutline(
         title="プロセス",
@@ -192,7 +201,7 @@ def test_generate_content_smartart_japanese():
         output_language="ja",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     block = result.slides[0].content[0]
     assert isinstance(block, SmartArtBlock)
@@ -201,7 +210,8 @@ def test_generate_content_smartart_japanese():
     assert block.nodes[4]["text"] == "リリース"
 
 
-def test_generate_content_smartart_single_node():
+@pytest.mark.asyncio
+async def test_generate_content_smartart_single_node():
     """Test SmartArt with single node."""
     outline = PresentationOutline(
         title="Test",
@@ -216,7 +226,7 @@ def test_generate_content_smartart_single_node():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     block = result.slides[0].content[0]
     assert isinstance(block, SmartArtBlock)
@@ -224,7 +234,8 @@ def test_generate_content_smartart_single_node():
     assert block.nodes[0]["text"] == "Single Step"
 
 
-def test_generate_content_smartart_many_nodes():
+@pytest.mark.asyncio
+async def test_generate_content_smartart_many_nodes():
     """Test SmartArt with many nodes."""
     outline = PresentationOutline(
         title="Test",
@@ -239,14 +250,15 @@ def test_generate_content_smartart_many_nodes():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     block = result.slides[0].content[0]
     assert isinstance(block, SmartArtBlock)
     assert len(block.nodes) == 8
 
 
-def test_generate_content_smartart_empty_node_text():
+@pytest.mark.asyncio
+async def test_generate_content_smartart_empty_node_text():
     """Test that empty node text is handled gracefully."""
     outline = PresentationOutline(
         title="Test",
@@ -261,7 +273,7 @@ def test_generate_content_smartart_empty_node_text():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     block = result.slides[0].content[0]
     assert isinstance(block, SmartArtBlock)
@@ -271,7 +283,8 @@ def test_generate_content_smartart_empty_node_text():
     assert block.nodes[1]["text"] == "Step 3"
 
 
-def test_generate_content_smartart_whitespace_trimming():
+@pytest.mark.asyncio
+async def test_generate_content_smartart_whitespace_trimming():
     """Test that node text whitespace is trimmed."""
     outline = PresentationOutline(
         title="Test",
@@ -286,7 +299,7 @@ def test_generate_content_smartart_whitespace_trimming():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     block = result.slides[0].content[0]
     assert isinstance(block, SmartArtBlock)
@@ -295,7 +308,8 @@ def test_generate_content_smartart_whitespace_trimming():
     assert block.nodes[2]["text"] == "Step 3"
 
 
-def test_generate_content_smartart_different_diagram_types():
+@pytest.mark.asyncio
+async def test_generate_content_smartart_different_diagram_types():
     """Test various SmartArt diagram types."""
     diagram_types = ["process", "hierarchy", "cycle", "relationship", "matrix", "pyramid"]
 
@@ -313,13 +327,14 @@ def test_generate_content_smartart_different_diagram_types():
             output_language="en",
         )
 
-        result = generate_content(outline)
+        result = await generate_content(outline, use_llm=False)
         block = result.slides[0].content[0]
         assert isinstance(block, SmartArtBlock)
         assert block.diagram_type == diagram_type
 
 
-def test_generate_content_smartart_special_characters():
+@pytest.mark.asyncio
+async def test_generate_content_smartart_special_characters():
     """Test SmartArt with special characters in node text."""
     outline = PresentationOutline(
         title="Test",
@@ -334,7 +349,7 @@ def test_generate_content_smartart_special_characters():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     block = result.slides[0].content[0]
     assert isinstance(block, SmartArtBlock)
@@ -343,7 +358,8 @@ def test_generate_content_smartart_special_characters():
     assert block.nodes[2]["text"] == "Step $3"
 
 
-def test_generate_content_preserves_non_smartart_content():
+@pytest.mark.asyncio
+async def test_generate_content_preserves_non_smartart_content():
     """Test that non-SmartArt content is not affected by SmartArt parsing."""
     outline = PresentationOutline(
         title="Test",
@@ -364,7 +380,7 @@ def test_generate_content_preserves_non_smartart_content():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     # First slide should have TextBlock
     assert isinstance(result.slides[0].content[0], TextBlock)

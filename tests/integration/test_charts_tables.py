@@ -45,7 +45,8 @@ def table_data_input() -> str:
     return fixture_path.read_text(encoding="utf-8")
 
 
-def test_generate_presentation_with_chart_data(chart_data_input: str, template_path: str):
+@pytest.mark.asyncio
+async def test_generate_presentation_with_chart_data(chart_data_input: str, template_path: str):
     """Test complete pipeline with numerical data for chart generation.
 
     Validates:
@@ -58,10 +59,11 @@ def test_generate_presentation_with_chart_data(chart_data_input: str, template_p
         output_path = str(Path(tmpdir) / "output_charts.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=chart_data_input,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify file was created
@@ -75,7 +77,8 @@ def test_generate_presentation_with_chart_data(chart_data_input: str, template_p
         assert len(prs.slides) <= 30, "Presentation should not exceed 30 slides"
 
 
-def test_generate_presentation_with_table_data(table_data_input: str, template_path: str):
+@pytest.mark.asyncio
+async def test_generate_presentation_with_table_data(table_data_input: str, template_path: str):
     """Test complete pipeline with tabular data for table generation.
 
     Validates:
@@ -88,10 +91,11 @@ def test_generate_presentation_with_table_data(table_data_input: str, template_p
         output_path = str(Path(tmpdir) / "output_tables.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=table_data_input,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify file was created
@@ -105,7 +109,8 @@ def test_generate_presentation_with_table_data(table_data_input: str, template_p
         assert len(prs.slides) <= 30, "Presentation should not exceed 30 slides"
 
 
-def test_presentation_contains_shapes(chart_data_input: str, template_path: str):
+@pytest.mark.asyncio
+async def test_presentation_contains_shapes(chart_data_input: str, template_path: str):
     """Test that generated presentation contains various shape types.
 
     Validates:
@@ -117,10 +122,11 @@ def test_presentation_contains_shapes(chart_data_input: str, template_path: str)
         output_path = str(Path(tmpdir) / "output_shapes.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=chart_data_input,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Open and inspect shapes
@@ -141,7 +147,8 @@ def test_presentation_contains_shapes(chart_data_input: str, template_path: str)
         assert total_shapes > 0, "Presentation should contain shapes"
 
 
-def test_mixed_content_with_charts_and_tables(template_path: str):
+@pytest.mark.asyncio
+async def test_mixed_content_with_charts_and_tables(template_path: str):
     """Test presentation with mixed numerical and tabular data.
 
     Validates:
@@ -192,10 +199,11 @@ Geographic distribution:
         output_path = str(Path(tmpdir) / "output_mixed.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=mixed_input,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify file was created and is valid
@@ -206,7 +214,8 @@ Geographic distribution:
         assert len(prs.slides) >= 3, "Presentation should have at least 3 slides"
 
 
-def test_chart_data_with_multiple_series(template_path: str):
+@pytest.mark.asyncio
+async def test_chart_data_with_multiple_series(template_path: str):
     """Test chart generation with multiple data series.
 
     Validates:
@@ -246,10 +255,11 @@ All categories show consistent growth with software leading the revenue contribu
         output_path = str(Path(tmpdir) / "output_multi_series.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=multi_series_input,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify successful generation
@@ -259,7 +269,8 @@ All categories show consistent growth with software leading the revenue contribu
         assert prs is not None, "Presentation should be readable"
 
 
-def test_table_with_various_row_counts(template_path: str):
+@pytest.mark.asyncio
+async def test_table_with_various_row_counts(template_path: str):
     """Test table generation with different row counts.
 
     Validates:
@@ -302,10 +313,11 @@ These tables demonstrate our inventory management across different warehouse loc
         output_path = str(Path(tmpdir) / "output_tables_varied.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=table_input,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify successful generation
@@ -315,7 +327,8 @@ These tables demonstrate our inventory management across different warehouse loc
         assert prs is not None, "Presentation should be readable"
 
 
-def test_percentage_and_ratio_data_for_charts(template_path: str):
+@pytest.mark.asyncio
+async def test_percentage_and_ratio_data_for_charts(template_path: str):
     """Test chart generation with percentage and ratio data.
 
     Validates:
@@ -355,10 +368,11 @@ The 25-34 age group represents our largest customer segment.
         output_path = str(Path(tmpdir) / "output_percentages.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=percentage_input,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Verify successful generation
@@ -368,7 +382,8 @@ The 25-34 age group represents our largest customer segment.
         assert prs is not None, "Presentation should be readable"
 
 
-def test_file_opens_without_corruption(chart_data_input: str, template_path: str):
+@pytest.mark.asyncio
+async def test_file_opens_without_corruption(chart_data_input: str, template_path: str):
     """Test that generated files with charts/tables open without corruption.
 
     Validates:
@@ -380,10 +395,11 @@ def test_file_opens_without_corruption(chart_data_input: str, template_path: str
         output_path = str(Path(tmpdir) / "output_no_corruption.pptx")
 
         # Generate presentation
-        result_path = generate_presentation(
+        result_path = await generate_presentation(
             input_text=chart_data_input,
             template_path=template_path,
             output_path=output_path,
+            use_llm=False,
         )
 
         # Try to open and access all elements

@@ -11,6 +11,8 @@ Tests cover:
 
 from unittest.mock import patch
 
+import pytest
+
 from pptx_agent.agents.content_generator import (
     _split_into_sentences,  # type: ignore[reportPrivateUsage]  # pyright: ignore[reportPrivateUsage]
     generate_content,  # type: ignore[reportPrivateUsage]
@@ -26,7 +28,8 @@ def test_generate_content_function_exists():
     assert callable(generate_content)
 
 
-def test_generate_content_with_english_outline():
+@pytest.mark.asyncio
+async def test_generate_content_with_english_outline():
     """Test generate_content with English PresentationOutline input."""
     outline = PresentationOutline(
         title="Introduction to Machine Learning",
@@ -53,7 +56,7 @@ def test_generate_content_with_english_outline():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     assert isinstance(result, PresentationSchema)
     assert result.title == "Introduction to Machine Learning"
@@ -61,7 +64,8 @@ def test_generate_content_with_english_outline():
     assert len(result.slides[0].content) > 0  # Should have content blocks
 
 
-def test_generate_content_with_japanese_outline():
+@pytest.mark.asyncio
+async def test_generate_content_with_japanese_outline():
     """Test generate_content with Japanese PresentationOutline input."""
     outline = PresentationOutline(
         title="機械学習入門",
@@ -82,14 +86,15 @@ def test_generate_content_with_japanese_outline():
         output_language="ja",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     assert isinstance(result, PresentationSchema)
     assert result.title == "機械学習入門"
     assert len(result.slides) == 2
 
 
-def test_generate_content_creates_text_blocks():
+@pytest.mark.asyncio
+async def test_generate_content_creates_text_blocks():
     """Test that content generator creates TextBlock objects."""
     outline = PresentationOutline(
         title="Test Presentation",
@@ -104,7 +109,7 @@ def test_generate_content_creates_text_blocks():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     # Check that slides have content blocks
     assert len(result.slides) > 0
@@ -115,7 +120,8 @@ def test_generate_content_creates_text_blocks():
     assert isinstance(first_block, TextBlock)
 
 
-def test_generate_content_preserves_layout_names():
+@pytest.mark.asyncio
+async def test_generate_content_preserves_layout_names():
     """Test that layout names are preserved from outline."""
     outline = PresentationOutline(
         title="Test",
@@ -142,14 +148,15 @@ def test_generate_content_preserves_layout_names():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     assert result.slides[0].layout_name == "Title Slide"
     assert result.slides[1].layout_name == "Section Header"
     assert result.slides[2].layout_name == "Title and Content"
 
 
-def test_generate_content_preserves_slide_titles():
+@pytest.mark.asyncio
+async def test_generate_content_preserves_slide_titles():
     """Test that slide titles are preserved from outline."""
     outline = PresentationOutline(
         title="Test",
@@ -170,13 +177,14 @@ def test_generate_content_preserves_slide_titles():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     assert result.slides[0].title == "First Title"
     assert result.slides[1].title == "Second Title"
 
 
-def test_generate_content_sets_language_on_text_blocks():
+@pytest.mark.asyncio
+async def test_generate_content_sets_language_on_text_blocks():
     """Test that TextBlocks have correct language set."""
     # Test English
     outline_en = PresentationOutline(
@@ -192,7 +200,7 @@ def test_generate_content_sets_language_on_text_blocks():
         output_language="en",
     )
 
-    result_en = generate_content(outline_en)
+    result_en = await generate_content(outline_en, use_llm=False)
     text_blocks_en = [b for b in result_en.slides[0].content if isinstance(b, TextBlock)]
     assert len(text_blocks_en) > 0
     assert all(block.language == "en" for block in text_blocks_en)
@@ -211,13 +219,14 @@ def test_generate_content_sets_language_on_text_blocks():
         output_language="ja",
     )
 
-    result_ja = generate_content(outline_ja)
+    result_ja = await generate_content(outline_ja, use_llm=False)
     text_blocks_ja = [b for b in result_ja.slides[0].content if isinstance(b, TextBlock)]
     assert len(text_blocks_ja) > 0
     assert all(block.language == "ja" for block in text_blocks_ja)
 
 
-def test_generate_content_with_speaker_notes():
+@pytest.mark.asyncio
+async def test_generate_content_with_speaker_notes():
     """Test that speaker notes are preserved if present."""
     outline = PresentationOutline(
         title="Test",
@@ -233,12 +242,13 @@ def test_generate_content_with_speaker_notes():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     assert result.slides[0].notes == "These are speaker notes"
 
 
-def test_generate_content_without_speaker_notes():
+@pytest.mark.asyncio
+async def test_generate_content_without_speaker_notes():
     """Test handling when speaker notes are not present."""
     outline = PresentationOutline(
         title="Test",
@@ -253,13 +263,14 @@ def test_generate_content_without_speaker_notes():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     # Notes should be None or not cause errors
     assert result.slides[0].notes is None or isinstance(result.slides[0].notes, str)
 
 
-def test_generate_content_with_minimal_outline():
+@pytest.mark.asyncio
+async def test_generate_content_with_minimal_outline():
     """Test generate_content with minimal outline (3 slides)."""
     outline = PresentationOutline(
         title="Minimal",
@@ -286,13 +297,14 @@ def test_generate_content_with_minimal_outline():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     assert isinstance(result, PresentationSchema)
     assert len(result.slides) == 3
 
 
-def test_generate_content_with_complex_outline():
+@pytest.mark.asyncio
+async def test_generate_content_with_complex_outline():
     """Test generate_content with complex outline (many slides)."""
     # Create 15 slides
     slides = [
@@ -311,13 +323,14 @@ def test_generate_content_with_complex_outline():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     assert isinstance(result, PresentationSchema)
     assert len(result.slides) == 15
 
 
-def test_generate_content_handles_empty_content():
+@pytest.mark.asyncio
+async def test_generate_content_handles_empty_content():
     """Test that empty content strings are handled gracefully."""
     outline = PresentationOutline(
         title="Test",
@@ -332,13 +345,14 @@ def test_generate_content_handles_empty_content():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     # Should handle empty content gracefully
     assert isinstance(result.slides[0].content, list)
 
 
-def test_generate_content_handles_long_content():
+@pytest.mark.asyncio
+async def test_generate_content_handles_long_content():
     """Test handling of long content strings."""
     long_content = " ".join(["This is a long sentence."] * 20)
 
@@ -355,13 +369,14 @@ def test_generate_content_handles_long_content():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     # Should create content blocks for long content
     assert len(result.slides[0].content) > 0
 
 
-def test_generate_content_assigns_placeholder_names():
+@pytest.mark.asyncio
+async def test_generate_content_assigns_placeholder_names():
     """Test that TextBlocks have appropriate placeholder names."""
     outline = PresentationOutline(
         title="Test",
@@ -376,7 +391,7 @@ def test_generate_content_assigns_placeholder_names():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     text_blocks = [b for b in result.slides[0].content if isinstance(b, TextBlock)]
     assert len(text_blocks) > 0
@@ -386,7 +401,8 @@ def test_generate_content_assigns_placeholder_names():
         assert len(block.placeholder_name) > 0
 
 
-def test_generate_content_creates_bullet_points_for_title_and_content():
+@pytest.mark.asyncio
+async def test_generate_content_creates_bullet_points_for_title_and_content():
     """Test that Title and Content layouts create bullet-point style content."""
     outline = PresentationOutline(
         title="Test",
@@ -401,13 +417,14 @@ def test_generate_content_creates_bullet_points_for_title_and_content():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     # Should have content (subtitle placeholder)
     assert len(result.slides[0].content) > 0
 
 
-def test_generate_speaker_notes_for_all_slides():
+@pytest.mark.asyncio
+async def test_generate_speaker_notes_for_all_slides():
     """Test that speaker notes are GENERATED for all slides when not provided."""
     outline = PresentationOutline(
         title="Test Presentation",
@@ -437,7 +454,7 @@ def test_generate_speaker_notes_for_all_slides():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     # All slides should have generated speaker notes (FR-024)
     for slide in result.slides:
@@ -445,7 +462,8 @@ def test_generate_speaker_notes_for_all_slides():
         assert len(slide.notes.strip()) > 0, f"Slide '{slide.title}' has empty speaker notes"
 
 
-def test_generated_speaker_notes_not_empty():
+@pytest.mark.asyncio
+async def test_generated_speaker_notes_not_empty():
     """Test that generated speaker notes are not empty strings."""
     outline = PresentationOutline(
         title="Test",
@@ -460,13 +478,14 @@ def test_generated_speaker_notes_not_empty():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     assert result.slides[0].notes is not None
     assert len(result.slides[0].notes.strip()) > 0
 
 
-def test_speaker_notes_in_english():
+@pytest.mark.asyncio
+async def test_speaker_notes_in_english():
     """Test that speaker notes are generated in English for English presentations."""
     outline = PresentationOutline(
         title="English Presentation",
@@ -481,7 +500,7 @@ def test_speaker_notes_in_english():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     notes = result.slides[0].notes
     assert notes is not None
@@ -490,7 +509,8 @@ def test_speaker_notes_in_english():
     assert any(c.isascii() for c in notes if c.isalpha())
 
 
-def test_speaker_notes_in_japanese():
+@pytest.mark.asyncio
+async def test_speaker_notes_in_japanese():
     """Test that speaker notes are generated in Japanese for Japanese presentations."""
     outline = PresentationOutline(
         title="日本語プレゼンテーション",
@@ -505,7 +525,7 @@ def test_speaker_notes_in_japanese():
         output_language="ja",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     notes = result.slides[0].notes
     assert notes is not None
@@ -513,7 +533,8 @@ def test_speaker_notes_in_japanese():
     assert any(ord(c) > 0x3000 for c in notes if not c.isspace())
 
 
-def test_speaker_notes_for_title_slide():
+@pytest.mark.asyncio
+async def test_speaker_notes_for_title_slide():
     """Test that title slides get appropriate introductory speaker notes."""
     outline = PresentationOutline(
         title="Machine Learning Basics",
@@ -528,7 +549,7 @@ def test_speaker_notes_for_title_slide():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     notes = result.slides[0].notes
     assert notes is not None
@@ -538,7 +559,8 @@ def test_speaker_notes_for_title_slide():
     assert 1 <= sentence_count <= 3
 
 
-def test_speaker_notes_for_content_slide():
+@pytest.mark.asyncio
+async def test_speaker_notes_for_content_slide():
     """Test that content slides get elaborative speaker notes."""
     outline = PresentationOutline(
         title="Test",
@@ -553,7 +575,7 @@ def test_speaker_notes_for_content_slide():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     notes = result.slides[0].notes
     assert notes is not None
@@ -561,7 +583,8 @@ def test_speaker_notes_for_content_slide():
     assert len(notes) > len("Feature one")  # Should add value beyond slide content
 
 
-def test_speaker_notes_for_section_slide():
+@pytest.mark.asyncio
+async def test_speaker_notes_for_section_slide():
     """Test that section slides get transitional speaker notes."""
     outline = PresentationOutline(
         title="Test",
@@ -576,7 +599,7 @@ def test_speaker_notes_for_section_slide():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     notes = result.slides[0].notes
     assert notes is not None
@@ -584,7 +607,8 @@ def test_speaker_notes_for_section_slide():
     assert len(notes.strip()) > 0
 
 
-def test_speaker_notes_provide_value_added_context():
+@pytest.mark.asyncio
+async def test_speaker_notes_provide_value_added_context():
     """Test that speaker notes provide context beyond what's on the slide."""
     outline = PresentationOutline(
         title="Test",
@@ -599,7 +623,7 @@ def test_speaker_notes_provide_value_added_context():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     notes = result.slides[0].notes
     assert notes is not None
@@ -608,7 +632,8 @@ def test_speaker_notes_provide_value_added_context():
     assert len(notes) > len("Benefits Increased efficiency")
 
 
-def test_speaker_notes_length_appropriate():
+@pytest.mark.asyncio
+async def test_speaker_notes_length_appropriate():
     """Test that speaker notes are 1-3 sentences as per guidelines."""
     outline = PresentationOutline(
         title="Test",
@@ -623,7 +648,7 @@ def test_speaker_notes_length_appropriate():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     notes = result.slides[0].notes
     assert notes is not None
@@ -632,7 +657,8 @@ def test_speaker_notes_length_appropriate():
     assert 1 <= sentence_count <= 3, f"Expected 1-3 sentences, got {sentence_count}"
 
 
-def test_speaker_notes_preserved_when_provided():
+@pytest.mark.asyncio
+async def test_speaker_notes_preserved_when_provided():
     """Test that speaker notes from outline are preserved (backward compatibility)."""
     provided_notes = "These are manually provided notes that should be kept."
 
@@ -650,7 +676,7 @@ def test_speaker_notes_preserved_when_provided():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     # When speaker notes are provided, they should be preserved (not generated)
     assert result.slides[0].notes == provided_notes
@@ -659,7 +685,8 @@ def test_speaker_notes_preserved_when_provided():
     assert len(result.slides[0].content) > 0
 
 
-def test_generate_content_handles_title_slide_layout():
+@pytest.mark.asyncio
+async def test_generate_content_handles_title_slide_layout():
     """Test special handling for Title Slide layout (subtitle)."""
     outline = PresentationOutline(
         title="Test",
@@ -674,7 +701,7 @@ def test_generate_content_handles_title_slide_layout():
         output_language="en",
     )
 
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     # Verify Title Slide layout generates content
     assert isinstance(result, PresentationSchema)
@@ -682,7 +709,8 @@ def test_generate_content_handles_title_slide_layout():
     assert result.slides[0].layout_name == "Title Slide"
 
 
-def test_generate_content_logs_entry_with_input_info():
+@pytest.mark.asyncio
+async def test_generate_content_logs_entry_with_input_info():
     """Test that generate_content logs input information at function entry."""
     outline = PresentationOutline(
         title="Test",
@@ -704,7 +732,7 @@ def test_generate_content_logs_entry_with_input_info():
     )
 
     with patch("pptx_agent.agents.content_generator.logger") as mock_logger:
-        generate_content(outline)
+        await generate_content(outline, use_llm=False)
 
         # Verify INFO level log at entry with input slide count
         mock_logger.info.assert_any_call(
@@ -714,7 +742,8 @@ def test_generate_content_logs_entry_with_input_info():
         )
 
 
-def test_generate_content_logs_exit_with_output_info():
+@pytest.mark.asyncio
+async def test_generate_content_logs_exit_with_output_info():
     """Test that generate_content logs output information at function exit."""
     outline = PresentationOutline(
         title="Test",
@@ -736,7 +765,7 @@ def test_generate_content_logs_exit_with_output_info():
     )
 
     with patch("pptx_agent.agents.content_generator.logger") as mock_logger:
-        result = generate_content(outline)
+        result = await generate_content(outline, use_llm=False)
 
         # Verify INFO level log at exit with output content count
         total_content_blocks = sum(len(slide.content) for slide in result.slides)
@@ -856,7 +885,8 @@ def test_split_into_sentences_single_sentence_no_punctuation():
 # Tests for manifest-based placeholder name resolution (M-6)
 
 
-def test_determine_placeholder_name_from_manifest_body_type():
+@pytest.mark.asyncio
+async def test_determine_placeholder_name_from_manifest_body_type():
     """Test that placeholder names are determined from manifest when available."""
     # Create manifest with custom placeholder name
     manifest = TemplateManifest(
@@ -890,7 +920,7 @@ def test_determine_placeholder_name_from_manifest_body_type():
     )
 
     # Generate content with manifest
-    result = generate_content(outline, manifest=manifest)
+    result = await generate_content(outline, manifest=manifest, use_llm=False)
 
     # Verify placeholder name comes from manifest, not hardcoded default
     text_blocks = [b for b in result.slides[0].content if isinstance(b, TextBlock)]
@@ -899,7 +929,8 @@ def test_determine_placeholder_name_from_manifest_body_type():
     assert text_blocks[0].placeholder_name == "Custom Content Box"
 
 
-def test_determine_placeholder_name_from_manifest_object_type():
+@pytest.mark.asyncio
+async def test_determine_placeholder_name_from_manifest_object_type():
     """Test placeholder name resolution with OBJECT type placeholder."""
     manifest = TemplateManifest(
         template_name="test-template",
@@ -929,7 +960,7 @@ def test_determine_placeholder_name_from_manifest_object_type():
         output_language="en",
     )
 
-    result = generate_content(outline, manifest=manifest)
+    result = await generate_content(outline, manifest=manifest, use_llm=False)
 
     text_blocks = [b for b in result.slides[0].content if isinstance(b, TextBlock)]
     assert len(text_blocks) > 0
@@ -937,7 +968,8 @@ def test_determine_placeholder_name_from_manifest_object_type():
     assert text_blocks[0].placeholder_name == "Content Area"
 
 
-def test_determine_placeholder_name_fallback_when_no_manifest():
+@pytest.mark.asyncio
+async def test_determine_placeholder_name_fallback_when_no_manifest():
     """Test that hardcoded defaults are used when no manifest is provided."""
     outline = PresentationOutline(
         title="Test",
@@ -953,7 +985,7 @@ def test_determine_placeholder_name_fallback_when_no_manifest():
     )
 
     # Call without manifest parameter (backward compatibility)
-    result = generate_content(outline)
+    result = await generate_content(outline, use_llm=False)
 
     text_blocks = [b for b in result.slides[0].content if isinstance(b, TextBlock)]
     assert len(text_blocks) > 0
@@ -961,7 +993,8 @@ def test_determine_placeholder_name_fallback_when_no_manifest():
     assert text_blocks[0].placeholder_name == "Content Placeholder"
 
 
-def test_determine_placeholder_name_fallback_when_layout_not_in_manifest():
+@pytest.mark.asyncio
+async def test_determine_placeholder_name_fallback_when_layout_not_in_manifest():
     """Test fallback when layout exists but isn't in manifest."""
     manifest = TemplateManifest(
         template_name="test-template",
@@ -988,7 +1021,7 @@ def test_determine_placeholder_name_fallback_when_layout_not_in_manifest():
         output_language="en",
     )
 
-    result = generate_content(outline, manifest=manifest)
+    result = await generate_content(outline, manifest=manifest, use_llm=False)
 
     text_blocks = [b for b in result.slides[0].content if isinstance(b, TextBlock)]
     assert len(text_blocks) > 0
@@ -996,7 +1029,8 @@ def test_determine_placeholder_name_fallback_when_layout_not_in_manifest():
     assert text_blocks[0].placeholder_name == "Content Placeholder"
 
 
-def test_determine_placeholder_name_title_slide_from_manifest():
+@pytest.mark.asyncio
+async def test_determine_placeholder_name_title_slide_from_manifest():
     """Test subtitle placeholder name resolution for Title Slide layout."""
     manifest = TemplateManifest(
         template_name="test-template",
@@ -1024,7 +1058,7 @@ def test_determine_placeholder_name_title_slide_from_manifest():
         output_language="en",
     )
 
-    result = generate_content(outline, manifest=manifest)
+    result = await generate_content(outline, manifest=manifest, use_llm=False)
 
     text_blocks = [b for b in result.slides[0].content if isinstance(b, TextBlock)]
     assert len(text_blocks) > 0
@@ -1032,7 +1066,8 @@ def test_determine_placeholder_name_title_slide_from_manifest():
     assert text_blocks[0].placeholder_name == "Custom Subtitle Area"
 
 
-def test_determine_placeholder_name_no_body_placeholders_in_manifest():
+@pytest.mark.asyncio
+async def test_determine_placeholder_name_no_body_placeholders_in_manifest():
     """Test fallback when manifest has layout but no BODY/OBJECT placeholders."""
     manifest = TemplateManifest(
         template_name="test-template",
@@ -1060,7 +1095,7 @@ def test_determine_placeholder_name_no_body_placeholders_in_manifest():
         output_language="en",
     )
 
-    result = generate_content(outline, manifest=manifest)
+    result = await generate_content(outline, manifest=manifest, use_llm=False)
 
     text_blocks = [b for b in result.slides[0].content if isinstance(b, TextBlock)]
     assert len(text_blocks) > 0
