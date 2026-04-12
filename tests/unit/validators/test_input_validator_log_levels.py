@@ -10,7 +10,7 @@ from pptx_agent.validators.input_validator import InputValidationError, validate
 class TestInputValidatorLogLevels:
     """Tests to verify correct log levels are used in input_validator.py."""
 
-    def test_validation_start_uses_debug_level(self, caplog):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
+    def test_validation_start_uses_debug_level(self, caplog: pytest.LogCaptureFixture):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
         """Validation entry should use DEBUG level (internal diagnostic)."""
         caplog.set_level(logging.DEBUG)
         text = "Valid text with enough content for validation."
@@ -23,7 +23,7 @@ class TestInputValidatorLogLevels:
             "Validation start should be logged at DEBUG level"
         )
 
-    def test_validation_failure_uses_error_level(self, caplog):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
+    def test_validation_failure_uses_error_level(self, caplog: pytest.LogCaptureFixture):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
         """Validation failure should use ERROR level (serious problem)."""
         caplog.set_level(logging.DEBUG)
         text = "Short"  # Too short - will fail validation
@@ -37,7 +37,7 @@ class TestInputValidatorLogLevels:
             "Validation failure should be logged at ERROR level"
         )
 
-    def test_validation_success_uses_debug_level(self, caplog):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
+    def test_validation_success_uses_debug_level(self, caplog: pytest.LogCaptureFixture):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
         """Validation success should use DEBUG level (internal diagnostic)."""
         caplog.set_level(logging.DEBUG)
         text = "Valid text with enough content for validation."
@@ -50,7 +50,7 @@ class TestInputValidatorLogLevels:
             "Validation success should be logged at DEBUG level"
         )
 
-    def test_no_info_level_logs_for_internal_operations(self, caplog):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
+    def test_no_info_level_logs_for_internal_operations(self, caplog: pytest.LogCaptureFixture):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
         """Internal validation operations should not use INFO level."""
         caplog.set_level(logging.INFO)
         text = "Valid text with enough content for validation."
@@ -61,7 +61,7 @@ class TestInputValidatorLogLevels:
         info_logs = [r for r in caplog.records if r.levelno == logging.INFO]
         assert len(info_logs) == 0, "Internal validation operations should use DEBUG, not INFO"
 
-    def test_no_info_level_logs_for_validation_failures(self, caplog):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
+    def test_no_info_level_logs_for_validation_failures(self, caplog: pytest.LogCaptureFixture):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
         """Validation failures should use ERROR, not INFO."""
         caplog.set_level(logging.INFO)
         text = "Short"  # Too short - will fail validation

@@ -113,7 +113,7 @@ class SmartArtWrapper:
                     raise ValueError(msg)
 
                 diagram_part = part_rels[data_rel_id].target_part
-                diagram_data = diagram_part._element  # type: ignore
+                diagram_data = diagram_part._element  # type: ignore[attr-defined]
 
             except (AttributeError, KeyError) as e:
                 # If we can't navigate the relationships, raise error

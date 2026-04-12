@@ -24,7 +24,7 @@ def mock_slide():
 class TestTableBuilder:
     """Tests for table builder functionality."""
 
-    def test_add_simple_table_creates_table_shape(self, mock_slide):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
+    def test_add_simple_table_creates_table_shape(self, mock_slide: Mock):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
         """Test that adding a table creates a table shape on the slide."""
         table_block = TableBlock(
             placeholder_name="Table Placeholder 1",
@@ -42,7 +42,7 @@ class TestTableBuilder:
         # Verify that a table was added using the public method
         mock_slide.add_table.assert_called_once()
 
-    def test_add_table_with_many_columns(self, mock_slide):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
+    def test_add_table_with_many_columns(self, mock_slide: Mock):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
         """Test adding a table with many columns (up to 10)."""
         table_block = TableBlock(
             placeholder_name="Table Placeholder 1",
@@ -69,7 +69,7 @@ class TestTableBuilder:
         # Verify table was added
         mock_slide.add_table.assert_called_once()
 
-    def test_add_table_with_many_rows(self, mock_slide):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
+    def test_add_table_with_many_rows(self, mock_slide: Mock):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
         """Test adding a table with many rows (up to 20)."""
         headers = ["Name", "Value"]
         rows = [[f"Row{i}", f"Value{i}"] for i in range(20)]
@@ -85,7 +85,7 @@ class TestTableBuilder:
         # Verify table was added
         mock_slide.add_table.assert_called_once()
 
-    def test_add_table_with_empty_headers_raises_error(self, mock_slide):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
+    def test_add_table_with_empty_headers_raises_error(self, mock_slide: Mock):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
         """Test that empty headers raise ValueError."""
         table_block = TableBlock(
             placeholder_name="Table Placeholder 1",
@@ -96,7 +96,7 @@ class TestTableBuilder:
         with pytest.raises(ValueError, match="Table must have at least one column"):
             add_table_to_slide(mock_slide, table_block)
 
-    def test_add_table_with_mismatched_column_count_raises_error(self, mock_slide):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
+    def test_add_table_with_mismatched_column_count_raises_error(self, mock_slide: Mock):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
         """Test that mismatched column counts raise ValueError."""
         table_block = TableBlock(
             placeholder_name="Table Placeholder 1",
@@ -124,7 +124,7 @@ class TestTableBuilder:
         assert table_block.num_rows == 2
         assert table_block.num_cols == 3
 
-    def test_add_single_row_table(self, mock_slide):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
+    def test_add_single_row_table(self, mock_slide: Mock):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
         """Test adding a table with just one data row."""
         table_block = TableBlock(
             placeholder_name="Table Placeholder 1",

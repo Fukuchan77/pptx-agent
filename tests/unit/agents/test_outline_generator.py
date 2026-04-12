@@ -8,13 +8,14 @@ Tests cover:
 - Edge cases (minimal input, complex structure)
 """
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
+from pydantic_ai import AgentRunResult
 
 from pptx_agent.agents.outline_generator import generate_outline
 from pptx_agent.agents.story_analyzer import StoryAnalysis
-from pptx_agent.schemas.outline import PresentationOutline
+from pptx_agent.schemas.outline import PresentationOutline, SlideContent
 
 
 def test_generate_outline_function_exists():
@@ -377,3 +378,311 @@ async def test_generate_outline_logs_exit_with_output_info():
             len(result.slides),
             result.title,
         )
+
+
+# Tests for LLM integration (use_llm=True)
+
+
+@pytest.mark.asyncio
+async def test_generate_outline_with_llm_integration():
+    """Test OutlineGenerator with LLM (use_llm=True).
+
+    RED PHASE: This test should FAIL until we implement LLM integration.
+    """
+    story = StoryAnalysis(
+        topic="Machine Learning Basics",
+        target_audience="Beginner audience",
+        key_message="Learn ML fundamentals",
+        tone="professional",
+        language="en",
+    )
+
+    # Expected result from LLM
+    expected_outline = PresentationOutline(
+        title="Machine Learning Basics",
+        slides=[
+            SlideContent(
+                slide_number=1,
+                layout_name="Title Slide",
+                title="Machine Learning Basics",
+                content="Learn ML fundamentals",
+            ),
+            SlideContent(
+                slide_number=2,
+                layout_name="Title and Content",
+                title="What is ML?",
+                content="ML overview",
+            ),
+            SlideContent(
+                slide_number=3,
+                layout_name="Title Slide",
+                title="Conclusion",
+                content="Summary",
+            ),
+        ],
+        output_language="en",
+    )
+
+    # Mock the agent's run method
+    with (
+        patch("pptx_agent.agents.outline_generator._outline_agent") as mock_agent,
+        patch("pptx_agent.agents.outline_generator.get_config") as mock_get_config,
+        patch("pptx_agent.agents.outline_generator.create_model") as mock_create_model,
+    ):
+        mock_result = AgentRunResult(output=expected_outline)
+        mock_agent.run = AsyncMock(return_value=mock_result)
+        mock_get_config.return_value = "mock-config"
+        mock_create_model.return_value = "mock-model"
+
+        # Act
+        result = await generate_outline(story, use_llm=True)
+
+        # Assert
+        assert result == expected_outline
+        mock_agent.run.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_generate_outline_llm_calls_create_model():
+    """Test that LLM integration creates model from config.
+
+    RED PHASE: This test should FAIL until we implement LLM integration.
+    """
+    story = StoryAnalysis(
+        topic="Test",
+        target_audience="General audience",
+        key_message="Test message",
+        tone="neutral",
+        language="en",
+    )
+
+    expected_outline = PresentationOutline(
+        title="Test",
+        slides=[
+            SlideContent(
+                slide_number=1,
+                layout_name="Title Slide",
+                title="Test",
+                content="Test message",
+            ),
+        ],
+        output_language="en",
+    )
+
+    with (
+        patch("pptx_agent.agents.outline_generator._outline_agent") as mock_agent,
+        patch("pptx_agent.agents.outline_generator.get_config") as mock_get_config,
+        patch("pptx_agent.agents.outline_generator.create_model") as mock_create_model,
+    ):
+        mock_result = AgentRunResult(output=expected_outline)
+        mock_agent.run = AsyncMock(return_value=mock_result)
+        mock_get_config.return_value = "mock-config"
+        mock_create_model.return_value = "mock-model"
+
+        # Act
+        await generate_outline(story, use_llm=True)
+
+        # Assert that create_model was called
+        mock_create_model.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_generate_outline_llm_returns_result_output():
+    """Test that LLM integration returns result.output from AgentRunResult.
+
+    RED PHASE: This test should FAIL until we implement LLM integration.
+    """
+    story = StoryAnalysis(
+        topic="Business Strategy",
+        target_audience="Business audience",
+        key_message="Strategic insights",
+        tone="formal",
+        language="en",
+    )
+
+    expected_outline = PresentationOutline(
+        title="Business Strategy",
+        slides=[
+            SlideContent(
+                slide_number=1,
+                layout_name="Title Slide",
+                title="Business Strategy",
+                content="Strategic insights",
+            ),
+        ],
+        output_language="en",
+    )
+
+    with (
+        patch("pptx_agent.agents.outline_generator._outline_agent") as mock_agent,
+        patch("pptx_agent.agents.outline_generator.get_config") as mock_get_config,
+        patch("pptx_agent.agents.outline_generator.create_model") as mock_create_model,
+    ):
+        mock_result = AgentRunResult(output=expected_outline)
+        mock_agent.run = AsyncMock(return_value=mock_result)
+        mock_get_config.return_value = "mock-config"
+        mock_create_model.return_value = "mock-model"
+
+        # Act
+        result = await generate_outline(story, use_llm=True)
+
+        # Assert we get the output from AgentRunResult
+        assert isinstance(result, PresentationOutline)
+        assert result.title == "Business Strategy"
+        assert len(result.slides) >= 1
+
+
+@pytest.mark.asyncio
+async def test_generate_outline_llm_false_uses_heuristic():
+    """Test that use_llm=False still uses heuristic method.
+
+    This ensures backward compatibility.
+    """
+    story = StoryAnalysis(
+        topic="Test Topic",
+        target_audience="General audience",
+        key_message="Test message",
+        tone="neutral",
+        language="en",
+    )
+
+    # Should NOT call the agent when use_llm=False
+    with patch("pptx_agent.agents.outline_generator._outline_agent") as mock_agent:
+        mock_agent.run = AsyncMock()
+
+        # Act
+        result = await generate_outline(story, use_llm=False)
+
+        # Assert agent was NOT called
+        mock_agent.run.assert_not_called()
+
+        # Should still return valid PresentationOutline
+        assert isinstance(result, PresentationOutline)
+        assert len(result.slides) >= 3
+
+
+# Tests for provider fallback logic (Task 6.7)
+
+
+@pytest.mark.asyncio
+async def test_generate_outline_with_fallback_on_primary_failure():
+    """Test that fallback model is used when primary fails."""
+    from unittest.mock import MagicMock
+
+    story = StoryAnalysis(
+        topic="Test Topic",
+        target_audience="General audience",
+        key_message="Test message",
+        tone="neutral",
+        language="en",
+    )
+
+    # Expected result from fallback
+    expected_outline = PresentationOutline(
+        title="Fallback Test",
+        slides=[
+            SlideContent(
+                slide_number=1,
+                layout_name="Title Slide",
+                title="Fallback Test",
+                content="Fallback succeeded",
+            ),
+        ],
+        output_language="en",
+    )
+
+    primary_model = MagicMock()
+    fallback_model = MagicMock()
+
+    with (
+        patch("pptx_agent.agents.outline_generator.get_config") as mock_get_config,
+        patch(
+            "pptx_agent.agents.outline_generator.create_model", return_value=primary_model
+        ) as mock_create_model,
+        patch(
+            "pptx_agent.agents.outline_generator.create_fallback_model", return_value=fallback_model
+        ) as mock_create_fallback,
+        patch("pptx_agent.agents.outline_generator._outline_agent") as mock_agent,
+    ):
+        mock_get_config.return_value = "mock-config"
+
+        # First call fails with primary, second succeeds with fallback
+        mock_agent.run = AsyncMock(
+            side_effect=[
+                Exception("Primary provider failed"),
+                AgentRunResult(output=expected_outline),
+            ]
+        )
+
+        # Act
+        result = await generate_outline(story, use_llm=True)
+
+        # Assert
+        assert result == expected_outline
+        assert mock_agent.run.call_count == 2  # Called twice: primary + fallback
+        mock_create_model.assert_called_once()
+        mock_create_fallback.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_generate_outline_both_providers_fail():
+    """Test that exception is raised when both providers fail."""
+    from unittest.mock import MagicMock
+
+    story = StoryAnalysis(
+        topic="Test Topic",
+        target_audience="General audience",
+        key_message="Test message",
+        tone="neutral",
+        language="en",
+    )
+
+    primary_model = MagicMock()
+    fallback_model = MagicMock()
+
+    with (
+        patch("pptx_agent.agents.outline_generator.get_config") as mock_get_config,
+        patch("pptx_agent.agents.outline_generator.create_model", return_value=primary_model),
+        patch(
+            "pptx_agent.agents.outline_generator.create_fallback_model", return_value=fallback_model
+        ),
+        patch("pptx_agent.agents.outline_generator._outline_agent") as mock_agent,
+    ):
+        mock_get_config.return_value = "mock-config"
+
+        # Both calls fail
+        mock_agent.run = AsyncMock(side_effect=Exception("All providers failed"))
+
+        # Act & Assert
+        with pytest.raises(RuntimeError, match="All LLM providers failed"):
+            await generate_outline(story, use_llm=True)
+
+
+@pytest.mark.asyncio
+async def test_generate_outline_heuristic_no_fallback():
+    """Test that fallback is not used in heuristic mode."""
+    story = StoryAnalysis(
+        topic="Test Topic",
+        target_audience="General audience",
+        key_message="Test message",
+        tone="neutral",
+        language="en",
+    )
+
+    with (
+        patch("pptx_agent.agents.outline_generator._outline_agent") as mock_agent,
+        patch("pptx_agent.agents.outline_generator.create_model") as mock_create_model,
+        patch("pptx_agent.agents.outline_generator.create_fallback_model") as mock_create_fallback,
+    ):
+        mock_agent.run = AsyncMock()
+
+        # Act
+        result = await generate_outline(story, use_llm=False)
+
+        # Assert
+        assert result is not None
+        assert isinstance(result, PresentationOutline)
+        # No LLM calls should be made
+        mock_agent.run.assert_not_called()
+        mock_create_model.assert_not_called()
+        mock_create_fallback.assert_not_called()

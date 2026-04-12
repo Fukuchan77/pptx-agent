@@ -24,7 +24,7 @@ def mock_slide():
 class TestChartBuilder:
     """Tests for chart builder functionality."""
 
-    def test_add_bar_chart_creates_chart_shape(self, mock_slide):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
+    def test_add_bar_chart_creates_chart_shape(self, mock_slide: Mock):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
         """Test that adding a bar chart creates a chart shape on the slide."""
         chart_block = ChartBlock(
             placeholder_name="Chart Placeholder 1",
@@ -45,7 +45,7 @@ class TestChartBuilder:
         # Verify that a chart was added using the public method
         mock_slide.add_chart.assert_called_once()
 
-    def test_add_line_chart_with_single_series(self, mock_slide):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
+    def test_add_line_chart_with_single_series(self, mock_slide: Mock):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
         """Test adding a line chart with a single data series."""
         chart_block = ChartBlock(
             placeholder_name="Chart Placeholder 1",
@@ -64,7 +64,7 @@ class TestChartBuilder:
         # Verify chart was added
         mock_slide.add_chart.assert_called_once()
 
-    def test_add_pie_chart_creates_chart(self, mock_slide):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
+    def test_add_pie_chart_creates_chart(self, mock_slide: Mock):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
         """Test adding a pie chart."""
         chart_block = ChartBlock(
             placeholder_name="Chart Placeholder 1",
@@ -83,7 +83,7 @@ class TestChartBuilder:
         # Verify chart was added
         mock_slide.add_chart.assert_called_once()
 
-    def test_add_chart_with_invalid_type_raises_error(self, mock_slide):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
+    def test_add_chart_with_invalid_type_raises_error(self, mock_slide: Mock):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
         """Test that invalid chart type raises ValueError."""
         chart_block = ChartBlock(
             placeholder_name="Chart Placeholder 1",
@@ -98,7 +98,7 @@ class TestChartBuilder:
         with pytest.raises(ValueError, match="Unsupported chart type"):
             add_chart_to_slide(mock_slide, chart_block)
 
-    def test_add_chart_with_empty_data_raises_error(self, mock_slide):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
+    def test_add_chart_with_empty_data_raises_error(self, mock_slide: Mock):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
         """Test that empty data raises ValueError."""
         chart_block = ChartBlock(
             placeholder_name="Chart Placeholder 1",
@@ -110,7 +110,7 @@ class TestChartBuilder:
         with pytest.raises(ValueError, match="Chart data cannot be empty"):
             add_chart_to_slide(mock_slide, chart_block)
 
-    def test_add_column_chart_creates_chart(self, mock_slide):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
+    def test_add_column_chart_creates_chart(self, mock_slide: Mock):  # type: ignore[reportUnknownParameterType, reportMissingParameterType]
         """Test adding a column chart (vertical bars)."""
         chart_block = ChartBlock(
             placeholder_name="Chart Placeholder 1",

@@ -15,6 +15,11 @@ import logging
 import re
 from typing import Any, Literal
 
+from pydantic_ai import Agent
+
+from pptx_agent.agents.llm_config import create_fallback_model, create_model
+from pptx_agent.agents.prompts import CONTENT_GENERATOR_PROMPT
+from pptx_agent.config import get_config
 from pptx_agent.schemas.outline import PresentationOutline, SlideContent
 from pptx_agent.schemas.presentation import PresentationSchema
 from pptx_agent.schemas.slide import ContentBlock, SlideSchema
@@ -23,6 +28,12 @@ from pptx_agent.schemas.text import TextBlock
 from pptx_agent.schemas.visual_assets import ChartBlock, SmartArtBlock, TableBlock
 
 logger = logging.getLogger(__name__)
+
+# Module-level pydantic-ai agent for content generation
+_content_agent: Agent[None, PresentationSchema] = Agent(
+    output_type=PresentationSchema,
+    system_prompt=CONTENT_GENERATOR_PROMPT,
+)
 
 
 async def generate_content(
@@ -51,7 +62,36 @@ async def generate_content(
     Raises:
         ValueError: If outline is invalid or cannot generate valid content
     """
-    # Use heuristic fallback for now (LLM integration in Phase 5b)
+    if use_llm:
+        # Serialize outline to text prompt for LLM
+        prompt = _serialize_outline_to_prompt(outline, manifest)
+
+        # Create model from config and run agent with fallback
+        config = get_config()
+
+        # Try primary model
+        try:
+            model = create_model(config)
+            result = await _content_agent.run(prompt, model=model)
+        except Exception as e:
+            # Log primary failure
+            logger.warning("Primary LLM provider failed: %s, trying fallback", e)
+
+            # Try fallback model
+            try:
+                fallback_model = create_fallback_model(config)
+                result = await _content_agent.run(prompt, model=fallback_model)
+            except Exception as fallback_error:
+                # Both failed - log and re-raise
+                error_msg = f"All LLM providers failed. Primary: {e}, Fallback: {fallback_error}"
+                logger.exception("Fallback LLM provider also failed")
+                raise RuntimeError(error_msg) from fallback_error
+            else:
+                logger.info("Fallback LLM provider succeeded")
+                return result.output
+        else:
+            return result.output
+    # Keep existing heuristic path unchanged
     return _heuristic_generate_content(outline, manifest)
 
 
@@ -498,3 +538,46 @@ def _parse_smartart_data(content: str, placeholder_name: str) -> SmartArtBlock:
         diagram_type=diagram_type,
         nodes=nodes,
     )
+
+
+def _serialize_outline_to_prompt(
+    outline: PresentationOutline,
+    manifest: TemplateManifest | None = None,
+) -> str:
+    """Serialize outline and manifest into text prompt for LLM.
+
+    Args:
+        outline: Presentation outline
+        manifest: Optional template manifest
+
+    Returns:
+        Formatted text prompt
+    """
+    prompt_parts = [
+        f"Title: {outline.title}",
+        f"Language: {outline.output_language}",
+        "\nSlides:",
+    ]
+
+    for i, slide in enumerate(outline.slides, 1):
+        prompt_parts.append(f"\nSlide {i}:")
+        prompt_parts.append(f"  Layout: {slide.layout_name}")
+        prompt_parts.append(f"  Title: {slide.title}")
+        prompt_parts.append(f"  Content: {slide.content}")
+        if slide.speaker_notes:
+            prompt_parts.append(f"  Speaker Notes: {slide.speaker_notes}")
+
+    # Add layout constraints from manifest if available
+    if manifest:
+        prompt_parts.append("\nAvailable Layouts:")
+        for layout in manifest.layouts:
+            placeholder_count = len(layout.placeholders) if layout.placeholders else 0
+            prompt_parts.append(f"  - {layout.name}: {placeholder_count} placeholders")
+            if layout.placeholders:
+                placeholder_names = [
+                    p.name for p in layout.placeholders if p.type in ["BODY", "OBJECT"]
+                ]
+                if placeholder_names:
+                    prompt_parts.append(f"    Content placeholders: {', '.join(placeholder_names)}")
+
+    return "\n".join(prompt_parts)

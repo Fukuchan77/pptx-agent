@@ -13,7 +13,12 @@ Future versions may integrate LLM-based generation.
 
 import logging
 
+from pydantic_ai import Agent
+
+from pptx_agent.agents.llm_config import create_fallback_model, create_model
+from pptx_agent.agents.prompts import OUTLINE_GENERATOR_PROMPT
 from pptx_agent.agents.story_analyzer import StoryAnalysis
+from pptx_agent.config import get_config
 from pptx_agent.constants import MAX_SLIDES, MIN_SLIDES
 from pptx_agent.schemas.outline import PresentationOutline, SlideContent
 from pptx_agent.schemas.template_manifest import TemplateManifest
@@ -32,6 +37,12 @@ SLIDE_INCREMENT_FOR_COMPLEXITY = 2  # Extra slides for complex content
 LONG_PRESENTATION_THRESHOLD = 8  # Slides count for "long" presentation
 SECTION_DIVIDER_INTERVAL = 4  # Interval for section dividers
 OVERVIEW_SLIDE_NUMBER = 2  # Position of overview slide
+
+# Module-level agent instance (model provided at runtime)
+_outline_agent: Agent[None, PresentationOutline] = Agent(
+    output_type=PresentationOutline,
+    system_prompt=OUTLINE_GENERATOR_PROMPT,
+)
 
 
 async def generate_outline(
@@ -59,7 +70,46 @@ async def generate_outline(
     Raises:
         ValueError: If story is invalid or cannot generate valid outline
     """
-    # Use heuristic fallback for now (LLM integration in Phase 5b)
+    if use_llm:
+        # Use LLM for outline generation with fallback
+        config = get_config()
+
+        # Format story as prompt for LLM
+        prompt = f"""Generate a presentation outline based on this story analysis:
+
+Topic: {story.topic}
+Target Audience: {story.target_audience}
+Key Message: {story.key_message}
+Tone: {story.tone}
+Language: {story.language}
+Suggested Structure: {story.suggested_structure or "Standard presentation structure"}
+
+The presentation should have between {MIN_SLIDES} and {MAX_SLIDES} slides.
+"""
+
+        # Try primary model
+        try:
+            model = create_model(config)
+            result = await _outline_agent.run(prompt, model=model)
+        except Exception as e:
+            # Log primary failure
+            logger.warning("Primary LLM provider failed: %s, trying fallback", e)
+
+            # Try fallback model
+            try:
+                fallback_model = create_fallback_model(config)
+                result = await _outline_agent.run(prompt, model=fallback_model)
+            except Exception as fallback_error:
+                # Both failed - log and re-raise
+                error_msg = f"All LLM providers failed. Primary: {e}, Fallback: {fallback_error}"
+                logger.exception("Fallback LLM provider also failed")
+                raise RuntimeError(error_msg) from fallback_error
+            else:
+                logger.info("Fallback LLM provider succeeded")
+                return result.output
+        else:
+            return result.output
+    # Use heuristic fallback for testing/debugging
     return _heuristic_generate_outline(story)
 
 

@@ -12,13 +12,20 @@ The analyzer uses heuristic-based text analysis for initial implementation.
 Future versions may integrate LLM-based analysis for improved accuracy.
 """
 
+import logging
 import re
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
+from pydantic_ai import Agent
 
+from pptx_agent.agents.llm_config import create_fallback_model, create_model
+from pptx_agent.agents.prompts import STORY_ANALYZER_PROMPT
+from pptx_agent.config import get_config
 from pptx_agent.utils.language_detector import detect_language
 from pptx_agent.validators.input_validator import InputValidationError
+
+logger = logging.getLogger(__name__)
 
 # Constants for text analysis heuristics
 MAX_TOPIC_LENGTH = 100
@@ -62,6 +69,13 @@ class StoryAnalysis(BaseModel):
         return v
 
 
+# Module-level agent instance (model provided at runtime)
+_story_agent: Agent[None, StoryAnalysis] = Agent(
+    output_type=StoryAnalysis,
+    system_prompt=STORY_ANALYZER_PROMPT,
+)
+
+
 async def analyze_story(text: str, *, use_llm: bool = True) -> StoryAnalysis:
     """Analyze input text to extract story elements.
 
@@ -96,7 +110,33 @@ async def analyze_story(text: str, *, use_llm: bool = True) -> StoryAnalysis:
         msg = "Input text cannot be empty or blank"
         raise InputValidationError(msg)
 
-    # Use heuristic fallback for now (LLM integration in Phase 5b)
+    if use_llm:
+        # Use LLM for analysis with fallback
+        config = get_config()
+
+        # Try primary model
+        try:
+            model = create_model(config)
+            result = await _story_agent.run(text, model=model)
+        except Exception as e:
+            # Log primary failure
+            logger.warning("Primary LLM provider failed: %s, trying fallback", e)
+
+            # Try fallback model
+            try:
+                fallback_model = create_fallback_model(config)
+                result = await _story_agent.run(text, model=fallback_model)
+            except Exception as fallback_error:
+                # Both failed - log and re-raise
+                error_msg = f"All LLM providers failed. Primary: {e}, Fallback: {fallback_error}"
+                logger.exception("Fallback LLM provider also failed")
+                raise RuntimeError(error_msg) from fallback_error
+            else:
+                logger.info("Fallback LLM provider succeeded")
+                return result.output
+        else:
+            return result.output
+    # Use heuristic fallback for testing/debugging
     return _heuristic_analyze_story(text)
 
 
