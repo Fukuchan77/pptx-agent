@@ -12,32 +12,17 @@ from pptx_agent.schemas.visual_assets import SmartArtBlock
 def add_smartart_to_slide(slide: SlideWrapper, smartart_block: SmartArtBlock) -> None:
     """Add SmartArt diagram to slide using SmartArtBlock specification.
 
-    Populates a SmartArt diagram placeholder with node text content.
-    Note: Due to the complexity of SmartArt XML structures, this function
-    currently raises NotImplementedError as acknowledged in the spec.
+    Populates an existing SmartArt diagram placeholder with node text content
+    via direct XML manipulation of the diagram data part.
 
     Args:
         slide: SlideWrapper instance to add SmartArt to
         smartart_block: SmartArtBlock with placeholder name and node data
 
     Raises:
-        ValueError: If SmartArt placeholder not found
-        NotImplementedError: SmartArt XML manipulation requires advanced handling
-
-    Example:
-        >>> smartart_block = SmartArtBlock(
-        ...     placeholder_name="Content Placeholder",
-        ...     diagram_type="process",
-        ...     nodes=[
-        ...         {"text": "Step 1", "level": 0},
-        ...         {"text": "Step 2", "level": 0},
-        ...     ]
-        ... )
-        >>> add_smartart_to_slide(slide, smartart_block)
+        ValueError: If SmartArt placeholder not found, the diagram data part
+            cannot be reached, or node count does not match the template.
     """
-    # Delegate to SmartArtWrapper for actual XML manipulation
-    # This will raise NotImplementedError as per the spec's acknowledgment
-    # that SmartArt manipulation requires advanced XML handling or commercial libraries
     SmartArtWrapper.populate_smartart(
         slide.slide,  # Access underlying python-pptx Slide object
         smartart_block.placeholder_name,

@@ -503,3 +503,36 @@ The cycle repeats, driving ongoing enhancement of our processes.
         prs = Presentation(result_path)
         assert prs is not None, "Presentation should be readable"
         assert len(prs.slides) >= 3, "Presentation should have multiple slides"
+
+
+@pytest.mark.asyncio
+@pytest.mark.llm_mock
+async def test_generate_presentation_with_smartart_llm_mock(
+    process_flow_input: str, template_path: str
+):
+    """Test complete pipeline with process flow content for SmartArt generation using LLM mock."""
+    from tests.integration.conftest import llm_mock_pipeline
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        output_path = str(Path(tmpdir) / "output_process_flow_llm.pptx")
+
+        with llm_mock_pipeline(topic="Process Flow") as (
+            mock_analyze,
+            mock_outline_gen,
+            mock_content_gen,
+        ):
+            result_path = await generate_presentation(
+                input_text=process_flow_input,
+                template_path=template_path,
+                output_path=output_path,
+                use_llm=True,
+            )
+
+            assert Path(result_path).exists()
+            assert mock_analyze.called
+            assert mock_outline_gen.called
+            assert mock_content_gen.called
+
+            prs = Presentation(result_path)
+            assert prs is not None
+            assert len(prs.slides) >= 3

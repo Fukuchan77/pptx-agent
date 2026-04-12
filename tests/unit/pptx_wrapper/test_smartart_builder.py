@@ -57,7 +57,11 @@ class TestAddSmartArtToSlide:
         # Assert - Verify text was updated in diagram data
         pt_nodes = diagram_data.findall(f".//{{{dgm_ns}}}pt[@type='node']")
         assert len(pt_nodes) == 3
-        texts = [pt.find(f".//{{{a_ns}}}t").text for pt in pt_nodes]
+        texts = []
+        for pt in pt_nodes:
+            t_elem = pt.find(f".//{{{a_ns}}}t")
+            assert t_elem is not None
+            texts.append(t_elem.text)
         assert texts == ["Step 1", "Step 2", "Step 3"]
 
     def test_add_smartart_hierarchy_diagram(self):
@@ -108,7 +112,11 @@ class TestAddSmartArtToSlide:
         # Assert - Verify text was updated in diagram data
         pt_nodes = diagram_data.findall(f".//{{{dgm_ns}}}pt[@type='node']")
         assert len(pt_nodes) == 4
-        texts = [pt.find(f".//{{{a_ns}}}t").text for pt in pt_nodes]
+        texts = []
+        for pt in pt_nodes:
+            t_elem = pt.find(f".//{{{a_ns}}}t")
+            assert t_elem is not None
+            texts.append(t_elem.text)
         assert texts == ["CEO", "Manager 1", "Manager 2", "Employee 1"]
 
     def test_add_smartart_calls_wrapper_with_correct_params(self):
@@ -184,4 +192,6 @@ class TestAddSmartArtToSlide:
         # Assert - Verify text was updated
         pt_nodes = diagram_data.findall(f".//{{{dgm_ns}}}pt[@type='node']")
         assert len(pt_nodes) == 1
-        assert pt_nodes[0].find(f".//{{{a_ns}}}t").text == "Node 1"
+        t_elem = pt_nodes[0].find(f".//{{{a_ns}}}t")
+        assert t_elem is not None
+        assert t_elem.text == "Node 1"

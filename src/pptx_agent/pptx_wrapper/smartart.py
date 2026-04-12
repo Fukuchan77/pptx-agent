@@ -3,6 +3,7 @@
 import logging
 from typing import Any
 
+from lxml import etree
 from pptx.slide import Slide
 
 # XML Namespaces for OpenXML diagram manipulation
@@ -47,8 +48,16 @@ class SmartArtWrapper:
             ... ]
             >>> SmartArtWrapper.populate_smartart(slide, "SmartArt", nodes)
         """
-        # Extract text items from nodes
-        text_items = [node["text"] for node in nodes]
+        # Extract text items from nodes with validation
+        try:
+            text_items = [node["text"] for node in nodes]
+        except KeyError as e:
+            msg = "Each node must have a 'text' key"
+            raise ValueError(msg) from e
+
+        if any(not text for text in text_items):
+            msg = "Empty text is not allowed in SmartArt nodes"
+            raise ValueError(msg)
 
         # Find the SmartArt shape by name
         smartart_shape = None
@@ -63,6 +72,7 @@ class SmartArtWrapper:
 
         # Check for test mode first: if shape has _diagram_data, use it directly
         # This allows tests to bypass the complex relationship navigation
+        diagram_part = None
         if hasattr(smartart_shape, "_diagram_data"):
             diagram_data = smartart_shape._diagram_data  # type: ignore[attr-defined]
             logger.debug("Using direct diagram data access (test mode)")
@@ -106,22 +116,29 @@ class SmartArtWrapper:
                     msg = "Could not find diagram data relationship ID"
                     raise ValueError(msg)
 
-                # Get the diagram data part through the relationship
+                # Get the diagram data part through the relationship.
+                # python-pptx has no registered factory for SmartArt diagram
+                # data parts, so they load as a base Part — which exposes only
+                # `blob`, not `_element`. Parse the blob ourselves and write
+                # the modified XML back via `_blob` after mutation.
                 part_rels = slide.part.rels
                 if data_rel_id not in part_rels:
                     msg = f"Diagram data relationship '{data_rel_id}' not found"
                     raise ValueError(msg)
 
                 diagram_part = part_rels[data_rel_id].target_part
-                diagram_data = diagram_part._element  # type: ignore[attr-defined]
+                diagram_data = etree.fromstring(diagram_part.blob)
 
-            except (AttributeError, KeyError) as e:
-                # If we can't navigate the relationships, raise error
-                msg = f"Could not access SmartArt diagram  {e}"
+            except (AttributeError, KeyError, etree.XMLSyntaxError) as e:
+                msg = f"Could not access SmartArt diagram data (XML parse may have failed): {e}"
                 raise ValueError(msg) from e
 
-        # Find all text nodes in the diagram data
-        pt_nodes = diagram_data.findall(f".//{{{DGM_NS}}}pt[@type='node']")
+        # Find all content nodes in the diagram data. The dgm:pt @type
+        # attribute defaults to "node" when omitted (per the OpenXML schema),
+        # so real-world SmartArt rarely sets it explicitly. Match both forms
+        # while skipping structural types: doc, parTrans, sibTrans, pres, asst.
+        all_pts = diagram_data.findall(f".//{{{DGM_NS}}}pt")
+        pt_nodes = [pt for pt in all_pts if pt.get("type") in (None, "node")]
 
         if len(pt_nodes) != len(text_items):
             msg = f"SmartArt has {len(pt_nodes)} nodes but {len(text_items)} text items provided"
@@ -137,6 +154,22 @@ class SmartArtWrapper:
                 logger.debug("Updated SmartArt node %d: '%s'", i, text_items[i])
             else:
                 logger.warning("No text element found in SmartArt node %d", i)
+
+        # Persist the modified XML back to the diagram data part. The base
+        # Part class has no `blob` setter, so we write `_blob` directly.
+        if diagram_part is not None:
+            if not hasattr(diagram_part, "_blob"):
+                msg = (
+                    "diagram_part has no '_blob' attribute. "
+                    "This may indicate an incompatible python-pptx version."
+                )
+                raise AttributeError(msg)
+            diagram_part._blob = etree.tostring(  # type: ignore[attr-defined]
+                diagram_data,
+                xml_declaration=True,
+                encoding="UTF-8",
+                standalone=True,
+            )
 
     @staticmethod
     def _populate_process_smartart(

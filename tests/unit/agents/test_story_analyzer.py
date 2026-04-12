@@ -8,7 +8,7 @@ Tests cover:
 - Edge cases (empty input, very long input, etc.)
 """
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
@@ -546,23 +546,17 @@ async def test_analyze_story_with_llm_integration():
         language="en",
     )
 
-    # Mock the agent's run method
-    with (
-        patch("pptx_agent.agents.story_analyzer._story_agent") as mock_agent,
-        patch("pptx_agent.agents.story_analyzer.get_config") as mock_get_config,
-        patch("pptx_agent.agents.story_analyzer.create_model") as mock_create_model,
-    ):
+    # Mock run_agent_with_fallback to return expected result
+    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
         mock_result = AgentRunResult(output=expected_analysis)
-        mock_agent.run = AsyncMock(return_value=mock_result)
-        mock_get_config.return_value = "mock-config"
-        mock_create_model.return_value = "mock-model"
+        mock_run.return_value = mock_result
 
         # Act
         result = await analyze_story(text, use_llm=True)
 
         # Assert
         assert result == expected_analysis
-        mock_agent.run.assert_called_once()
+        mock_run.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -581,21 +575,16 @@ async def test_analyze_story_llm_calls_create_model():
         language="en",
     )
 
-    with (
-        patch("pptx_agent.agents.story_analyzer._story_agent") as mock_agent,
-        patch("pptx_agent.agents.story_analyzer.get_config") as mock_get_config,
-        patch("pptx_agent.agents.story_analyzer.create_model") as mock_create_model,
-    ):
+    # Mock run_agent_with_fallback
+    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
         mock_result = AgentRunResult(output=expected_analysis)
-        mock_agent.run = AsyncMock(return_value=mock_result)
-        mock_get_config.return_value = "mock-config"
-        mock_create_model.return_value = "mock-model"
+        mock_run.return_value = mock_result
 
         # Act
         await analyze_story(text, use_llm=True)
 
-        # Assert that create_model was called
-        mock_create_model.assert_called_once()
+        # Assert that run_agent_with_fallback was called
+        mock_run.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -614,15 +603,10 @@ async def test_analyze_story_llm_returns_result_data():
         language="en",
     )
 
-    with (
-        patch("pptx_agent.agents.story_analyzer._story_agent") as mock_agent,
-        patch("pptx_agent.agents.story_analyzer.get_config") as mock_get_config,
-        patch("pptx_agent.agents.story_analyzer.create_model") as mock_create_model,
-    ):
+    # Mock run_agent_with_fallback
+    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
         mock_result = AgentRunResult(output=expected_analysis)
-        mock_agent.run = AsyncMock(return_value=mock_result)
-        mock_get_config.return_value = "mock-config"
-        mock_create_model.return_value = "mock-model"
+        mock_run.return_value = mock_result
 
         # Act
         result = await analyze_story(text, use_llm=True)
@@ -641,15 +625,13 @@ async def test_analyze_story_llm_false_uses_heuristic():
     """
     text = "Machine learning introduction"
 
-    # Should NOT call the agent when use_llm=False
-    with patch("pptx_agent.agents.story_analyzer._story_agent") as mock_agent:
-        mock_agent.run = AsyncMock()
-
+    # Should NOT call run_agent_with_fallback when use_llm=False
+    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
         # Act
         result = await analyze_story(text, use_llm=False)
 
-        # Assert agent was NOT called
-        mock_agent.run.assert_not_called()
+        # Assert run_agent_with_fallback was NOT called
+        mock_run.assert_not_called()
 
         # Should still return valid StoryAnalysis
         assert isinstance(result, StoryAnalysis)
@@ -662,8 +644,6 @@ async def test_analyze_story_llm_false_uses_heuristic():
 @pytest.mark.asyncio
 async def test_analyze_story_with_fallback_on_primary_failure():
     """Test that fallback model is used when primary fails."""
-    from unittest.mock import MagicMock
-
     text = "Test story for fallback"
 
     # Expected result from fallback
@@ -675,61 +655,30 @@ async def test_analyze_story_with_fallback_on_primary_failure():
         language="en",
     )
 
-    primary_model = MagicMock()
-    fallback_model = MagicMock()
-
-    with (
-        patch("pptx_agent.agents.story_analyzer.get_config") as mock_get_config,
-        patch(
-            "pptx_agent.agents.story_analyzer.create_model", return_value=primary_model
-        ) as mock_create_model,
-        patch(
-            "pptx_agent.agents.story_analyzer.create_fallback_model", return_value=fallback_model
-        ) as mock_create_fallback,
-        patch("pptx_agent.agents.story_analyzer._story_agent") as mock_agent,
-    ):
-        mock_get_config.return_value = "mock-config"
-
-        # First call fails with primary, second succeeds with fallback
-        mock_agent.run = AsyncMock(
-            side_effect=[
-                Exception("Primary provider failed"),
-                AgentRunResult(output=expected_analysis),
-            ]
-        )
+    # Mock run_agent_with_fallback to return expected result
+    # The fallback logic is tested in test_utils.py
+    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
+        mock_result = AgentRunResult(output=expected_analysis)
+        mock_run.return_value = mock_result
 
         # Act
         result = await analyze_story(text, use_llm=True)
 
         # Assert
         assert result == expected_analysis
-        assert mock_agent.run.call_count == 2  # Called twice: primary + fallback
-        mock_create_model.assert_called_once()
-        mock_create_fallback.assert_called_once()
+        mock_run.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_analyze_story_both_providers_fail():
     """Test that exception is raised when both providers fail."""
-    from unittest.mock import MagicMock
-
     text = "Test story for double failure"
 
-    primary_model = MagicMock()
-    fallback_model = MagicMock()
-
-    with (
-        patch("pptx_agent.agents.story_analyzer.get_config") as mock_get_config,
-        patch("pptx_agent.agents.story_analyzer.create_model", return_value=primary_model),
-        patch(
-            "pptx_agent.agents.story_analyzer.create_fallback_model", return_value=fallback_model
-        ),
-        patch("pptx_agent.agents.story_analyzer._story_agent") as mock_agent,
-    ):
-        mock_get_config.return_value = "mock-config"
-
-        # Both calls fail
-        mock_agent.run = AsyncMock(side_effect=Exception("All providers failed"))
+    # Mock run_agent_with_fallback to raise RuntimeError
+    # The fallback logic is tested in test_utils.py
+    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
+        # Simulate all providers failing
+        mock_run.side_effect = RuntimeError("All LLM providers failed")
 
         # Act & Assert
         with pytest.raises(RuntimeError, match="All LLM providers failed"):
@@ -741,13 +690,8 @@ async def test_analyze_story_heuristic_no_fallback():
     """Test that fallback is not used in heuristic mode."""
     text = "Test story for heuristic mode"
 
-    with (
-        patch("pptx_agent.agents.story_analyzer._story_agent") as mock_agent,
-        patch("pptx_agent.agents.story_analyzer.create_model") as mock_create_model,
-        patch("pptx_agent.agents.story_analyzer.create_fallback_model") as mock_create_fallback,
-    ):
-        mock_agent.run = AsyncMock()
-
+    # Mock run_agent_with_fallback
+    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
         # Act
         result = await analyze_story(text, use_llm=False)
 
@@ -755,6 +699,4 @@ async def test_analyze_story_heuristic_no_fallback():
         assert result is not None
         assert isinstance(result, StoryAnalysis)
         # No LLM calls should be made
-        mock_agent.run.assert_not_called()
-        mock_create_model.assert_not_called()
-        mock_create_fallback.assert_not_called()
+        mock_run.assert_not_called()

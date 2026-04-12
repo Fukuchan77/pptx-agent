@@ -9,19 +9,20 @@ Tests cover:
 - Edge cases (minimal outline, complex slides)
 """
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 from pydantic_ai import AgentRunResult
 
-from pptx_agent.agents.content_generator import (
-    _split_into_sentences,  # type: ignore[reportPrivateUsage]  # pyright: ignore[reportPrivateUsage]
-    generate_content,  # type: ignore[reportPrivateUsage]
-)
+from pptx_agent.agents.content_generator import \
+    _split_into_sentences  # type: ignore[reportPrivateUsage]  # pyright: ignore[reportPrivateUsage]
+from pptx_agent.agents.content_generator import \
+    generate_content  # type: ignore[reportPrivateUsage]
 from pptx_agent.schemas.outline import PresentationOutline, SlideContent
 from pptx_agent.schemas.presentation import PresentationSchema
 from pptx_agent.schemas.slide import SlideSchema
-from pptx_agent.schemas.template_manifest import LayoutInfo, PlaceholderInfo, TemplateManifest
+from pptx_agent.schemas.template_manifest import (LayoutInfo, PlaceholderInfo,
+                                                  TemplateManifest)
 from pptx_agent.schemas.text import TextBlock
 
 
@@ -1165,23 +1166,17 @@ async def test_generate_content_with_llm():
         metadata={},
     )
 
-    # Mock the agent's run method
-    with (
-        patch("pptx_agent.agents.content_generator._content_agent") as mock_agent,
-        patch("pptx_agent.agents.content_generator.get_config") as mock_get_config,
-        patch("pptx_agent.agents.content_generator.create_model") as mock_create_model,
-    ):
+    # Mock run_agent_with_fallback to return expected result
+    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
         mock_result = AgentRunResult(output=expected_schema)
-        mock_agent.run = AsyncMock(return_value=mock_result)
-        mock_get_config.return_value = "mock-config"
-        mock_create_model.return_value = "mock-model"
+        mock_run.return_value = mock_result
 
         # Act
         result = await generate_content(outline, use_llm=True)
 
         # Assert
         assert result == expected_schema
-        mock_agent.run.assert_called_once()
+        mock_run.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -1222,22 +1217,16 @@ async def test_generate_content_with_llm_creates_model():
         metadata={},
     )
 
-    with (
-        patch("pptx_agent.agents.content_generator._content_agent") as mock_agent,
-        patch("pptx_agent.agents.content_generator.get_config") as mock_get_config,
-        patch("pptx_agent.agents.content_generator.create_model") as mock_create_model,
-    ):
+    # Mock run_agent_with_fallback
+    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
         mock_result = AgentRunResult(output=expected_schema)
-        mock_agent.run = AsyncMock(return_value=mock_result)
-        mock_get_config.return_value = "mock-config"
-        mock_create_model.return_value = "mock-model"
+        mock_run.return_value = mock_result
 
         # Act
         await generate_content(outline, use_llm=True)
 
-        # Assert that create_model was called with config
-        mock_get_config.assert_called_once()
-        mock_create_model.assert_called_once_with("mock-config")
+        # Assert that run_agent_with_fallback was called
+        mock_run.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -1259,15 +1248,10 @@ async def test_generate_content_with_llm_error_handling():
         output_language="en",
     )
 
-    with (
-        patch("pptx_agent.agents.content_generator._content_agent") as mock_agent,
-        patch("pptx_agent.agents.content_generator.get_config") as mock_get_config,
-        patch("pptx_agent.agents.content_generator.create_model") as mock_create_model,
-    ):
+    # Mock run_agent_with_fallback to raise exception
+    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
         # Simulate LLM error
-        mock_agent.run = AsyncMock(side_effect=Exception("LLM API error"))
-        mock_get_config.return_value = "mock-config"
-        mock_create_model.return_value = "mock-model"
+        mock_run.side_effect = Exception("LLM API error")
 
         # Act & Assert - should raise the exception
         with pytest.raises(Exception, match="LLM API error"):
@@ -1293,15 +1277,15 @@ async def test_generate_content_heuristic_unchanged():
         output_language="en",
     )
 
-    # Should NOT call the agent when use_llm=False
-    with patch("pptx_agent.agents.content_generator._content_agent") as mock_agent:
-        mock_agent.run = AsyncMock()
+    # Should NOT call run_agent_with_fallback when use_llm=False
+    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
+        mock_run.return_value = None
 
         # Act
         result = await generate_content(outline, use_llm=False)
 
-        # Assert agent was NOT called
-        mock_agent.run.assert_not_called()
+        # Assert run_agent_with_fallback was NOT called
+        mock_run.assert_not_called()
 
         # Should still return valid PresentationSchema
         assert isinstance(result, PresentationSchema)
@@ -1315,8 +1299,6 @@ async def test_generate_content_heuristic_unchanged():
 @pytest.mark.asyncio
 async def test_generate_content_with_fallback_on_primary_failure():
     """Test that fallback model is used when primary fails."""
-    from unittest.mock import MagicMock
-
     outline = PresentationOutline(
         title="Test Presentation",
         slides=[
@@ -1350,44 +1332,23 @@ async def test_generate_content_with_fallback_on_primary_failure():
         metadata={},
     )
 
-    primary_model = MagicMock()
-    fallback_model = MagicMock()
-
-    with (
-        patch("pptx_agent.agents.content_generator.get_config") as mock_get_config,
-        patch(
-            "pptx_agent.agents.content_generator.create_model", return_value=primary_model
-        ) as mock_create_model,
-        patch(
-            "pptx_agent.agents.content_generator.create_fallback_model", return_value=fallback_model
-        ) as mock_create_fallback,
-        patch("pptx_agent.agents.content_generator._content_agent") as mock_agent,
-    ):
-        mock_get_config.return_value = "mock-config"
-
-        # First call fails with primary, second succeeds with fallback
-        mock_agent.run = AsyncMock(
-            side_effect=[
-                Exception("Primary provider failed"),
-                AgentRunResult(output=expected_schema),
-            ]
-        )
+    # Mock run_agent_with_fallback to return expected result
+    # The fallback logic is tested in test_utils.py
+    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
+        mock_result = AgentRunResult(output=expected_schema)
+        mock_run.return_value = mock_result
 
         # Act
         result = await generate_content(outline, use_llm=True)
 
         # Assert
         assert result == expected_schema
-        assert mock_agent.run.call_count == 2  # Called twice: primary + fallback
-        mock_create_model.assert_called_once()
-        mock_create_fallback.assert_called_once()
+        mock_run.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_generate_content_both_providers_fail():
     """Test that exception is raised when both providers fail."""
-    from unittest.mock import MagicMock
-
     outline = PresentationOutline(
         title="Test Presentation",
         slides=[
@@ -1401,21 +1362,11 @@ async def test_generate_content_both_providers_fail():
         output_language="en",
     )
 
-    primary_model = MagicMock()
-    fallback_model = MagicMock()
-
-    with (
-        patch("pptx_agent.agents.content_generator.get_config") as mock_get_config,
-        patch("pptx_agent.agents.content_generator.create_model", return_value=primary_model),
-        patch(
-            "pptx_agent.agents.content_generator.create_fallback_model", return_value=fallback_model
-        ),
-        patch("pptx_agent.agents.content_generator._content_agent") as mock_agent,
-    ):
-        mock_get_config.return_value = "mock-config"
-
-        # Both calls fail
-        mock_agent.run = AsyncMock(side_effect=Exception("All providers failed"))
+    # Mock run_agent_with_fallback to raise RuntimeError
+    # The fallback logic is tested in test_utils.py
+    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
+        # Simulate all providers failing
+        mock_run.side_effect = RuntimeError("All LLM providers failed")
 
         # Act & Assert
         with pytest.raises(RuntimeError, match="All LLM providers failed"):
@@ -1438,13 +1389,8 @@ async def test_generate_content_heuristic_no_fallback():
         output_language="en",
     )
 
-    with (
-        patch("pptx_agent.agents.content_generator._content_agent") as mock_agent,
-        patch("pptx_agent.agents.content_generator.create_model") as mock_create_model,
-        patch("pptx_agent.agents.content_generator.create_fallback_model") as mock_create_fallback,
-    ):
-        mock_agent.run = AsyncMock()
-
+    # Mock run_agent_with_fallback
+    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
         # Act
         result = await generate_content(outline, use_llm=False)
 
@@ -1452,6 +1398,4 @@ async def test_generate_content_heuristic_no_fallback():
         assert result is not None
         assert isinstance(result, PresentationSchema)
         # No LLM calls should be made
-        mock_agent.run.assert_not_called()
-        mock_create_model.assert_not_called()
-        mock_create_fallback.assert_not_called()
+        mock_run.assert_not_called()

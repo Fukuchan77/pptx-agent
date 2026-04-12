@@ -49,6 +49,42 @@ class CustomOpenAIProvider(Provider[AsyncOpenAI]):
         return self._name
 
 
+def _create_model_from_params(
+    provider_type: str, model: str, base_url: str | None, api_key: str | None, config: Config
+) -> OpenAIChatModel:
+    """Helper to generate LLM model object from direct parameters."""
+    if provider_type == "openai":
+        p_base_url = base_url
+        p_api_key = api_key or "not-needed"
+        provider_name = "openai-custom"
+        model_name = model
+    elif provider_type == "watsonx":
+        p_base_url = f"{config.watsonx_url}/ml/v1/text/generation?version=2023-05-29"
+        p_api_key = api_key or ""
+        provider_name = "watsonx"
+        model_name = f"watsonx/{model}"
+    elif provider_type == "anthropic":
+        p_base_url = None
+        p_api_key = api_key or ""
+        provider_name = "anthropic"
+        model_name = f"anthropic/{model}"
+    else:
+        msg = f"Unsupported LLM provider: {provider_type}"
+        raise ValueError(msg)
+
+    http_client = create_http_client(config)
+    if p_base_url:
+        client = AsyncOpenAI(api_key=p_api_key, base_url=p_base_url, http_client=http_client)
+    else:
+        client = AsyncOpenAI(api_key=p_api_key, http_client=http_client)
+    provider = CustomOpenAIProvider(client, name=provider_name)
+
+    return OpenAIChatModel(
+        model_name=model_name,
+        provider=provider,
+    )
+
+
 def create_model(config: Config) -> OpenAIChatModel:
     """Generate LLM model object from Config.
 
@@ -66,49 +102,21 @@ def create_model(config: Config) -> OpenAIChatModel:
     Raises:
         ValueError: If provider configuration is invalid
     """
-    # For OpenAI provider with custom base URL (e.g., Ollama)
+    api_key = None
     if config.llm_provider == "openai":
-        # Create AsyncOpenAI client with custom configuration
-        client = AsyncOpenAI(
-            base_url=config.llm_api_base,
-            api_key=config.openai_api_key or "not-needed",  # Ollama doesn't need key
-            http_client=create_http_client(config),
-        )
-        provider = CustomOpenAIProvider(client, name="openai-custom")
-        return OpenAIChatModel(
-            model_name=config.llm_model,
-            provider=provider,
-        )
+        api_key = config.openai_api_key
+    elif config.llm_provider == "watsonx":
+        api_key = config.watsonx_apikey
+    elif config.llm_provider == "anthropic":
+        api_key = config.anthropic_api_key
 
-    # For watsonx provider via LiteLLM
-    if config.llm_provider == "watsonx":
-        # LiteLLM format: watsonx/model_name
-        client = AsyncOpenAI(
-            base_url=f"{config.watsonx_url}/ml/v1/text/generation?version=2023-05-29",
-            api_key=config.watsonx_apikey or "",
-            http_client=create_http_client(config),
-        )
-        provider = CustomOpenAIProvider(client, name="watsonx")
-        return OpenAIChatModel(
-            model_name=f"watsonx/{config.llm_model}",
-            provider=provider,
-        )
-
-    # For Anthropic provider via LiteLLM
-    if config.llm_provider == "anthropic":
-        # LiteLLM format: anthropic/model_name
-        client = AsyncOpenAI(
-            api_key=config.anthropic_api_key or "",
-            http_client=create_http_client(config),
-        )
-        provider = CustomOpenAIProvider(client, name="anthropic")
-        return OpenAIChatModel(
-            model_name=f"anthropic/{config.llm_model}",
-            provider=provider,
-        )
-
-    msg = f"Unsupported LLM provider: {config.llm_provider}"
-    raise ValueError(msg)
+    return _create_model_from_params(
+        provider_type=config.llm_provider,
+        model=config.llm_model,
+        base_url=config.llm_api_base,
+        api_key=api_key,
+        config=config,
+    )
 
 
 def create_fallback_model(config: Config) -> OpenAIChatModel | None:
@@ -126,29 +134,27 @@ def create_fallback_model(config: Config) -> OpenAIChatModel | None:
         OpenAIChatModel | None: Fallback model instance or None if not configured
 
     """
-    # Return None if fallback is disabled or not configured
-    if not config.enable_fallback:
+    if not config.enable_fallback or not config.fallback_provider:
         return None
 
-    if not config.fallback_provider:
-        return None
+    api_key = None
+    if config.fallback_provider == "anthropic":
+        api_key = config.anthropic_api_key
+    elif config.fallback_provider == "openai":
+        api_key = config.openai_api_key
+    elif config.fallback_provider == "watsonx":
+        api_key = config.watsonx_apikey
 
-    # Create temporary config for fallback provider
-    fallback_config = Config(
-        llm_provider=config.fallback_provider,  # type: ignore[arg-type]
-        llm_model=config.fallback_model or "claude-3-5-sonnet-20241022",
-        anthropic_api_key=config.anthropic_api_key,
-        openai_api_key=config.openai_api_key,
-        llm_api_base=config.llm_api_base,
-        environment=config.environment,
-        max_retries=config.max_retries,
-        request_timeout=config.request_timeout,
-        retry_base_delay=config.retry_base_delay,
-        retry_max_delay=config.retry_max_delay,
-    )
+    fallback_model_name = config.fallback_model or "claude-3-5-sonnet-20241022"
 
     try:
-        return create_model(fallback_config)
+        return _create_model_from_params(
+            provider_type=config.fallback_provider,
+            model=fallback_model_name,
+            base_url=config.llm_api_base,  # fallback uses original base url or None
+            api_key=api_key,
+            config=config,
+        )
     except ValueError as e:
         logger.warning("Failed to create fallback model: %s", e)
         return None
@@ -170,10 +176,10 @@ def create_http_client(config: Config) -> AsyncClient:
     """
     # Create timeout configuration
     timeout = Timeout(
-        connect=10.0,  # Connection timeout
+        connect=config.connect_timeout,  # Connection timeout
         read=config.request_timeout,  # Read timeout
-        write=10.0,  # Write timeout
-        pool=10.0,  # Pool timeout
+        write=config.write_timeout,  # Write timeout
+        pool=config.pool_timeout,  # Pool timeout
     )
 
     # Create HTTP client with timeout

@@ -10,6 +10,7 @@ from pptx_agent.validators.exceptions import (
     InvalidFileError,
     SecurityValidationError,
 )
+from pptx_agent.validators.security import validate_xml_safety
 
 # Constants for validation limits
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
@@ -52,28 +53,15 @@ def validate_pptx_file(file_path: Path | str) -> None:
     # Try to open as ZIP file
     try:
         with zipfile.ZipFile(file_path, "r") as zf:
-            # First, calculate total uncompressed size
+            # Calculate total uncompressed size and check compression ratio in a single loop
             total_uncompressed_size = 0
 
             for info in zf.infolist():
                 total_uncompressed_size += info.file_size
 
-            # Check total uncompressed size first (before compression ratio check)
-            if total_uncompressed_size > MAX_UNCOMPRESSED_SIZE:
-                msg = (
-                    f"Uncompressed size limit exceeded: {total_uncompressed_size} bytes total, "
-                    f"maximum allowed is {MAX_UNCOMPRESSED_SIZE} bytes."
-                )
-                raise FileSizeLimitError(msg)
-
-            # Then check compression ratio for each file
-            for info in zf.infolist():
-                uncompressed_size = info.file_size
-                compressed_size = info.compress_size
-
                 # Check compression ratio for each file (avoid division by zero)
-                if compressed_size > 0:
-                    ratio = uncompressed_size / compressed_size
+                if info.compress_size > 0:
+                    ratio = info.file_size / info.compress_size
                     if ratio > MAX_COMPRESSION_RATIO:
                         msg = (
                             f"Suspicious compression ratio detected: file '{info.filename}' has "
@@ -81,6 +69,14 @@ def validate_pptx_file(file_path: Path | str) -> None:
                             f"{MAX_COMPRESSION_RATIO}x. Expected: valid compression ratio."
                         )
                         raise CompressionRatioError(msg)
+
+            # Check total uncompressed size (after gathering total)
+            if total_uncompressed_size > MAX_UNCOMPRESSED_SIZE:
+                msg = (
+                    f"Uncompressed size limit exceeded: {total_uncompressed_size} bytes total, "
+                    f"maximum allowed is {MAX_UNCOMPRESSED_SIZE} bytes."
+                )
+                raise FileSizeLimitError(msg)
 
     except zipfile.BadZipFile as e:
         msg = f"File format validation failed: file is not a valid ZIP/PPTX file. Details: {e}"
@@ -235,9 +231,26 @@ def validate_pptx_structure(file_path: Path | str) -> None:
                         )
                         raise SecurityValidationError(msg)
 
-                    # TODO: Integrate defusedxml-based validation (validate_xml_safety
-                    # from security.py) for defense-in-depth.  Tracked as a follow-up
-                    # task; see cross-validation report P1-#2 (2026-04-11).
+                    # Defense-in-depth: validate via defusedxml parser
+                    # after regex pre-checks pass.
+                    try:
+                        decoded_content = content.decode("utf-8")
+                    except UnicodeDecodeError as e:
+                        # Non-UTF-8 XML in a PPTX is suspicious
+                        msg = (
+                            f"XML security validation failed: unable to decode "
+                            f"'{file_info.filename}' as UTF-8. "
+                            "Expected: UTF-8 encoded XML."
+                        )
+                        raise SecurityValidationError(msg) from e
+
+                    if not validate_xml_safety(decoded_content):
+                        msg = (
+                            f"XML security validation failed: defusedxml detected "
+                            f"a potential threat in '{file_info.filename}'. "
+                            "Expected: XML without malicious patterns."
+                        )
+                        raise SecurityValidationError(msg)
 
     except zipfile.BadZipFile as e:
         msg = (

@@ -169,6 +169,15 @@ def _load_manifest(manifest_path: str | None) -> TemplateManifest | None:
     return TemplateManifest.model_validate(manifest_data)
 
 
+def validate_cli_inputs(args: argparse.Namespace) -> tuple[str, Path, TemplateManifest | None]:
+    """Validate all CLI inputs, return validated objects or raise."""
+    validate_templates(auto_generate=args.generate_templates)
+    input_text = _validate_and_read_input(args.input)
+    template_path = _validate_template(args.template)
+    template_manifest = _load_manifest(args.manifest)
+    return input_text, template_path, template_manifest
+
+
 def main() -> int:
     """Main CLI entry point.
 
@@ -182,41 +191,8 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        # Validate templates on startup
-        try:
-            validate_templates(auto_generate=args.generate_templates)
-        except FileNotFoundError as e:
-            print(f"Error: {e}", file=sys.stderr)
-            return 1
-        except RuntimeError as e:
-            # Handle template generation failures
-            print(f"Error: {e}", file=sys.stderr)
-            return 1
-
-        # Validate and read input files
-        try:
-            input_text = _validate_and_read_input(args.input)
-        except FileNotFoundError as e:
-            print(f"Error: {e}", file=sys.stderr)
-            return 1
-        except (OSError, UnicodeDecodeError) as e:
-            print(f"Error: Cannot read input file: {e}", file=sys.stderr)
-            return 1
-
-        try:
-            template_path = _validate_template(args.template)
-        except FileNotFoundError as e:
-            print(f"Error: {e}", file=sys.stderr)
-            return 1
-
-        try:
-            template_manifest = _load_manifest(args.manifest)
-        except FileNotFoundError as e:
-            print(f"Error: {e}", file=sys.stderr)
-            return 1
-        except (json.JSONDecodeError, ValueError) as e:
-            print(f"Error: Invalid manifest file: {e}", file=sys.stderr)
-            return 1
+        # Validate all CLI inputs
+        input_text, template_path, template_manifest = validate_cli_inputs(args)
 
         # Resolve output path to absolute
         # Note: Path traversal validation is intentionally not performed here for CLI flexibility
@@ -245,10 +221,21 @@ def main() -> int:
         print(f"Error: File validation failed: {e}", file=sys.stderr)
         return 1
     except FileNotFoundError as e:
-        print(f"Error: File not found: {e}", file=sys.stderr)
-        return 1
-    except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
+        return 1
+    except (OSError, UnicodeDecodeError) as e:
+        print(f"Error: Cannot read input file: {e}", file=sys.stderr)
+        return 1
+    except RuntimeError as e:
+        logger.exception("Unexpected error")
+        if args.verbose:
+            # Show full traceback in verbose mode
+            traceback.print_exc(file=sys.stderr)
+        else:
+            print(f"Error: {e}", file=sys.stderr)
+        return 1
+    except (json.JSONDecodeError, ValueError) as e:
+        print(f"Error: Invalid manifest file or input: {e}", file=sys.stderr)
         return 1
     except Exception as e:
         logger.exception("Unexpected error")

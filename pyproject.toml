@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "pydantic-ai-slim[logfire,openai]>=1.77.0",
     "pydantic-ai-litellm>=0.2.3",
-    "python-pptx>=1.0.2",
+    "python-pptx>=1.0.2,<2.0.0",
     "pydantic-settings>=2.13.0",
     "defusedxml>=0.7.1",
 ]
@@ -20,6 +20,7 @@ dev = [
     "ruff>=0.15.8",
     "pyright>=1.1.408",
     "ty>=0.0.28",
+    "types-lxml>=2026.2.16",
 ]
 
 [build-system]
@@ -109,13 +110,21 @@ ignore = [
 "src/pptx_agent/config.py" = ["PLW0603", "PYI063", "ANN001"]  # Global singleton, pydantic hooks
 "src/pptx_agent/main.py" = ["T201", "PLR0911", "PLR0912"]  # CLI uses print, many error returns, complex routing
 "src/pptx_agent/pipeline.py" = ["PLR0913"]  # Core pipeline needs many arguments
-"src/pptx_agent/agents/*.py" = ["ARG001"]  # Unused args like use_llm or manifest required for API parity
+"src/pptx_agent/agents/content_generator.py" = ["ARG001"]  # Unused args required for API parity
+"src/pptx_agent/agents/llm_config.py" = ["ARG001"]  # Unused args required for API parity
+"src/pptx_agent/agents/outline_generator.py" = ["ARG001"]  # Unused args required for API parity
+"src/pptx_agent/agents/overflow_resolver.py" = ["ARG001"]  # Unused args required for API parity
+"src/pptx_agent/agents/story_analyzer.py" = ["ARG001"]  # Unused args required for API parity
 "src/pptx_agent/pptx_wrapper/shapes.py" = ["SLF001", "S110", "SIM105"]  # Private XML access, defensive error handling
 "src/pptx_agent/pptx_wrapper/slide.py" = ["PLR0912", "S110"]  # Complex placeholder matching logic
 "src/pptx_agent/pptx_wrapper/smartart.py" = ["ARG004", "SIM102", "TRY301", "B904", "PLR0912", "PLR0915", "SLF001"]  # NotImplementedError stub, complex XML parsing
 "src/pptx_agent/template_parser/parser.py" = ["ANN001"]  # python-pptx types not annotatable
 "src/pptx_agent/validators.py" = ["ARG001"]  # Future expansion placeholder
-"src/pptx_agent/validators/*.py" = ["ARG001", "TD", "FIX", "PLR0911", "PLR0912"]  # Security module complexity, TODOs
+"src/pptx_agent/validators/content_validator.py" = ["ARG001", "PLR0911", "PLR0912"]  # Validator complexity
+"src/pptx_agent/validators/file_validator.py" = ["ARG001", "PLR0911"]  # Validator complexity
+"src/pptx_agent/validators/input_validator.py" = ["ARG001", "PLR0911", "PLR0912"]  # Validator complexity
+"src/pptx_agent/validators/outline_validator.py" = ["ARG001", "PLR0911"]  # Validator complexity
+"src/pptx_agent/validators/security.py" = ["ARG001", "TD", "FIX", "PLR0911", "PLR0912"]  # Security module complexity, TODOs
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -130,6 +139,9 @@ reportMissingTypeStubs = false
 reportUnknownMemberType = false
 reportUnknownArgumentType = false
 reportUnknownVariableType = false
+reportUnknownLambdaType = false
+reportMissingParameterType = false
+reportMissingTypeArgument = false
 
 [tool.pytest.ini_options]
 minversion = "9.0"
@@ -144,6 +156,10 @@ addopts = [
 ]
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+    "llm_mock: marks tests as LLM mock tests",
+    "integration: marks tests as integration tests",
+]
 
 [tool.coverage.run]
 source = ["src"]

@@ -237,27 +237,13 @@ async def test_pipeline_fails_when_all_providers_fail(tmp_path: Path, template_p
     input_text = "Test presentation"
     output_path = tmp_path / "output_fail.pptx"
 
-    with (
-        patch("pptx_agent.agents.story_analyzer.get_config") as mock_get_config,
-        patch(
-            "pptx_agent.agents.story_analyzer._story_agent.run", new_callable=AsyncMock
-        ) as mock_story_agent,
-    ):
-        # Mock config
-        mock_get_config.return_value = MagicMock(
-            llm_provider="openai",
-            llm_model="gpt-4",
-            llm_api_key="test-key",
-            fallback_provider="anthropic",
-            fallback_model="claude-3-5-sonnet-20241022",
-            fallback_api_key="test-fallback-key",
+    with patch(
+        "pptx_agent.agents.utils.run_agent_with_fallback", new_callable=AsyncMock
+    ) as mock_run_with_fallback:
+        # Mock run_agent_with_fallback to raise RuntimeError (simulating both providers failing)
+        mock_run_with_fallback.side_effect = RuntimeError(
+            "All LLM providers failed. Primary: Primary failed, Fallback: Fallback failed"
         )
-
-        # Both primary and fallback fail
-        mock_story_agent.side_effect = [
-            Exception("Primary provider failed"),
-            Exception("Fallback provider failed"),
-        ]
 
         # Act & Assert
         with pytest.raises(RuntimeError, match="All LLM providers failed"):

@@ -19,24 +19,13 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 from pydantic_ai import Agent
 
-from pptx_agent.agents.llm_config import create_fallback_model, create_model
+from pptx_agent.agents.analyzer_config import ANALYZER_CONFIG
 from pptx_agent.agents.prompts import STORY_ANALYZER_PROMPT
 from pptx_agent.config import get_config
 from pptx_agent.utils.language_detector import detect_language
 from pptx_agent.validators.input_validator import InputValidationError
 
 logger = logging.getLogger(__name__)
-
-# Constants for text analysis heuristics
-MAX_TOPIC_LENGTH = 100
-MAX_MESSAGE_LENGTH = 150
-MIN_EMPHASIZED_TEXT_LENGTH = 20
-MIN_PARAGRAPH_LENGTH = 50
-MAX_CONTRACTION_COUNT_FORMAL = 3
-MIN_CONTRACTION_COUNT_CASUAL = 5
-MAX_EXCLAMATION_COUNT_PROFESSIONAL = 2
-MIN_EXCLAMATION_COUNT_CASUAL = 3
-MIN_MARKDOWN_HEADERS_FOR_STRUCTURED = 3
 
 
 class StoryAnalysis(BaseModel):
@@ -113,29 +102,10 @@ async def analyze_story(text: str, *, use_llm: bool = True) -> StoryAnalysis:
     if use_llm:
         # Use LLM for analysis with fallback
         config = get_config()
+        from pptx_agent.agents.utils import run_agent_with_fallback  # noqa: PLC0415
 
-        # Try primary model
-        try:
-            model = create_model(config)
-            result = await _story_agent.run(text, model=model)
-        except Exception as e:
-            # Log primary failure
-            logger.warning("Primary LLM provider failed: %s, trying fallback", e)
-
-            # Try fallback model
-            try:
-                fallback_model = create_fallback_model(config)
-                result = await _story_agent.run(text, model=fallback_model)
-            except Exception as fallback_error:
-                # Both failed - log and re-raise
-                error_msg = f"All LLM providers failed. Primary: {e}, Fallback: {fallback_error}"
-                logger.exception("Fallback LLM provider also failed")
-                raise RuntimeError(error_msg) from fallback_error
-            else:
-                logger.info("Fallback LLM provider succeeded")
-                return result.output
-        else:
-            return result.output
+        result = await run_agent_with_fallback(_story_agent, text, config)
+        return result.output
     # Use heuristic fallback for testing/debugging
     return _heuristic_analyze_story(text)
 
@@ -215,8 +185,8 @@ def _extract_topic(text: str) -> str:
     first_line = lines[0]
 
     # Limit length for topic
-    if len(first_line) > MAX_TOPIC_LENGTH:
-        return first_line[: MAX_TOPIC_LENGTH - 3] + "..."
+    if len(first_line) > ANALYZER_CONFIG.max_topic_length:
+        return first_line[: ANALYZER_CONFIG.max_topic_length - 3] + "..."
 
     return first_line
 
@@ -271,8 +241,8 @@ def _truncate_message(msg: str) -> str:
     Returns:
         Truncated message
     """
-    if len(msg) > MAX_MESSAGE_LENGTH:
-        return msg[: MAX_MESSAGE_LENGTH - 3] + "..."
+    if len(msg) > ANALYZER_CONFIG.max_message_length:
+        return msg[: ANALYZER_CONFIG.max_message_length - 3] + "..."
     return msg
 
 
@@ -328,7 +298,9 @@ def _find_emphasized_message(text: str) -> str | None:
     for line in text.split("\n"):
         if "**" in line or "*" in line or "_" in line:
             clean_line = line.replace("**", "").replace("*", "").replace("_", "").strip()
-            if MIN_EMPHASIZED_TEXT_LENGTH < len(clean_line) < MAX_MESSAGE_LENGTH:
+            min_len = ANALYZER_CONFIG.min_emphasized_text_length
+            max_len = ANALYZER_CONFIG.max_message_length
+            if min_len < len(clean_line) < max_len:
                 return clean_line
     return None
 
@@ -347,7 +319,7 @@ def _extract_from_first_paragraph(text: str) -> str | None:
         return None
 
     first_para = paragraphs[0]
-    if len(first_para) <= MIN_PARAGRAPH_LENGTH:
+    if len(first_para) <= ANALYZER_CONFIG.min_paragraph_length:
         return None
 
     sentences = [s.strip() for s in first_para.split(".") if s.strip()]
@@ -451,17 +423,18 @@ def _detect_tone(text: str) -> str:
     exclamation_count = text.count("!")
 
     # Determine tone
-    if formal_count > casual_count and contraction_count < MAX_CONTRACTION_COUNT_FORMAL:
+    max_contraction_formal = ANALYZER_CONFIG.max_contraction_count_formal
+    if formal_count > casual_count and contraction_count < max_contraction_formal:
         return "formal"
     if (
         casual_count > formal_count
-        or contraction_count > MIN_CONTRACTION_COUNT_CASUAL
-        or exclamation_count > MIN_EXCLAMATION_COUNT_CASUAL
+        or contraction_count > ANALYZER_CONFIG.min_contraction_count_casual
+        or exclamation_count > ANALYZER_CONFIG.min_exclamation_count_casual
     ):
         return "casual"
-    if formal_count > 0 and exclamation_count < MAX_EXCLAMATION_COUNT_PROFESSIONAL:
+    if formal_count > 0 and exclamation_count < ANALYZER_CONFIG.max_exclamation_count_professional:
         return "professional"
-    if exclamation_count > MAX_EXCLAMATION_COUNT_PROFESSIONAL or casual_count > 0:
+    if exclamation_count > ANALYZER_CONFIG.max_exclamation_count_professional or casual_count > 0:
         return "friendly"
     return "neutral"
 
@@ -497,7 +470,7 @@ def _generate_suggested_structure(text: str) -> str | None:
         return "Problem, Solution, Benefits"
     if has_intro and has_conclusion:
         return "Introduction, Main Content, Conclusion"
-    if text.count("#") >= MIN_MARKDOWN_HEADERS_FOR_STRUCTURED:
+    if text.count("#") >= ANALYZER_CONFIG.min_markdown_headers_for_structured:
         # Multiple Markdown headers suggest structured content
         return "Multi-section structured presentation"
     # Default structure

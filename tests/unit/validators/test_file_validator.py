@@ -25,7 +25,7 @@ class TestValidatePptxFile:
         # Create a small valid ZIP file
         pptx_path = tmp_path / "normal.pptx"
         with zipfile.ZipFile(pptx_path, "w", zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr("content.xml", "x" * 1000)  # 1KB uncompressed
+            zf.writestr("content.xml", "<root>" + "x" * 987 + "</root>")  # 1KB uncompressed
             zf.writestr("[Content_Types].xml", "<Types/>")
 
         # Should not raise any exception
@@ -115,7 +115,7 @@ class TestValidateTemplatePath:
         # Create a valid PPTX file
         template_path = tmp_path / "valid_template.pptx"
         with zipfile.ZipFile(template_path, "w", zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr("content.xml", "x" * 1000)
+            zf.writestr("content.xml", "<root>" + "x" * 987 + "</root>")
             zf.writestr("[Content_Types].xml", "<Types/>")
 
         # Should not raise any exception
@@ -151,7 +151,7 @@ class TestValidateTemplatePath:
         """Test validation fails for file without extension."""
         template_path = tmp_path / "template"
         with zipfile.ZipFile(template_path, "w", zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr("content.xml", "x" * 1000)
+            zf.writestr("content.xml", "<root>" + "x" * 987 + "</root>")
 
         with pytest.raises(InvalidFileError) as exc_info:
             validate_template_path(str(template_path))
@@ -164,7 +164,7 @@ class TestValidateTemplatePath:
         # Create a valid PPTX file
         actual_file = tmp_path / "actual_template.pptx"
         with zipfile.ZipFile(actual_file, "w", zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr("content.xml", "x" * 1000)
+            zf.writestr("content.xml", "<root>" + "x" * 987 + "</root>")
 
         # Create a symlink to it
         symlink_path = tmp_path / "symlink_template.pptx"
@@ -195,7 +195,7 @@ class TestValidateTemplatePath:
         # Create a valid PPTX file
         template_path = tmp_path / "template.pptx"
         with zipfile.ZipFile(template_path, "w", zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr("content.xml", "x" * 1000)
+            zf.writestr("content.xml", "<root>" + "x" * 987 + "</root>")
 
         # Pass relative path
 
@@ -217,7 +217,7 @@ class TestValidateTemplatePath:
         # Create a valid PPTX file
         template_path = tmp_path / "unreadable.pptx"
         with zipfile.ZipFile(template_path, "w", zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr("content.xml", "x" * 1000)
+            zf.writestr("content.xml", "<root>" + "x" * 987 + "</root>")
 
         # Remove read permission
 

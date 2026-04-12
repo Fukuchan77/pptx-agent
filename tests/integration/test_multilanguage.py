@@ -356,3 +356,57 @@ async def test_output_language_in_generated_metadata(sample_story_ja: str, templ
         # Language info should be determinable from content
         # (This is a basic check - more sophisticated metadata tracking could be added)
         assert len(prs.slides) >= 3, "Presentation should have at least 3 slides"
+
+
+@pytest.mark.asyncio
+@pytest.mark.llm_mock
+async def test_generate_presentation_multilanguage_llm_mock(
+    sample_story_ja: str, template_path: str
+):
+    """Test complete pipeline with multi-language content using LLM mock."""
+    from pptx_agent.schemas.text import TextBlock
+    from tests.integration.conftest import llm_mock_pipeline
+
+    custom_slides = [
+        {
+            "layout_name": "Title Slide",
+            "title": "Japanese Title",
+            "content": [TextBlock(placeholder_name="Subtitle", text="Test", language="ja")],
+        },
+        {
+            "layout_name": "Title and Content",
+            "title": "Japanese Content",
+            "content": [
+                TextBlock(placeholder_name="Content", text="日本語のテキスト", language="ja")
+            ],
+        },
+        {
+            "layout_name": "Title Slide",
+            "title": "End",
+            "content": [TextBlock(placeholder_name="Subtitle", text="Test", language="ja")],
+        },
+    ]
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        output_path = str(Path(tmpdir) / "output_multilanguage_llm.pptx")
+
+        with llm_mock_pipeline(topic="ML", language="ja", slides=custom_slides) as (
+            mock_analyze,
+            mock_outline_gen,
+            mock_content_gen,
+        ):
+            result_path = await generate_presentation(
+                input_text=sample_story_ja,
+                template_path=template_path,
+                output_path=output_path,
+                use_llm=True,
+            )
+
+            assert Path(result_path).exists()
+            assert mock_analyze.called
+            assert mock_outline_gen.called
+            assert mock_content_gen.called
+
+            prs = Presentation(result_path)
+            assert prs is not None
+            assert len(prs.slides) >= 3

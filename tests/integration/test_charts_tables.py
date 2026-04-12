@@ -419,3 +419,72 @@ async def test_file_opens_without_corruption(chart_data_input: str, template_pat
 
         # If we got here, file is not corrupted
         assert True, "File should open without corruption"
+
+
+@pytest.mark.asyncio
+@pytest.mark.llm_mock
+async def test_generate_presentation_with_charts_tables_llm_mock(
+    chart_data_input: str, template_path: str
+):
+    """Test complete pipeline with charts and tables content using LLM mock."""
+    from pptx_agent.schemas.text import TextBlock
+    from pptx_agent.schemas.visual_assets import ChartBlock, TableBlock
+    from tests.integration.conftest import llm_mock_pipeline
+
+    custom_slides = [
+        {
+            "layout_name": "Title Slide",
+            "title": "Title",
+            "content": [TextBlock(placeholder_name="Subtitle", text="Sub", language="en")],
+        },
+        {
+            "layout_name": "Title and Content",
+            "title": "Chart data",
+            "content": [
+                ChartBlock(
+                    placeholder_name="Content",
+                    chart_type="bar",
+                    title="Sales",
+                    data={
+                        "categories": ["Q1", "Q2"],
+                        "series": [{"name": "Sales", "values": [10, 20]}],
+                    },
+                )
+            ],
+        },
+        {
+            "layout_name": "Title and Content",
+            "title": "Table data",
+            "content": [
+                TableBlock(
+                    placeholder_name="Content",
+                    headers=["Metric", "Value"],
+                    rows=[["Rev", "$1M"], ["Cost", "$500k"]],
+                )
+            ],
+        },
+    ]
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        output_path = str(Path(tmpdir) / "output_charts_tables_llm.pptx")
+
+        with llm_mock_pipeline(topic="Charts & Tables", slides=custom_slides) as (
+            mock_analyze,
+            mock_outline_gen,
+            mock_content_gen,
+        ):
+            result_path = await generate_presentation(
+                input_text=chart_data_input,
+                template_path=template_path,
+                output_path=output_path,
+                use_llm=True,
+            )
+
+            assert Path(result_path).exists()
+            assert mock_analyze.called
+            assert mock_outline_gen.called
+            assert mock_content_gen.called
+
+            prs = Presentation(result_path)
+            assert prs is not None
+            assert len(prs.slides) >= 3

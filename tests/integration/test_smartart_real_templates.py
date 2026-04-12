@@ -360,18 +360,164 @@ def test_smartart_end_to_end_workflow(template_with_smartart: str, tmp_path: Any
     assert has_smartart_shape(verify_slide), "SmartArt should exist in re-opened file"
 
 
-# NOTE: Additional integration tests would go here once templates with SmartArt exist.
-# The tests above document requirements for Phase 2.3: Integration Testing with Real Template XML.
-#
-# Current status:
-# - 3 tests SKIP because templates lack SmartArt shapes (RED phase - documenting requirements)
-# - Unit tests in test_smartart_xml_operations.py already validate XML manipulation logic
-# - GREEN phase will occur when templates with SmartArt are created using PowerPoint
-#
+def _get_diagram_part_and_node_count(slide: Slide, smartart_shape: Any) -> tuple[Any, int]:
+    """Extract diagram part and count content nodes from SmartArt shape.
+
+    Args:
+        slide: PowerPoint slide containing the SmartArt
+        smartart_shape: SmartArt shape object
+
+    Returns:
+        Tuple of (diagram_part, node_count)
+
+    Raises:
+        pytest.skip: If diagram data cannot be extracted
+    """
+    from lxml import etree
+
+    shape_elem = smartart_shape._element  # type: ignore[attr-defined]
+    graphic_data = shape_elem.find(f".//{{{A_NS}}}graphicData")
+    if graphic_data is None:
+        pytest.skip("Could not find graphicData in SmartArt shape")
+
+    rel_elem = graphic_data.find(f".//{{{DGM_NS}}}relIds")
+    if rel_elem is None:
+        pytest.skip("Could not find diagram relIds element")
+
+    r_ns = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+    data_rel_id = rel_elem.get(f"{{{r_ns}}}dm")
+    if not data_rel_id:
+        pytest.skip("Could not find diagram data relationship ID")
+
+    diagram_part = slide.part.rels[data_rel_id].target_part
+    diagram_xml = etree.fromstring(diagram_part.blob)
+    all_pts = diagram_xml.findall(f".//{{{DGM_NS}}}pt")
+    pt_nodes = [pt for pt in all_pts if pt.get("type") in (None, "node")]
+    node_count = len(pt_nodes)
+
+    if node_count == 0:
+        pytest.skip("SmartArt has 0 content nodes; cannot test roundtrip")
+
+    return diagram_part, node_count
+
+
+def _verify_roundtrip_text(
+    verify_slide: Slide, test_texts: list[str], expected_node_count: int
+) -> None:
+    """Verify that SmartArt text survived the save/reload roundtrip.
+
+    Args:
+        verify_slide: Slide from reloaded presentation
+        test_texts: Expected text values for each node
+        expected_node_count: Expected number of nodes
+
+    Raises:
+        AssertionError: If verification fails
+    """
+    from lxml import etree
+
+    verify_shape = find_smartart_shape(verify_slide)
+    assert verify_shape is not None, "SmartArt shape should exist after roundtrip"
+
+    verify_elem = verify_shape._element  # type: ignore[attr-defined]
+    verify_gd = verify_elem.find(f".//{{{A_NS}}}graphicData")
+    assert verify_gd is not None
+
+    verify_rel = verify_gd.find(f".//{{{DGM_NS}}}relIds")
+    assert verify_rel is not None
+
+    r_ns = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+    verify_rel_id = verify_rel.get(f"{{{r_ns}}}dm")
+    assert verify_rel_id
+
+    verify_part = verify_slide.part.rels[verify_rel_id].target_part
+    verify_xml = etree.fromstring(verify_part.blob)
+    verify_pts = verify_xml.findall(f".//{{{DGM_NS}}}pt")
+    verify_nodes = [pt for pt in verify_pts if pt.get("type") in (None, "node")]
+
+    assert len(verify_nodes) == expected_node_count, (
+        "Node count should be preserved after roundtrip"
+    )
+
+    # Verify each node's text matches what we set
+    for i, pt_node in enumerate(verify_nodes):
+        a_t = pt_node.find(f".//{{{A_NS}}}t")
+        assert a_t is not None, f"Node {i} should have text element"
+        assert a_t.text == test_texts[i], (
+            f"Node {i} text mismatch: expected '{test_texts[i]}', got '{a_t.text}'"
+        )
+
+
+@pytest.mark.integration
+def test_smartart_blob_persistence_roundtrip(template_with_smartart: str, tmp_path: Any):
+    """Test that _blob persistence path works: populate → save → reload → verify text.
+
+    This test exercises the PRODUCTION code path (diagram_part._blob = ...)
+    that is unreachable via test-mode (_diagram_data injection). It verifies:
+    - diagram_part._blob setter works with current python-pptx version
+    - xml_declaration/standalone/encoding produce valid XML after save
+    - PowerPoint can re-read the modified diagram data part
+    - Text content survives the full roundtrip
+    """
+    template_path_obj = Path(template_with_smartart)
+    if not template_path_obj.exists():
+        pytest.skip(f"Template not found: {template_path_obj}")
+
+    prs = Presentation(str(template_path_obj))
+
+    # Find a slide with SmartArt
+    test_slide = None
+    smartart_shape = None
+
+    for slide in prs.slides:
+        if has_smartart_shape(slide):
+            test_slide = slide
+            smartart_shape = find_smartart_shape(slide)
+            break
+
+    if test_slide is None or smartart_shape is None:
+        pytest.skip(
+            f"Template '{template_path_obj}' does not contain SmartArt shapes. "
+            "Blob persistence roundtrip requires a real SmartArt template."
+        )
+
+    # Determine node count from the diagram data part
+    _diagram_part, node_count = _get_diagram_part_and_node_count(test_slide, smartart_shape)
+
+    # Build unique test texts
+    test_texts = [f"RT-Node-{i}" for i in range(node_count)]
+    smartart_nodes = [{"text": text, "level": 0} for text in test_texts]
+
+    # Populate via production path
+    wrapper = SmartArtWrapper()
+    wrapper.populate_smartart(
+        slide=test_slide, placeholder_name=smartart_shape.name, nodes=smartart_nodes
+    )
+
+    # Save to temp file
+    output_path = tmp_path / "blob_roundtrip_output.pptx"
+    prs.save(str(output_path))
+    assert output_path.exists(), "Output file should be created"
+    assert output_path.stat().st_size > 0, "Output file should not be empty"
+
+    # Reload and verify text survived roundtrip
+    prs_verify = Presentation(str(output_path))
+    verify_slide = None
+    for slide in prs_verify.slides:
+        if has_smartart_shape(slide):
+            verify_slide = slide
+            break
+
+    assert verify_slide is not None, "SmartArt shape should exist after roundtrip"
+
+    # Verify text content
+    _verify_roundtrip_text(verify_slide, test_texts, node_count)
+
+
+# NOTE: Integration tests will SKIP when templates lack SmartArt shapes.
+# Unit tests in test_smartart_xml_operations.py validate XML manipulation logic.
 # To make tests pass:
 # 1. Create/obtain a .pptx template with SmartArt shapes using Microsoft PowerPoint
-# 2. Place template in tests/fixtures/smartart_test_template.pptx or templates/smartart-template.pptx
+# 2. Place template in tests/fixtures/smartart_test_template.pptx
 # 3. Ensure SmartArt has 3-4 nodes for testing
 # 4. Run: uv run pytest tests/integration/test_smartart_real_templates.py -v
-#
-# Expected result after adding SmartArt templates: All 3 tests should PASS

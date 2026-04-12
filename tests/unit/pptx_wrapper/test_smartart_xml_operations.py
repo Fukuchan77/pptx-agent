@@ -121,6 +121,7 @@ class TestSmartArtXMLOperations:
 
         for i, pt_node in enumerate(pt_nodes):
             a_t = pt_node.find(f".//{{{A_NS}}}t")
+            assert a_t is not None
             assert a_t.text == text_items[i]["text"]
 
     def test_populate_smartart_cycle_circular_process(self):
@@ -150,6 +151,7 @@ class TestSmartArtXMLOperations:
 
         for i, pt_node in enumerate(pt_nodes):
             a_t = pt_node.find(f".//{{{A_NS}}}t")
+            assert a_t is not None
             assert a_t.text == text_items[i]["text"]
 
     def test_populate_smartart_relationship_interconnections(self):
@@ -178,6 +180,7 @@ class TestSmartArtXMLOperations:
 
         for i, pt_node in enumerate(pt_nodes):
             a_t = pt_node.find(f".//{{{A_NS}}}t")
+            assert a_t is not None
             assert a_t.text == text_items[i]["text"]
 
     def test_populate_smartart_preserves_xml_structure(self):
@@ -227,6 +230,7 @@ class TestSmartArtXMLOperations:
         assert len(pt_nodes) == 1
 
         a_t = pt_nodes[0].find(f".//{{{A_NS}}}t")
+        assert a_t is not None
         assert a_t.text == "Single Item"
 
     def test_populate_smartart_large_node_count(self):
@@ -251,6 +255,7 @@ class TestSmartArtXMLOperations:
 
         for i, pt_node in enumerate(pt_nodes):
             a_t = pt_node.find(f".//{{{A_NS}}}t")
+            assert a_t is not None
             assert a_t.text == f"Item {i + 1}"
 
     def test_populate_smartart_placeholder_not_found(self):
@@ -369,6 +374,7 @@ class TestSmartArtXMLOperations:
 
         for i, pt_node in enumerate(pt_nodes):
             a_t = pt_node.find(f".//{{{A_NS}}}t")
+            assert a_t is not None
             assert a_t.text == text_items[i]["text"]
 
         # Verify doc type elements were not modified
@@ -376,4 +382,135 @@ class TestSmartArtXMLOperations:
         assert len(pt_docs) == 2
         for i, pt_doc in enumerate(pt_docs):
             a_t = pt_doc.find(f".//{{{A_NS}}}t")
+            assert a_t is not None
             assert a_t.text == f"Document text {i}"  # Original text preserved
+
+    def test_populate_smartart_type_attribute_omitted_pt(self):
+        """Test that <dgm:pt> nodes WITHOUT a type attribute are treated as 'node'.
+
+        Per the OpenXML schema, the @type attribute defaults to 'node' when omitted.
+        Real-world PowerPoint SmartArt frequently omits this attribute.
+        """
+        # Arrange - Create fixture with type attribute OMITTED
+        from unittest.mock import Mock
+
+        from lxml import etree
+
+        DGM_NS = "http://schemas.openxmlformats.org/drawingml/2006/diagram"
+        A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
+        P_NS = "http://schemas.openxmlformats.org/presentationml/2006/main"
+
+        nsmap = {"dgm": DGM_NS, "a": A_NS}
+        data_model = etree.Element(f"{{{DGM_NS}}}dataModel", nsmap=nsmap)
+        pt_list = etree.SubElement(data_model, f"{{{DGM_NS}}}ptLst")
+
+        # Create nodes WITHOUT type attribute (the OpenXML default)
+        for i in range(3):
+            pt = etree.SubElement(pt_list, f"{{{DGM_NS}}}pt", modelId=f"node_{i}")
+            # NOTE: NO type="node" attribute set here
+            t_elem = etree.SubElement(pt, f"{{{DGM_NS}}}t")
+            a_t = etree.SubElement(t_elem, f"{{{A_NS}}}t")
+            a_t.text = f"Original {i}"
+
+        mock_slide = Mock()
+        mock_shape = Mock()
+        mock_shape.name = "SmartArt Test"
+        mock_shape._diagram_data = data_model
+        mock_slide.shapes = [mock_shape]
+
+        text_items = [
+            {"text": "Updated A", "level": 0},
+            {"text": "Updated B", "level": 0},
+            {"text": "Updated C", "level": 0},
+        ]
+
+        # Act
+        from pptx_agent.pptx_wrapper.smartart import SmartArtWrapper
+
+        SmartArtWrapper.populate_smartart(mock_slide, "SmartArt Test", text_items)
+
+        # Assert - All 3 nodes (type omitted) should have been updated
+        all_pts = data_model.findall(f".//{{{DGM_NS}}}pt")
+        assert len(all_pts) == 3
+        for i, pt in enumerate(all_pts):
+            assert pt.get("type") is None  # Confirm type is indeed omitted
+            a_t = pt.find(f".//{{{A_NS}}}t")
+            assert a_t is not None
+            assert a_t.text == text_items[i]["text"]
+
+    def test_populate_smartart_mixed_explicit_and_omitted_type(self):
+        """Test that a mix of explicit type='node' and omitted-type <dgm:pt> are all processed.
+
+        Structural types (doc, sibTrans) should still be skipped.
+        """
+        # Arrange
+        from unittest.mock import Mock
+
+        from lxml import etree
+
+        DGM_NS = "http://schemas.openxmlformats.org/drawingml/2006/diagram"
+        A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
+
+        nsmap = {"dgm": DGM_NS, "a": A_NS}
+        data_model = etree.Element(f"{{{DGM_NS}}}dataModel", nsmap=nsmap)
+        pt_list = etree.SubElement(data_model, f"{{{DGM_NS}}}ptLst")
+
+        # Node 0: explicit type="node"
+        pt0 = etree.SubElement(pt_list, f"{{{DGM_NS}}}pt", modelId="n0", type="node")
+        t0 = etree.SubElement(pt0, f"{{{DGM_NS}}}t")
+        a_t0 = etree.SubElement(t0, f"{{{A_NS}}}t")
+        a_t0.text = "Orig 0"
+
+        # Node 1: type omitted (should default to "node")
+        pt1 = etree.SubElement(pt_list, f"{{{DGM_NS}}}pt", modelId="n1")
+        t1 = etree.SubElement(pt1, f"{{{DGM_NS}}}t")
+        a_t1 = etree.SubElement(t1, f"{{{A_NS}}}t")
+        a_t1.text = "Orig 1"
+
+        # Structural: type="doc" (should be skipped)
+        pt_doc = etree.SubElement(pt_list, f"{{{DGM_NS}}}pt", modelId="doc0", type="doc")
+        t_doc = etree.SubElement(pt_doc, f"{{{DGM_NS}}}t")
+        a_t_doc = etree.SubElement(t_doc, f"{{{A_NS}}}t")
+        a_t_doc.text = "Doc text"
+
+        # Structural: type="sibTrans" (should be skipped)
+        pt_sib = etree.SubElement(pt_list, f"{{{DGM_NS}}}pt", modelId="sib0", type="sibTrans")
+        t_sib = etree.SubElement(pt_sib, f"{{{DGM_NS}}}t")
+        a_t_sib = etree.SubElement(t_sib, f"{{{A_NS}}}t")
+        a_t_sib.text = "Sib text"
+
+        # Node 2: type omitted
+        pt2 = etree.SubElement(pt_list, f"{{{DGM_NS}}}pt", modelId="n2")
+        t2 = etree.SubElement(pt2, f"{{{DGM_NS}}}t")
+        a_t2 = etree.SubElement(t2, f"{{{A_NS}}}t")
+        a_t2.text = "Orig 2"
+
+        mock_slide = Mock()
+        mock_shape = Mock()
+        mock_shape.name = "SmartArt Test"
+        mock_shape._diagram_data = data_model
+        mock_slide.shapes = [mock_shape]
+
+        text_items = [
+            {"text": "New 0", "level": 0},
+            {"text": "New 1", "level": 0},
+            {"text": "New 2", "level": 0},
+        ]
+
+        # Act
+        from pptx_agent.pptx_wrapper.smartart import SmartArtWrapper
+
+        SmartArtWrapper.populate_smartart(mock_slide, "SmartArt Test", text_items)
+
+        # Assert - Only nodes (explicit + omitted type) should be updated
+        all_pts = data_model.findall(f".//{{{DGM_NS}}}pt")
+        assert len(all_pts) == 5  # 3 nodes + 2 structural
+
+        # Verify node text was updated
+        assert a_t0.text == "New 0"
+        assert a_t1.text == "New 1"
+        assert a_t2.text == "New 2"
+
+        # Verify structural elements were NOT modified
+        assert a_t_doc.text == "Doc text"
+        assert a_t_sib.text == "Sib text"

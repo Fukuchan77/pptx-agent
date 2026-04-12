@@ -4,6 +4,7 @@ Loads configuration from environment variables with support for .env files.
 """
 
 import logging
+import re
 import threading
 from typing import Any, Literal
 
@@ -63,9 +64,12 @@ class Config(BaseSettings):
     max_requests: int = 20  # Maximum 20 requests
     max_response_tokens: int = 50000  # Maximum 50,000 response tokens
 
-    # HTTP-level retry configuration (FR-045)
+    # HTTP-level retry and timeout configuration (FR-045)
     retry_base_delay: float = 1.0  # Base delay for exponential backoff (seconds)
     retry_max_delay: float = 8.0  # Maximum delay (1→2→4→8 seconds)
+    connect_timeout: float = 10.0  # Connection timeout
+    write_timeout: float = 10.0  # Write timeout
+    pool_timeout: float = 10.0  # Pool timeout
 
     # Agent-level retry (FR-046)
     agent_retries: int = 3  # 3 attempts for validation failures
@@ -106,8 +110,10 @@ class Config(BaseSettings):
                 msg = "API key appears to be invalid (too short)"
                 raise ValueError(msg)
 
-            placeholder_prefixes = ("your-", "sk-xxx", "placeholder")
-            if any(stripped.lower().startswith(p) for p in placeholder_prefixes):
+            placeholder_pattern = (
+                r"^(your|sk-xxx|placeholder|dummy|fake|example|sample|todo|replace)-?"
+            )
+            if re.match(placeholder_pattern, stripped, re.IGNORECASE):
                 msg = "API key appears to be a placeholder value — update .env with your actual key"
                 raise ValueError(msg)
             return stripped

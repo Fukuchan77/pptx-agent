@@ -17,7 +17,6 @@ from typing import Any, Literal
 
 from pydantic_ai import Agent
 
-from pptx_agent.agents.llm_config import create_fallback_model, create_model
 from pptx_agent.agents.prompts import CONTENT_GENERATOR_PROMPT
 from pptx_agent.config import get_config
 from pptx_agent.schemas.outline import PresentationOutline, SlideContent
@@ -68,29 +67,10 @@ async def generate_content(
 
         # Create model from config and run agent with fallback
         config = get_config()
+        from pptx_agent.agents.utils import run_agent_with_fallback  # noqa: PLC0415
 
-        # Try primary model
-        try:
-            model = create_model(config)
-            result = await _content_agent.run(prompt, model=model)
-        except Exception as e:
-            # Log primary failure
-            logger.warning("Primary LLM provider failed: %s, trying fallback", e)
-
-            # Try fallback model
-            try:
-                fallback_model = create_fallback_model(config)
-                result = await _content_agent.run(prompt, model=fallback_model)
-            except Exception as fallback_error:
-                # Both failed - log and re-raise
-                error_msg = f"All LLM providers failed. Primary: {e}, Fallback: {fallback_error}"
-                logger.exception("Fallback LLM provider also failed")
-                raise RuntimeError(error_msg) from fallback_error
-            else:
-                logger.info("Fallback LLM provider succeeded")
-                return result.output
-        else:
-            return result.output
+        result = await run_agent_with_fallback(_content_agent, prompt, config)
+        return result.output
     # Keep existing heuristic path unchanged
     return _heuristic_generate_content(outline, manifest)
 
