@@ -29,7 +29,7 @@ from pptx_agent.schemas.visual_assets import ChartBlock, SmartArtBlock, TableBlo
 logger = logging.getLogger(__name__)
 
 # Module-level pydantic-ai agent for content generation
-_content_agent: Agent[None, PresentationSchema] = Agent(
+_content_agent: Agent[None, PresentationSchema] = Agent(  # type: ignore[assignment]
     output_type=PresentationSchema,
     system_prompt=CONTENT_GENERATOR_PROMPT,
 )

@@ -59,7 +59,7 @@ class StoryAnalysis(BaseModel):
 
 
 # Module-level agent instance (model provided at runtime)
-_story_agent: Agent[None, StoryAnalysis] = Agent(
+_story_agent: Agent[None, StoryAnalysis] = Agent(  # type: ignore[assignment]
     output_type=StoryAnalysis,
     system_prompt=STORY_ANALYZER_PROMPT,
 )

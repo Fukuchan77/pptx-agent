@@ -8,12 +8,27 @@ HTTP clients, and usage limits. Supports multiple LLM providers:
 """
 
 import logging
+import os
+from typing import TYPE_CHECKING
 
 from httpx import AsyncClient, Timeout
 from openai import AsyncOpenAI
 from pydantic_ai import UsageLimits
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers import Provider
+
+if TYPE_CHECKING:
+    from pydantic_ai_litellm import LiteLLMModel
+
+    HAS_LITELLM = True
+else:
+    try:
+        from pydantic_ai_litellm import LiteLLMModel
+
+        HAS_LITELLM = True
+    except ImportError:
+        LiteLLMModel = None  # type: ignore[assignment,misc]
+        HAS_LITELLM = False
 
 from pptx_agent.config import Config
 
@@ -51,18 +66,42 @@ class CustomOpenAIProvider(Provider[AsyncOpenAI]):
 
 def _create_model_from_params(
     provider_type: str, model: str, base_url: str | None, api_key: str | None, config: Config
-) -> OpenAIChatModel:
-    """Helper to generate LLM model object from direct parameters."""
+) -> "OpenAIChatModel | LiteLLMModel":
+    """Helper to generate LLM model object from direct parameters.
+
+    For watsonx provider, uses LiteLLMModel with project_id support.
+    For other providers, uses OpenAIChatModel.
+    """
+    # Special handling for watsonx - use LiteLLMModel with project_id
+    if provider_type == "watsonx":
+        if not HAS_LITELLM:
+            msg = (
+                "pydantic-ai-litellm is required for watsonx provider. "
+                "Install with: uv add pydantic-ai-litellm"
+            )
+            raise ImportError(msg)
+
+        model_name = f"watsonx/{model}"
+        api_base = config.watsonx_url
+        project_id = config.watsonx_project_id
+
+        # Set project_id as environment variable for LiteLLM to use
+        # LiteLLM will automatically pick this up when making watsonx API calls
+        if project_id:
+            os.environ["WATSONX_PROJECT_ID"] = project_id
+
+        return LiteLLMModel(
+            model_name,
+            api_key=api_key or "",
+            api_base=api_base,
+        )
+
+    # For other providers, use OpenAIChatModel with custom provider
     if provider_type == "openai":
         p_base_url = base_url
         p_api_key = api_key or "not-needed"
         provider_name = "openai-custom"
         model_name = model
-    elif provider_type == "watsonx":
-        p_base_url = f"{config.watsonx_url}/ml/v1/text/generation?version=2023-05-29"
-        p_api_key = api_key or ""
-        provider_name = "watsonx"
-        model_name = f"watsonx/{model}"
     elif provider_type == "anthropic":
         p_base_url = None
         p_api_key = api_key or ""
@@ -85,7 +124,7 @@ def _create_model_from_params(
     )
 
 
-def create_model(config: Config) -> OpenAIChatModel:
+def create_model(config: Config) -> "OpenAIChatModel | LiteLLMModel":
     """Generate LLM model object from Config.
 
     Selects appropriate provider based on config.llm_provider:
@@ -119,7 +158,7 @@ def create_model(config: Config) -> OpenAIChatModel:
     )
 
 
-def create_fallback_model(config: Config) -> OpenAIChatModel | None:
+def create_fallback_model(config: Config) -> "OpenAIChatModel | LiteLLMModel | None":
     """Generate fallback provider model (production environment only).
 
     Creates a fallback model when:

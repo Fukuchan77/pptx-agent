@@ -39,7 +39,7 @@ SECTION_DIVIDER_INTERVAL = 4  # Interval for section dividers
 OVERVIEW_SLIDE_NUMBER = 2  # Position of overview slide
 
 # Module-level agent instance (model provided at runtime)
-_outline_agent: Agent[None, PresentationOutline] = Agent(
+_outline_agent: Agent[None, PresentationOutline] = Agent(  # type: ignore[assignment]
     output_type=PresentationOutline,
     system_prompt=OUTLINE_GENERATOR_PROMPT,
 )

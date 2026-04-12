@@ -489,3 +489,46 @@ class TestConfigProviderFallback:
 
         # Should disable fallback when openai_api_key is not provided
         assert config.enable_fallback is False
+
+
+class TestConfigReset:
+    """Test configuration reset functionality for test isolation."""
+
+    def test_reset_config_function_exists(self) -> None:
+        """reset_config() function should exist and be callable."""
+        from pptx_agent.config import reset_config
+
+        # Should be callable without errors
+        reset_config()
+
+    def test_reset_config_clears_global_instance(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """reset_config() should clear the global config instance."""
+        from pptx_agent.config import get_config, reset_config
+
+        # Set up minimal config for watsonx
+        monkeypatch.setenv("LLM_PROVIDER", "watsonx")
+        monkeypatch.setenv("LLM_MODEL", "test-model")
+        monkeypatch.setenv("WATSONX_URL", "https://test.example.com")
+        monkeypatch.setenv("WATSONX_APIKEY", "test-api-key-1234567890")
+        monkeypatch.setenv("WATSONX_PROJECT_ID", "test-project-id")
+
+        # Get initial config
+        config1 = get_config()
+        assert config1 is not None
+
+        # Reset config
+        reset_config()
+
+        # Get config again - should be a new instance
+        config2 = get_config()
+        assert config2 is not None
+        assert config2 is not config1, "Should create new instance after reset"
+
+    def test_reset_config_is_idempotent(self) -> None:
+        """reset_config() should be safe to call multiple times."""
+        from pptx_agent.config import reset_config
+
+        # Should not raise any errors when called multiple times
+        reset_config()
+        reset_config()
+        reset_config()

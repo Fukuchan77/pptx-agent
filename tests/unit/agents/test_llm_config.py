@@ -9,6 +9,11 @@ from httpx import AsyncClient
 from pydantic_ai import UsageLimits
 from pydantic_ai.models.openai import OpenAIChatModel
 
+try:
+    from pydantic_ai_litellm import LiteLLMModel
+except ImportError:
+    LiteLLMModel = None  # type: ignore[assignment]
+
 from pptx_agent.agents.llm_config import (
     create_fallback_model,
     create_http_client,
@@ -82,7 +87,11 @@ class TestCreateModel:
         """Test creating watsonx model via LiteLLM provider."""
         model = create_model(watsonx_config)
 
-        assert isinstance(model, OpenAIChatModel)
+        # Watsonx now uses LiteLLMModel instead of OpenAIChatModel
+        assert LiteLLMModel is not None, "LiteLLMModel should be available"
+        assert isinstance(model, LiteLLMModel), (
+            f"Expected LiteLLMModel for watsonx, got {type(model).__name__}"
+        )
         # Model created successfully
 
     def test_create_model_anthropic(self, anthropic_config: Config):

@@ -42,7 +42,7 @@ class Config(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
-        case_sensitive=True,
+        case_sensitive=False,
         extra="ignore",
     )
 
@@ -210,6 +210,22 @@ def get_config() -> Config:
     return _config
 
 
+def reset_config() -> None:
+    """Reset the global config instance in a thread-safe manner.
+
+    This function is primarily intended for testing purposes to ensure
+    test isolation by clearing the cached configuration between tests.
+
+    Thread Safety:
+        This function is thread-safe and can be called concurrently from
+        multiple threads. The lock ensures that concurrent resets and
+        get_config() calls are properly synchronized.
+    """
+    global _config
+    with _config_lock:
+        _config = None
+
+
 # ---------------------------------------------------------------------------
 # Backward-compatible re-exports from pptx_agent.templates
 # ---------------------------------------------------------------------------
@@ -228,5 +244,6 @@ __all__ = [
     "generate_basic_template",
     "generate_japanese_template",
     "get_config",
+    "reset_config",
     "validate_templates",
 ]

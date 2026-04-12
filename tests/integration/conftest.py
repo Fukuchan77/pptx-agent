@@ -10,10 +10,28 @@ from contextlib import contextmanager
 from typing import Any, Literal
 from unittest.mock import AsyncMock, patch
 
+import pytest
+
 from pptx_agent.agents.story_analyzer import StoryAnalysis
 from pptx_agent.schemas.outline import PresentationOutline, SlideContent
 from pptx_agent.schemas.presentation import PresentationSchema, SlideSchema
 from pptx_agent.schemas.text import TextBlock
+
+
+@pytest.fixture(autouse=True)
+def mock_llm_config(monkeypatch: pytest.MonkeyPatch):
+    """Provide minimal LLM configuration for integration tests.
+
+    This fixture is automatically applied to all integration tests.
+    It sets minimal environment variables needed for Config validation
+    when tests call get_config(), even though the actual LLM calls are mocked.
+    """
+    # Set minimal required environment variables for Config validation
+    monkeypatch.setenv("LLM_PROVIDER", "watsonx")
+    monkeypatch.setenv("LLM_MODEL", "test-model")
+    monkeypatch.setenv("WATSONX_URL", "https://test.example.com")
+    monkeypatch.setenv("WATSONX_APIKEY", "test-api-key-1234567890")
+    monkeypatch.setenv("WATSONX_PROJECT_ID", "test-project-id")
 
 
 def make_mock_pipeline_data(
