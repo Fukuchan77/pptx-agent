@@ -175,7 +175,7 @@ def build_presentation(
                 add_smartart_to_slide(slide, block)
             # Handle ImageBlock
             elif isinstance(block, ImageBlock):  # type: ignore[reportUnnecessaryIsInstance]
-                image_path = block.image_path or block.image_url or ""
+                image_path = block.image_path
                 _validate_image_format(image_path)
                 ImageWrapper.add_image(
                     slide.slide,
@@ -263,7 +263,7 @@ def rebuild_slide_with_layout(
         elif isinstance(block, SmartArtBlock):
             add_smartart_to_slide(slide, block)
         elif isinstance(block, ImageBlock):  # type: ignore[reportUnnecessaryIsInstance]
-            image_path = block.image_path or block.image_url or ""
+            image_path = block.image_path
             _validate_image_format(image_path)
             ImageWrapper.add_image(
                 slide.slide,

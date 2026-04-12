@@ -197,7 +197,7 @@ def validate_pptx_structure(file_path: Path | str) -> None:
     # See docstring for security design rationale and future considerations.
     entity_pattern = re.compile(rb"<!ENTITY", re.IGNORECASE)
     doctype_pattern = re.compile(rb"<!DOCTYPE", re.IGNORECASE)
-    system_pattern = re.compile(rb"SYSTEM\s+", re.IGNORECASE)
+    system_pattern = re.compile(rb"SYSTEM\s+[\"']", re.IGNORECASE)
 
     try:
         with zipfile.ZipFile(file_path, "r") as zf:

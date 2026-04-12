@@ -15,13 +15,11 @@ from pydantic import BaseModel, Field
 class ImageBlock(BaseModel):
     """Image content block.
 
-    Supports both URL and local file path.
-    At least one of image_url or image_path must be provided.
+    Supports local file path only. Remote URLs are not supported in the current version.
     """
 
     placeholder_name: str = Field(min_length=1)
-    image_url: str | None = None
-    image_path: str | None = None
+    image_path: str = Field(min_length=1)
     alt_text: str
 
 

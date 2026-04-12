@@ -14,15 +14,14 @@ from unittest.mock import patch
 import pytest
 from pydantic_ai import AgentRunResult
 
-from pptx_agent.agents.content_generator import \
-    _split_into_sentences  # type: ignore[reportPrivateUsage]  # pyright: ignore[reportPrivateUsage]
-from pptx_agent.agents.content_generator import \
-    generate_content  # type: ignore[reportPrivateUsage]
+from pptx_agent.agents.content_generator import (
+    _split_into_sentences,  # type: ignore[reportPrivateUsage]  # pyright: ignore[reportPrivateUsage]
+    generate_content,  # type: ignore[reportPrivateUsage]
+)
 from pptx_agent.schemas.outline import PresentationOutline, SlideContent
 from pptx_agent.schemas.presentation import PresentationSchema
 from pptx_agent.schemas.slide import SlideSchema
-from pptx_agent.schemas.template_manifest import (LayoutInfo, PlaceholderInfo,
-                                                  TemplateManifest)
+from pptx_agent.schemas.template_manifest import LayoutInfo, PlaceholderInfo, TemplateManifest
 from pptx_agent.schemas.text import TextBlock
 
 

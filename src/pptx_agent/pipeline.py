@@ -86,11 +86,13 @@ async def generate_presentation(
 
     # Stage 2: Generate outline
     start = time.time()
-    outline = await generate_outline(story, manifest=template_manifest, use_llm=use_llm)
 
-    # Override output_language if explicitly provided
+    # Override story language if output_language is explicitly provided
+    # This ensures the outline generator uses the correct language from the start
     if output_language is not None:
-        outline.output_language = output_language
+        story.language = output_language
+
+    outline = await generate_outline(story, manifest=template_manifest, use_llm=use_llm)
 
     duration = time.time() - start
     logger.info("Stage: Outline Generation completed in %.2fs", duration)

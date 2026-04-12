@@ -410,3 +410,76 @@ async def test_generate_presentation_multilanguage_llm_mock(
             prs = Presentation(result_path)
             assert prs is not None
             assert len(prs.slides) >= 3
+
+
+@pytest.mark.asyncio
+async def test_output_language_ja_produces_japanese_text_in_pptx(template_path: str):
+    """Test that output_language='ja' produces Japanese text in the final PPTX.
+
+    When output_language='ja' is explicitly passed to generate_presentation,
+    the final PPTX should contain Japanese text in slide titles and content.
+    This test verifies that the language parameter flows through the entire pipeline.
+    """
+    # Use English input but request Japanese output
+    input_text = """
+    Topic: Machine Learning Basics
+    Audience: Beginners
+    Message: Understanding fundamental concepts of machine learning
+    """
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        output_path = str(Path(tmpdir) / "japanese_text_output.pptx")
+
+        # Act - explicitly request Japanese output
+        result_path = await generate_presentation(
+            input_text=input_text,
+            template_path=template_path,
+            output_path=output_path,
+            output_language="ja",
+            use_llm=False,  # Use heuristic mode for deterministic testing
+        )
+
+        # Assert - verify file was created
+        assert Path(result_path).exists(), "Generated .pptx file should exist"
+
+        # Load the generated presentation and verify Japanese text presence
+        prs = Presentation(result_path)
+        assert prs is not None, "Presentation should be readable"
+        assert len(prs.slides) >= 3, "Presentation should have at least 3 slides"
+
+        # Check for Japanese characters in slides
+        # Japanese character ranges: Hiragana (ぁ-ん), Katakana (ァ-ヶ), Kanji (一-龯)
+        japanese_text_found = False
+        slides_with_text = []
+
+        for slide_idx, slide in enumerate(prs.slides):
+            slide_text = []
+            for shape in slide.shapes:
+                if not shape.has_text_frame:
+                    continue
+                text = shape.text_frame.text  # type: ignore[attr-defined]
+                if text:
+                    slide_text.append(text)
+                    # Check each character for Japanese
+                    for char in text:
+                        if (
+                            "\u3040" <= char <= "\u309f"  # Hiragana
+                            or "\u30a0" <= char <= "\u30ff"  # Katakana
+                            or "\u4e00" <= char <= "\u9fff"
+                        ):  # Kanji
+                            japanese_text_found = True
+                            break
+                if japanese_text_found:
+                    break
+
+            if slide_text:
+                slides_with_text.append((slide_idx, slide_text))
+
+            if japanese_text_found:
+                break
+
+        # Assert that Japanese text is present
+        assert japanese_text_found, (
+            f"Generated presentation should contain Japanese text when output_language='ja'. "
+            f"Found text in {len(slides_with_text)} slides: {slides_with_text[:2]}"
+        )

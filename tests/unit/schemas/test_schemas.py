@@ -191,15 +191,15 @@ class TestVisualAssetSchemas:
     """Test visual asset schemas (ImageBlock, ChartBlock, etc.)."""
 
     def test_valid_image_block(self):
-        """RED: Test valid ImageBlock creation."""
+        """Test valid ImageBlock creation with local file path."""
         block = ImageBlock(
             placeholder_name="Picture",
-            image_url="https://example.com/image.png",
+            image_path="/path/to/image.png",
             alt_text="Example image",
         )
 
         assert block.placeholder_name == "Picture"
-        assert block.image_url == "https://example.com/image.png"
+        assert block.image_path == "/path/to/image.png"
         assert block.alt_text == "Example image"
 
     def test_image_block_with_local_path(self):
@@ -299,7 +299,7 @@ class TestContentBlockUnion:
                 ),
                 ImageBlock(
                     placeholder_name="Picture",
-                    image_url="https://example.com/img.png",
+                    image_path="/path/to/img.png",
                     alt_text="Image",
                 ),
                 ChartBlock(

@@ -326,6 +326,42 @@ class TestImageBlockInBuildPresentation:
             # Assert
             assert result_path == output_path
 
+    def test_build_presentation_with_url_in_image_path_not_supported(self, tmp_path: Path) -> None:
+        """Test that URL paths in image_path are not supported.
+
+        ImageBlock currently only supports local file paths via image_path field.
+        Remote URLs (http://, https://) are not supported in the current version.
+        This test documents this limitation.
+
+        RED PHASE: This test should FAIL because URL handling is not implemented.
+        """
+        # Arrange - use a URL in image_path field
+        content = PresentationSchema(
+            title="URL Test",
+            slides=[
+                SlideSchema(
+                    layout_name="Title and Content",
+                    title="URL Image",
+                    content=[
+                        ImageBlock(
+                            placeholder_name="Content Placeholder 1",
+                            image_path="https://example.com/image.png",
+                            alt_text="Remote image",
+                        )
+                    ],
+                )
+            ],
+        )
+
+        template_path = "templates/basic-template.pptx"
+        output_path = str(tmp_path / "with_url.pptx")
+
+        # Act & Assert - URL paths should not be supported
+        # This could raise FileNotFoundError (file doesn't exist locally)
+        # or ValueError (unsupported format if we add URL validation)
+        with pytest.raises((FileNotFoundError, ValueError)):
+            build_presentation(content, template_path, output_path)
+
 
 class TestImageBlockInRebuildSlide:
     """Test suite for ImageBlock handling in rebuild_slide_with_layout().
