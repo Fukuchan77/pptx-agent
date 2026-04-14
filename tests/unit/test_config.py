@@ -1,5 +1,7 @@
 """Tests for configuration management with security-focused error messages."""
 
+import threading
+
 import pytest
 
 from pptx_agent.config import Config
@@ -120,6 +122,7 @@ class TestConfigValidConfiguration:
             watsonx_url="https://us-south.ml.cloud.ibm.com",
             watsonx_apikey="test-api-key",
             watsonx_project_id="test-project-id",
+            allow_test_keys=True,
         )  # type: ignore[call-arg]
 
         assert config.llm_provider == "watsonx"
@@ -134,6 +137,7 @@ class TestConfigValidConfiguration:
             llm_provider="anthropic",
             llm_model="claude-3-5-sonnet-20241022",
             anthropic_api_key="sk-ant-test-key",
+            allow_test_keys=True,
         )  # type: ignore[call-arg]
 
         assert config.llm_provider == "anthropic"
@@ -225,6 +229,7 @@ class TestConfigAPIKeyFormatValidation:
             watsonx_url="https://us-south.ml.cloud.ibm.com",
             watsonx_apikey="valid-key-123",
             watsonx_project_id="test-project-id",
+            allow_test_keys=True,
         )  # type: ignore[call-arg]
 
         assert config.watsonx_apikey == "valid-key-123"
@@ -235,6 +240,7 @@ class TestConfigAPIKeyFormatValidation:
             llm_provider="anthropic",
             llm_model="claude-3-5-sonnet-20241022",
             anthropic_api_key="sk-ant-valid-key",
+            allow_test_keys=True,
         )  # type: ignore[call-arg]
 
         assert config.anthropic_api_key == "sk-ant-valid-key"
@@ -247,6 +253,7 @@ class TestConfigAPIKeyFormatValidation:
             watsonx_url="https://us-south.ml.cloud.ibm.com",
             watsonx_apikey="  valid-key-123  ",
             watsonx_project_id="test-project-id",
+            allow_test_keys=True,
         )  # type: ignore[call-arg]
 
         assert config.watsonx_apikey == "valid-key-123", (
@@ -259,6 +266,7 @@ class TestConfigAPIKeyFormatValidation:
             llm_provider="anthropic",
             llm_model="claude-3-5-sonnet-20241022",
             anthropic_api_key="  sk-ant-valid-key  ",
+            allow_test_keys=True,
         )  # type: ignore[call-arg]
 
         assert config.anthropic_api_key == "sk-ant-valid-key", (
@@ -300,6 +308,7 @@ class TestConfigRetryStrategies:
             watsonx_apikey="test-api-key",
             watsonx_project_id="test-project-id",
             environment="development",
+            allow_test_keys=True,
         )  # type: ignore[call-arg]
 
         assert config.environment == "development"
@@ -315,6 +324,7 @@ class TestConfigRetryStrategies:
             watsonx_apikey="test-api-key",
             watsonx_project_id="test-project-id",
             environment="production",
+            allow_test_keys=True,
         )  # type: ignore[call-arg]
 
         assert config.environment == "production"
@@ -329,6 +339,7 @@ class TestConfigRetryStrategies:
             watsonx_url="https://us-south.ml.cloud.ibm.com",
             watsonx_apikey="test-api-key",
             watsonx_project_id="test-project-id",
+            allow_test_keys=True,
         )  # type: ignore[call-arg]
 
         assert config.environment == "development"
@@ -346,6 +357,7 @@ class TestConfigTimeouts:
             watsonx_url="https://us-south.ml.cloud.ibm.com",
             watsonx_apikey="test-api-key",
             watsonx_project_id="test-project-id",
+            allow_test_keys=True,
         )  # type: ignore[call-arg]
 
         assert config.outline_timeout == 120
@@ -358,6 +370,7 @@ class TestConfigTimeouts:
             watsonx_url="https://us-south.ml.cloud.ibm.com",
             watsonx_apikey="test-api-key",
             watsonx_project_id="test-project-id",
+            allow_test_keys=True,
         )  # type: ignore[call-arg]
 
         assert config.slide_timeout == 60
@@ -374,6 +387,7 @@ class TestConfigUsageLimits:
             watsonx_url="https://us-south.ml.cloud.ibm.com",
             watsonx_apikey="test-api-key",
             watsonx_project_id="test-project-id",
+            allow_test_keys=True,
         )  # type: ignore[call-arg]
 
         assert config.max_requests == 20
@@ -386,6 +400,7 @@ class TestConfigUsageLimits:
             watsonx_url="https://us-south.ml.cloud.ibm.com",
             watsonx_apikey="test-api-key",
             watsonx_project_id="test-project-id",
+            allow_test_keys=True,
         )  # type: ignore[call-arg]
 
         assert config.max_response_tokens == 50000
@@ -402,6 +417,7 @@ class TestConfigHTTPRetry:
             watsonx_url="https://us-south.ml.cloud.ibm.com",
             watsonx_apikey="test-api-key",
             watsonx_project_id="test-project-id",
+            allow_test_keys=True,
         )  # type: ignore[call-arg]
 
         # Should have exponential backoff params: base_delay, max_delay
@@ -418,6 +434,7 @@ class TestConfigHTTPRetry:
             watsonx_url="https://us-south.ml.cloud.ibm.com",
             watsonx_apikey="test-api-key",
             watsonx_project_id="test-project-id",
+            allow_test_keys=True,
         )  # type: ignore[call-arg]
 
         assert config.agent_retries == 3
@@ -436,6 +453,7 @@ class TestConfigProviderFallback:
             watsonx_project_id="test-project-id",
             anthropic_api_key="sk-ant-fallback-key",
             environment="production",
+            allow_test_keys=True,
         )  # type: ignore[call-arg]
 
         assert config.enable_fallback is True
@@ -451,6 +469,7 @@ class TestConfigProviderFallback:
             watsonx_apikey="test-api-key",
             watsonx_project_id="test-project-id",
             environment="development",
+            allow_test_keys=True,
         )  # type: ignore[call-arg]
 
         assert config.enable_fallback is False
@@ -468,6 +487,7 @@ class TestConfigProviderFallback:
             enable_fallback=True,
             fallback_provider="openai",
             fallback_model="gpt-4",
+            allow_test_keys=True,
         )  # type: ignore[call-arg]
 
         assert config.enable_fallback is True
@@ -485,6 +505,7 @@ class TestConfigProviderFallback:
             enable_fallback=True,
             fallback_provider="openai",
             fallback_model="gpt-4",
+            allow_test_keys=True,
         )  # type: ignore[call-arg]
 
         # Should disable fallback when openai_api_key is not provided
@@ -505,12 +526,12 @@ class TestConfigReset:
         """reset_config() should clear the global config instance."""
         from pptx_agent.config import get_config, reset_config
 
-        # Set up minimal config for watsonx
+        # Set up minimal config for watsonx with non-test API key
         monkeypatch.setenv("LLM_PROVIDER", "watsonx")
-        monkeypatch.setenv("LLM_MODEL", "test-model")
-        monkeypatch.setenv("WATSONX_URL", "https://test.example.com")
-        monkeypatch.setenv("WATSONX_APIKEY", "test-api-key-1234567890")
-        monkeypatch.setenv("WATSONX_PROJECT_ID", "test-project-id")
+        monkeypatch.setenv("LLM_MODEL", "granite-model")
+        monkeypatch.setenv("WATSONX_URL", "https://cloud.ibm.com")
+        monkeypatch.setenv("WATSONX_APIKEY", "abcdef1234567890")  # Non-test pattern
+        monkeypatch.setenv("WATSONX_PROJECT_ID", "prod-project-id")
 
         # Get initial config
         config1 = get_config()
@@ -532,3 +553,153 @@ class TestConfigReset:
         reset_config()
         reset_config()
         reset_config()
+
+
+class TestConfigThreadSafety:
+    """Test thread safety of configuration management."""
+
+    def test_get_config_thread_safety(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verify get_config() is thread-safe"""
+        from pptx_agent.config import get_config, reset_config
+
+        # Set up minimal config for watsonx with non-test API key
+        monkeypatch.setenv("LLM_PROVIDER", "watsonx")
+        monkeypatch.setenv("LLM_MODEL", "granite-model")
+        monkeypatch.setenv("WATSONX_URL", "https://cloud.ibm.com")
+        monkeypatch.setenv("WATSONX_APIKEY", "abcdef1234567890")  # Non-test pattern
+        monkeypatch.setenv("WATSONX_PROJECT_ID", "prod-project-id")
+
+        # Clear before test
+        reset_config()
+
+        # Call get_config() simultaneously from multiple threads
+        configs = []
+        errors = []
+
+        def access_config() -> None:
+            try:
+                config = get_config()
+                configs.append(id(config))
+            except Exception as e:
+                errors.append(e)
+
+        threads = [threading.Thread(target=access_config) for _ in range(10)]
+
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        # Verify no errors occurred
+        assert len(errors) == 0, f"Errors occurred: {errors}"
+
+        # Verify all threads got the same Config instance
+        assert len(set(configs)) == 1, "Different threads got different Config instances"
+
+    def test_get_config_concurrent_reset(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verify config reset doesn't cause race conditions"""
+        from pptx_agent.config import get_config, reset_config
+
+        # Set up minimal config for watsonx with non-test API key
+        monkeypatch.setenv("LLM_PROVIDER", "watsonx")
+        monkeypatch.setenv("LLM_MODEL", "granite-model")
+        monkeypatch.setenv("WATSONX_URL", "https://cloud.ibm.com")
+        monkeypatch.setenv("WATSONX_APIKEY", "abcdef1234567890")  # Non-test pattern
+        monkeypatch.setenv("WATSONX_PROJECT_ID", "prod-project-id")
+
+        errors = []
+
+        def reset_and_access() -> None:
+            try:
+                reset_config()
+                config = get_config()
+                assert config is not None
+            except Exception as e:
+                errors.append(e)
+
+        threads = [threading.Thread(target=reset_and_access) for _ in range(5)]
+
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert len(errors) == 0, f"Race conditions detected: {errors}"
+
+
+class TestConfigTestKeyValidation:
+    """Test API key validation for test vs production keys."""
+
+    def test_config_rejects_test_api_keys_by_default(self) -> None:
+        """Verify test API key patterns are rejected in production mode."""
+        test_key_patterns = [
+            "test-api-key-123",
+            "test_key_12345",
+            "TEST_API_KEY_123",
+            "my-test-key-value",
+            "dummy-key-12345",
+            "fake_key_value",
+            "sample-key-value",
+        ]
+
+        for test_key in test_key_patterns:
+            with pytest.raises(ValueError, match="API key appears to be a test value"):
+                Config(
+                    llm_provider="openai",
+                    llm_model="gpt-4",
+                    openai_api_key=test_key,
+                )  # type: ignore[call-arg]
+
+    def test_config_allows_test_keys_when_explicitly_enabled(self) -> None:
+        """Verify test API keys are allowed when allow_test_keys=True."""
+        test_key_patterns = [
+            "test-api-key",
+            "test_key_12345",
+            "TEST_API_KEY",
+        ]
+
+        for test_key in test_key_patterns:
+            # Should not raise when allow_test_keys=True
+            config = Config(
+                llm_provider="openai",
+                llm_model="gpt-4",
+                openai_api_key=test_key,
+                allow_test_keys=True,  # Test mode
+            )  # type: ignore[call-arg]
+            assert config.openai_api_key == test_key
+
+    def test_config_allows_real_looking_keys(self) -> None:
+        """Verify real-looking API keys are still accepted."""
+        real_key_patterns = [
+            "sk-proj-1234567890abcdefghijklmnopqrstuvwxyz",  # OpenAI format
+            "AIzaSyD1234567890abcdefghijklmnopqrst",  # Google format
+            "1234567890abcdef1234567890abcdef",  # Generic hex
+            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",  # JWT format
+        ]
+
+        for real_key in real_key_patterns:
+            # Should not raise
+            config = Config(
+                llm_provider="openai",
+                llm_model="gpt-4",
+                openai_api_key=real_key,
+            )  # type: ignore[call-arg]
+            assert config.openai_api_key == real_key
+
+    def test_api_key_validation_edge_cases(self) -> None:
+        """Test edge cases in API key validation."""
+        # Too short (should be rejected even if not a test pattern)
+        with pytest.raises(ValueError, match="too short"):
+            Config(
+                llm_provider="openai",
+                llm_model="gpt-4",
+                openai_api_key="abc",
+            )  # type: ignore[call-arg]
+
+        # None is always valid (handled by model_post_init)
+        with pytest.raises(ValueError, match="Required configuration for openai"):
+            Config(
+                llm_provider="openai",
+                llm_model="gpt-4",
+                openai_api_key=None,
+            )  # type: ignore[call-arg]

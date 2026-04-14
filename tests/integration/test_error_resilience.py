@@ -4,25 +4,27 @@ These tests validate that the configuration for error handling, retries,
 and provider fallback is correctly set up and accessible.
 """
 
-from pptx_agent.config import Config
+from typing import Any
 
 
 class TestErrorResilienceConfiguration:
     """Test that error resilience configuration is properly set up."""
 
-    def test_development_environment_has_fail_fast_configuration(self) -> None:
+    def test_development_environment_has_fail_fast_configuration(
+        self, make_test_config: Any
+    ) -> None:
         """Development environment should use fail-fast retry strategy.
 
         Validates FR-051: Development uses fail-fast strategy with retries=1, timeout=60s
         """
-        config = Config(
+        config = make_test_config(
             llm_provider="watsonx",
             llm_model="test-model",
             watsonx_url="https://us-south.ml.cloud.ibm.com",
             watsonx_apikey="test-api-key-dev",
             watsonx_project_id="test-project-id",
             environment="development",
-        )  # type: ignore[call-arg]
+        )
 
         # FR-051: Development fail-fast mode
         assert config.max_retries == 1
@@ -44,13 +46,15 @@ class TestErrorResilienceConfiguration:
         # FR-046: Agent-level retry
         assert config.agent_retries == 3
 
-    def test_production_environment_has_resilience_configuration(self) -> None:
+    def test_production_environment_has_resilience_configuration(
+        self, make_test_config: Any
+    ) -> None:
         """Production environment should use full resilience strategy.
 
         Validates FR-050: Production uses resilience mode with retries=5, timeout=120s,
         and provider fallback enabled.
         """
-        config = Config(
+        config = make_test_config(
             llm_provider="watsonx",
             llm_model="test-model",
             watsonx_url="https://us-south.ml.cloud.ibm.com",
@@ -58,7 +62,7 @@ class TestErrorResilienceConfiguration:
             watsonx_project_id="test-project-id",
             anthropic_api_key="sk-ant-fallback-key",
             environment="production",
-        )  # type: ignore[call-arg]
+        )
 
         # FR-050: Production resilience mode
         assert config.max_retries == 5
@@ -76,10 +80,10 @@ class TestErrorResilienceConfiguration:
         assert config.retry_max_delay == 8.0
         assert config.agent_retries == 3
 
-    def test_configuration_supports_custom_fallback_model(self) -> None:
+    def test_configuration_supports_custom_fallback_model(self, make_test_config: Any) -> None:
         """Production configuration allows specifying custom fallback model."""
         custom_model = "claude-3-opus-20240229"
-        config = Config(
+        config = make_test_config(
             llm_provider="watsonx",
             llm_model="test-model",
             watsonx_url="https://us-south.ml.cloud.ibm.com",
@@ -88,22 +92,22 @@ class TestErrorResilienceConfiguration:
             anthropic_api_key="sk-ant-fallback-key",
             environment="production",
             fallback_model=custom_model,
-        )  # type: ignore[call-arg]
+        )
 
         assert config.fallback_model == custom_model
 
-    def test_exponential_backoff_configuration_follows_spec(self) -> None:
+    def test_exponential_backoff_configuration_follows_spec(self, make_test_config: Any) -> None:
         """Exponential backoff should follow 1→2→4→8 second pattern.
 
         Validates FR-045: HTTP-level retry with exponential backoff.
         """
-        config = Config(
+        config = make_test_config(
             llm_provider="watsonx",
             llm_model="test-model",
             watsonx_url="https://us-south.ml.cloud.ibm.com",
             watsonx_apikey="test-api-key",
             watsonx_project_id="test-project-id",
-        )  # type: ignore[call-arg]
+        )
 
         # Base delay starts at 1 second
         assert config.retry_base_delay == 1.0
@@ -118,33 +122,33 @@ class TestErrorResilienceConfiguration:
         # Verify last delay doesn't exceed max
         assert delays[-1] <= config.retry_max_delay
 
-    def test_agent_retry_count_matches_spec(self) -> None:
+    def test_agent_retry_count_matches_spec(self, make_test_config: Any) -> None:
         """Agent-level retries should be 3 attempts for validation failures.
 
         Validates FR-046: Agent-level retry (3 attempts) for Pydantic validation failures.
         """
-        config = Config(
+        config = make_test_config(
             llm_provider="watsonx",
             llm_model="test-model",
             watsonx_url="https://us-south.ml.cloud.ibm.com",
             watsonx_apikey="test-api-key",
             watsonx_project_id="test-project-id",
-        )  # type: ignore[call-arg]
+        )
 
         assert config.agent_retries == 3
 
-    def test_usage_limits_prevent_runaway_costs(self) -> None:
+    def test_usage_limits_prevent_runaway_costs(self, make_test_config: Any) -> None:
         """Usage limits should prevent excessive API calls and token usage.
 
         Validates FR-049: Usage limits enforcement.
         """
-        config = Config(
+        config = make_test_config(
             llm_provider="watsonx",
             llm_model="test-model",
             watsonx_url="https://us-south.ml.cloud.ibm.com",
             watsonx_apikey="test-api-key",
             watsonx_project_id="test-project-id",
-        )  # type: ignore[call-arg]
+        )
 
         # FR-049: max 20 requests
         assert config.max_requests == 20
@@ -152,19 +156,19 @@ class TestErrorResilienceConfiguration:
         # FR-049: max 50,000 response tokens
         assert config.max_response_tokens == 50000
 
-    def test_stage_specific_timeouts_match_spec(self) -> None:
+    def test_stage_specific_timeouts_match_spec(self, make_test_config: Any) -> None:
         """Stage-specific timeouts should match functional requirements.
 
         Validates FR-047: 120s for outline generation
         Validates FR-048: 60s for individual slide content generation
         """
-        config = Config(
+        config = make_test_config(
             llm_provider="watsonx",
             llm_model="test-model",
             watsonx_url="https://us-south.ml.cloud.ibm.com",
             watsonx_apikey="test-api-key",
             watsonx_project_id="test-project-id",
-        )  # type: ignore[call-arg]
+        )
 
         # FR-047: Outline generation timeout
         assert config.outline_timeout == 120
@@ -185,7 +189,7 @@ class TestErrorResilienceIntegration:
     by the pydantic-settings library itself.
     """
 
-    def test_configuration_validates_functional_requirements(self) -> None:
+    def test_configuration_validates_functional_requirements(self, make_test_config: Any) -> None:
         """Test that all Phase 8 functional requirements are addressable via configuration.
 
         This test validates that the Config class provides all necessary
@@ -199,7 +203,7 @@ class TestErrorResilienceIntegration:
         - FR-051: Environment-specific retry strategies
         """
         # Validate that all required configuration fields exist and have correct types
-        config = Config(
+        config = make_test_config(
             llm_provider="watsonx",
             llm_model="test-model",
             watsonx_url="https://us-south.ml.cloud.ibm.com",
@@ -207,7 +211,7 @@ class TestErrorResilienceIntegration:
             watsonx_project_id="test-project-id",
             environment="production",
             anthropic_api_key="sk-ant-fallback",
-        )  # type: ignore[call-arg]
+        )
 
         # Verify all Phase 8 configuration is accessible
         assert hasattr(config, "environment")

@@ -233,21 +233,41 @@ pptx-agent/
 
 ## テスト
 
-テストスイートの実行:
+### テストの実行
 
 ```bash
 # 全テストの実行
 mise run test
 
-# カバレッジ付きで実行
+# 単体テストのみ実行
+uv run pytest tests/unit/ -x
+
+# 統合テストの実行（API鍵が必要）
+uv run pytest tests/integration/ -x
+
+# カバレッジレポート付きで実行
 mise run test-cov
-
-# 特定のテストファイルを実行
-uv run pytest tests/unit/test_project_structure.py
-
-# 特定のテストを実行
-uv run pytest tests/unit/test_project_structure.py::test_src_directory_exists
 ```
+
+### テスト設定
+
+**単体テスト**: 環境変数から自動的に隔離されます。[`make_test_config()`](tests/conftest.py:103)フィクスチャを使用してください:
+
+```python
+def test_something(make_test_config):
+    config = make_test_config(llm_provider="openai")
+    # テストロジック
+```
+
+**統合テスト**: 実際のAPI鍵が必要です。テスト環境をセットアップしてください:
+
+1. テンプレートをコピー: `cp .env.test.template .env.test`
+2. テスト用API鍵を記入
+3. 統合テストを実行: `uv run pytest tests/integration/ -x`
+
+**注意**: `.env.test`はgitignoreされており、コミットしてはいけません。
+
+詳細については、[開発者ガイド](docs/developer-guide.md#testing-configuration)を参照してください。
 
 ## 🤝 貢献
 

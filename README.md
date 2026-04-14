@@ -233,21 +233,41 @@ The system follows a pipeline architecture:
 
 ## Testing
 
-Run the test suite:
+### Running Tests
 
 ```bash
 # Run all tests
 mise run test
 
-# Run with coverage
+# Run unit tests only
+uv run pytest tests/unit/ -x
+
+# Run integration tests (requires API keys)
+uv run pytest tests/integration/ -x
+
+# Run with coverage report
 mise run test-cov
-
-# Run specific test file
-uv run pytest tests/unit/test_project_structure.py
-
-# Run specific test
-uv run pytest tests/unit/test_project_structure.py::test_src_directory_exists
 ```
+
+### Test Configuration
+
+**Unit Tests**: Automatically isolated from environment variables. Use [`make_test_config()`](tests/conftest.py:103) fixture:
+
+```python
+def test_something(make_test_config):
+    config = make_test_config(llm_provider="openai")
+    # Test logic here
+```
+
+**Integration Tests**: Require real API keys. Set up your test environment:
+
+1. Copy the template: `cp .env.test.template .env.test`
+2. Fill in your test API keys
+3. Run integration tests: `uv run pytest tests/integration/ -x`
+
+**Note**: `.env.test` is gitignored and should never be committed.
+
+For more details, see the [Developer Guide](docs/developer-guide.md#testing-configuration).
 
 ## 🤝 Contributing
 

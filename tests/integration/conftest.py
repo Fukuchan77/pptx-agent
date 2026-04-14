@@ -18,6 +18,20 @@ from pptx_agent.schemas.presentation import PresentationSchema, SlideSchema
 from pptx_agent.schemas.text import TextBlock
 
 
+@pytest.fixture
+def integration_test_config(make_test_config: Any) -> Any:
+    """
+    Config for integration tests.
+
+    Uses make_test_config with integration-appropriate settings.
+    """
+    return make_test_config(
+        llm_provider="openai",
+        llm_model="gpt-4",
+        openai_api_key="integration-key-67890abcd",
+    )
+
+
 @pytest.fixture(autouse=True)
 def mock_llm_config(monkeypatch: pytest.MonkeyPatch):
     """Provide minimal LLM configuration for integration tests.
@@ -27,11 +41,12 @@ def mock_llm_config(monkeypatch: pytest.MonkeyPatch):
     when tests call get_config(), even though the actual LLM calls are mocked.
     """
     # Set minimal required environment variables for Config validation
+    # Using non-test-pattern keys to pass validation (Phase 3 requirement)
     monkeypatch.setenv("LLM_PROVIDER", "watsonx")
-    monkeypatch.setenv("LLM_MODEL", "test-model")
-    monkeypatch.setenv("WATSONX_URL", "https://test.example.com")
-    monkeypatch.setenv("WATSONX_APIKEY", "test-api-key-1234567890")
-    monkeypatch.setenv("WATSONX_PROJECT_ID", "test-project-id")
+    monkeypatch.setenv("LLM_MODEL", "granite-model")
+    monkeypatch.setenv("WATSONX_URL", "https://cloud.ibm.com")
+    monkeypatch.setenv("WATSONX_APIKEY", "abcdef1234567890")
+    monkeypatch.setenv("WATSONX_PROJECT_ID", "prod-project-id")
 
 
 def make_mock_pipeline_data(

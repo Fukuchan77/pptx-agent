@@ -241,6 +241,53 @@ uv run pytest tests/unit/test_validators.py::test_input_validator_rejects_empty_
 uv run pytest -k "validator" -v
 ```
 
+## Testing Guidelines
+
+### Test Isolation
+
+All tests are automatically isolated from your development environment:
+
+- Environment variables are cleared by [`isolate_config_from_environment`](tests/conftest.py:49) fixture
+- Use [`make_test_config()`](tests/conftest.py:103) to create Config instances in tests
+- Never rely on environment variables in unit tests
+
+### Writing Tests
+
+Follow TDD (Test-Driven Development):
+
+1. **RED**: Write a failing test that defines the expected behavior
+2. **GREEN**: Write minimal code to make the test pass
+3. **REFACTOR**: Improve the code while keeping tests green
+
+Example:
+
+```python
+def test_new_feature(make_test_config):
+    """Test description"""
+    config = make_test_config(llm_provider="openai")
+    result = my_function(config)
+    assert result == expected_value
+```
+
+### API Keys in Tests
+
+- **Unit tests**: Use [`make_test_config()`](tests/conftest.py:103) which automatically allows test keys
+- **Integration tests**: Use real API keys from `.env.test`
+- **Never commit**: Real API keys should never be in code or `.env.test`
+
+### Running Specific Tests
+
+```bash
+# Single test
+uv run pytest tests/unit/test_config.py::test_specific_test -xvs
+
+# Test file
+uv run pytest tests/unit/test_config.py -xvs
+
+# With pattern
+uv run pytest -k "test_config" -xvs
+```
+
 ## Pull Request Process
 
 ### Before Submitting

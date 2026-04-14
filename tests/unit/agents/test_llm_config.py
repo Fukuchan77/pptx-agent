@@ -58,6 +58,7 @@ def watsonx_config():
         fallback_provider="anthropic",
         fallback_model="claude-3-5-sonnet-20241022",
         anthropic_api_key="test-anthropic-key-1234567890",
+        allow_test_keys=True,  # Phase 3: Allow test keys in test mode
     )
 
 
@@ -70,6 +71,7 @@ def anthropic_config():
         anthropic_api_key="test-anthropic-key-1234567890",
         environment="production",
         enable_fallback=False,
+        allow_test_keys=True,  # Phase 3: Allow test keys in test mode
     )
 
 

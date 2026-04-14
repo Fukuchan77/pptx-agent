@@ -465,6 +465,56 @@ mise run test-cov
 # Opens HTML report in browser
 ```
 
+## Testing Configuration
+
+### Unit Tests
+
+Unit tests use the `make_test_config` fixture factory for creating test Config instances:
+
+```python
+def test_example(make_test_config):
+    # Use default test config
+    config = make_test_config()
+    assert config.llm_provider == "openai"
+
+    # Override specific fields
+    config = make_test_config(
+        llm_provider="watsonx",
+        watsonx_project_id="test-project"
+    )
+```
+
+### Integration Tests
+
+Integration tests require real API keys. Set up your test environment:
+
+1. Copy the template:
+
+   ```bash
+   cp .env.test.template .env.test
+   ```
+
+2. Fill in your test API keys in `.env.test`
+
+3. Run integration tests:
+   ```bash
+   mise run test-integration
+   ```
+
+**Note**: `.env.test` is gitignored and should never be committed.
+
+### Test Isolation
+
+All tests are automatically isolated from your development environment:
+
+- The `isolate_config_from_environment` fixture clears all config-related env vars
+- Unit tests don't read `.env` files
+- Integration tests explicitly load `.env.test` if present
+
+### Thread Safety
+
+Config access is thread-safe. Tests verify concurrent access patterns.
+
 ## Adding New Features
 
 ### Feature Development Process

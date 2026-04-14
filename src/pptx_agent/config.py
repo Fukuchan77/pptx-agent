@@ -8,7 +8,7 @@ import re
 import threading
 from typing import Any, Literal
 
-from pydantic import field_validator
+from pydantic import Field, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -51,6 +51,10 @@ class Config(BaseSettings):
     llm_model: str
     llm_api_base: str | None = None
 
+    # Internal test mode flag
+    allow_test_keys: bool = Field(default=False, exclude=True)
+    """Internal flag to allow test API keys. Only used in test environments."""
+
     # Environment and retry settings
     environment: Literal["development", "production"] = "development"
     max_retries: int | None = None  # Auto-set based on environment
@@ -92,17 +96,25 @@ class Config(BaseSettings):
 
     @field_validator("watsonx_apikey", "anthropic_api_key", "openai_api_key", mode="before")
     @classmethod
-    def validate_api_key_not_empty(cls, v: str | None) -> str | None:
+    def validate_api_key_not_empty(cls, v: str | None, info: ValidationInfo) -> str | None:
         """Validate that API keys have minimum length to prevent obviously invalid values.
+
+        In production mode, also rejects keys matching test patterns like:
+        - Contains "test" (case-insensitive)
+        - Contains "dummy", "fake", "sample"
+        - Is a placeholder like "your-api-key-here"
+
+        In test mode (_allow_test_keys=True), test patterns are accepted.
 
         Args:
             v: The API key value to validate
+            info: Validation context containing _allow_test_keys flag
 
         Returns:
             The validated API key value with whitespace stripped (or None if None was provided)
 
         Raises:
-            ValueError: If the API key is too short (less than MIN_API_KEY_LENGTH characters)
+            ValueError: If the API key is too short or appears to be a test value in production
         """
         if v is not None:
             stripped = v.strip()
@@ -110,12 +122,38 @@ class Config(BaseSettings):
                 msg = "API key appears to be invalid (too short)"
                 raise ValueError(msg)
 
-            placeholder_pattern = (
-                r"^(your|sk-xxx|placeholder|dummy|fake|example|sample|todo|replace)-?"
-            )
+            # Get allow_test_keys from validation context
+            allow_test_keys = info.data.get("allow_test_keys", False)
+
+            if not allow_test_keys:
+                # Production mode: check for test patterns
+                v_lower = stripped.lower()
+
+                test_patterns = [
+                    "test",
+                    "dummy",
+                    "fake",
+                    "sample",
+                    "example",
+                    "placeholder",
+                    "your-api-key",
+                    "xxx",
+                ]
+
+                for pattern in test_patterns:
+                    if pattern in v_lower:
+                        msg = (
+                            f"API key appears to be a test value (contains '{pattern}'). "
+                            f"Please use a real API key in production."
+                        )
+                        raise ValueError(msg)
+
+            # Also check for placeholder patterns (always reject these)
+            placeholder_pattern = r"^(your|sk-xxx|placeholder|todo|replace)-?"
             if re.match(placeholder_pattern, stripped, re.IGNORECASE):
                 msg = "API key appears to be a placeholder value — update .env with your actual key"
                 raise ValueError(msg)
+
             return stripped
         return None
 

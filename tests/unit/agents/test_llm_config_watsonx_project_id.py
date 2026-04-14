@@ -29,6 +29,7 @@ class TestWatsonxProjectId:
             watsonx_apikey="test-watsonx-key-1234567890",
             watsonx_project_id="test-project-id-12345",
             environment="production",
+            allow_test_keys=True,  # Phase 3: Allow test keys in test mode
         )
 
         # Act & Assert
