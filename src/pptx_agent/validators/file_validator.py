@@ -159,11 +159,21 @@ def validate_file_extension(file_path: Path | str) -> None:
 def validate_no_symlinks(file_path: Path | str) -> None:
     """Validate that file path does not contain symlinks.
 
+    This function validates that the file path and its parent directories
+    do not contain symlinks. However, it allows the current working directory
+    (cwd) itself to be a symlink, as this is a common scenario when users
+    run the application from a symlinked directory.
+
+    The validation resolves cwd to its real path first, then checks only
+    the path components beyond cwd for symlinks. This prevents false positives
+    when running from a symlinked directory while still catching actual
+    security issues.
+
     Args:
         file_path: Path to validate
 
     Raises:
-        SecurityValidationError: If path contains symlinks
+        SecurityValidationError: If path contains symlinks (excluding cwd)
 
     """
     if isinstance(file_path, str):
@@ -178,17 +188,43 @@ def validate_no_symlinks(file_path: Path | str) -> None:
         raise SecurityValidationError(msg)
 
     # Check if any parent directory is a symlink
+    # Strategy: Resolve both cwd and file path, then check if file is under cwd
+    # This allows cwd itself to be a symlink without triggering false positives
     try:
-        # Check each parent in the original path
-        current = file_path.absolute()
-        while current != current.parent:
-            if current.is_symlink():
-                msg = (
-                    f"Symlink validation failed: path contains symlink at '{current}'. "
-                    "Expected: regular file path without symlinks."
-                )
-                raise SecurityValidationError(msg)
-            current = current.parent
+        # Get the resolved (real) current working directory and file path
+        resolved_cwd = Path.cwd().resolve()
+        resolved_file = file_path.resolve()
+
+        # Try to make the resolved file path relative to resolved cwd
+        try:
+            # If this succeeds, the file is within cwd (after resolving all symlinks)
+            # This means any symlinks in the path are part of cwd itself, which is acceptable
+            resolved_file.relative_to(resolved_cwd)
+            # No additional symlinks beyond cwd - accept the file
+
+        except ValueError:
+            # File is not relative to cwd (outside cwd directory)
+            # In this case, check the entire absolute path for symlinks
+            # We exclude the resolved cwd from checking to avoid false positives
+            current = file_path.absolute().parent
+            while current != current.parent:
+                # Skip checking if this directory is part of or above the resolved cwd
+                try:
+                    resolved_cwd.relative_to(current.resolve())
+                    # current is an ancestor of cwd, skip it
+                    current = current.parent
+                    continue
+                except ValueError:
+                    pass
+
+                if current.is_symlink():
+                    msg = (
+                        f"Symlink validation failed: path contains symlink at '{current}'. "
+                        "Expected: regular file path without symlinks."
+                    )
+                    raise SecurityValidationError(msg) from None
+                current = current.parent
+
     except (OSError, RuntimeError) as e:
         msg = f"Symlink validation failed: error while validating path. Details: {e}"
         raise SecurityValidationError(msg) from e

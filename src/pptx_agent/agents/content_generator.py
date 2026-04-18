@@ -17,7 +17,15 @@ from typing import Any, Literal
 
 from pydantic_ai import Agent
 
-from pptx_agent.agents.prompts import CONTENT_GENERATOR_PROMPT
+from pptx_agent.agents.prompts import (
+    CONTENT_GENERATOR_PROMPT,
+    SPEAKER_NOTES_EN_CONTENT_SLIDE,
+    SPEAKER_NOTES_EN_SECTION_SLIDE,
+    SPEAKER_NOTES_EN_TITLE_SLIDE,
+    SPEAKER_NOTES_JA_CONTENT_SLIDE,
+    SPEAKER_NOTES_JA_SECTION_SLIDE,
+    SPEAKER_NOTES_JA_TITLE_SLIDE,
+)
 from pptx_agent.agents.utils import run_agent_with_fallback
 from pptx_agent.config import get_config
 from pptx_agent.schemas.outline import PresentationOutline, SlideContent
@@ -335,27 +343,20 @@ def _generate_speaker_notes(
     if is_title_slide:
         # Title slide - introduce presentation
         if language == "ja":
-            notes = (
-                f"このプレゼンテーションでは「{title}」について説明します。"
-                f"{content}について詳しく見ていきます。"
-            )
+            notes = SPEAKER_NOTES_JA_TITLE_SLIDE.format(title=title, content=content)
         else:
-            notes = f"This presentation covers {title}. We will explore {content} in detail."
+            notes = SPEAKER_NOTES_EN_TITLE_SLIDE.format(title=title, content=content)
     elif is_section_slide:
         # Section slide - provide transition
         if language == "ja":
-            notes = f"次のセクションでは「{title}」について説明します。{content}に焦点を当てます。"
+            notes = SPEAKER_NOTES_JA_SECTION_SLIDE.format(title=title, content=content)
         else:
-            notes = f"In this section, we will discuss {title}. The focus will be on {content}."
+            notes = SPEAKER_NOTES_EN_SECTION_SLIDE.format(title=title, content=content)
     # Content slide - elaborate on content
     elif language == "ja":
-        notes = (
-            f"「{title}」に関して、{content}という点が重要です。これらの詳細について説明します。"
-        )
+        notes = SPEAKER_NOTES_JA_CONTENT_SLIDE.format(title=title, content=content)
     else:
-        notes = (
-            f"Regarding {title}, the key points are: {content}. Let me elaborate on these details."
-        )
+        notes = SPEAKER_NOTES_EN_CONTENT_SLIDE.format(title=title, content=content)
 
     return notes
 

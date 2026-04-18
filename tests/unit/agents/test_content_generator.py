@@ -1166,7 +1166,7 @@ async def test_generate_content_with_llm():
     )
 
     # Mock run_agent_with_fallback to return expected result
-    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
+    with patch("pptx_agent.agents.content_generator.run_agent_with_fallback") as mock_run:
         mock_result = AgentRunResult(output=expected_schema)
         mock_run.return_value = mock_result
 
@@ -1217,7 +1217,7 @@ async def test_generate_content_with_llm_creates_model():
     )
 
     # Mock run_agent_with_fallback
-    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
+    with patch("pptx_agent.agents.content_generator.run_agent_with_fallback") as mock_run:
         mock_result = AgentRunResult(output=expected_schema)
         mock_run.return_value = mock_result
 
@@ -1248,7 +1248,7 @@ async def test_generate_content_with_llm_error_handling():
     )
 
     # Mock run_agent_with_fallback to raise exception
-    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
+    with patch("pptx_agent.agents.content_generator.run_agent_with_fallback") as mock_run:
         # Simulate LLM error
         mock_run.side_effect = Exception("LLM API error")
 
@@ -1277,7 +1277,7 @@ async def test_generate_content_heuristic_unchanged():
     )
 
     # Should NOT call run_agent_with_fallback when use_llm=False
-    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
+    with patch("pptx_agent.agents.content_generator.run_agent_with_fallback") as mock_run:
         mock_run.return_value = None
 
         # Act
@@ -1333,7 +1333,7 @@ async def test_generate_content_with_fallback_on_primary_failure():
 
     # Mock run_agent_with_fallback to return expected result
     # The fallback logic is tested in test_utils.py
-    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
+    with patch("pptx_agent.agents.content_generator.run_agent_with_fallback") as mock_run:
         mock_result = AgentRunResult(output=expected_schema)
         mock_run.return_value = mock_result
 
@@ -1363,7 +1363,7 @@ async def test_generate_content_both_providers_fail():
 
     # Mock run_agent_with_fallback to raise RuntimeError
     # The fallback logic is tested in test_utils.py
-    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
+    with patch("pptx_agent.agents.content_generator.run_agent_with_fallback") as mock_run:
         # Simulate all providers failing
         mock_run.side_effect = RuntimeError("All LLM providers failed")
 
@@ -1389,7 +1389,7 @@ async def test_generate_content_heuristic_no_fallback():
     )
 
     # Mock run_agent_with_fallback
-    with patch("pptx_agent.agents.utils.run_agent_with_fallback") as mock_run:
+    with patch("pptx_agent.agents.content_generator.run_agent_with_fallback") as mock_run:
         # Act
         result = await generate_content(outline, use_llm=False)
 
