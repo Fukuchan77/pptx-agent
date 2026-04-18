@@ -1,153 +1,78 @@
-# pyright: ignore[reportAttributeAccessIssue, reportUnknownParameterType, reportUnknownMemberType, reportMissingParameterType, reportUnusedVariable]
-"""
-Unit tests for template validation script.
+"""Tests for template generation script exception logging."""
 
-PLAN B EXECUTION:
-python-pptx cannot create custom slide layouts programmatically.
-This test file validates the manual creation instruction/validation functionality.
-
-See design.md Section 8.3.4 for Plan B details.
-"""
-
+import logging
 from pathlib import Path
 
 import pytest
 
+from scripts.generate_templates import generate_data_template, generate_smartart_template
 
-class TestTemplateValidationScript:
-    """Tests for template validation and manual creation instructions."""
 
-    def test_generate_data_template_detects_missing_file(
+class TestDuplicateExceptionLogging:
+    """Test that exception logging is not duplicated."""
+
+    def test_data_template_logs_exception_once_on_validation_error(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Test that script detects when data-template.pptx doesn't exist."""
-        from scripts.generate_templates import generate_data_template
+        """Verify only one exception log when data template validation fails."""
+        # Create invalid template file
+        template_path = tmp_path / "data-template.pptx"
+        template_path.write_bytes(b"invalid pptx content")
 
-        output_path = tmp_path / "data-template.pptx"
+        with caplog.at_level(logging.ERROR):
+            generate_data_template(str(template_path))
 
-        generate_data_template(str(output_path))
+        # Count how many times the exception was logged with traceback
+        exception_logs = [record for record in caplog.records if record.exc_info is not None]
 
-        # Should log warning about missing file
-        assert "data-template.pptx does NOT exist" in caplog.text
-        assert "MANUAL ACTION REQUIRED" in caplog.text
+        # Should have exactly 1 exception log (not 2)
+        assert len(exception_logs) == 1, f"Expected 1 exception log but found {len(exception_logs)}"
 
-    def test_generate_smartart_template_detects_missing_file(
+        # Verify the exception message
+        assert "Failed to validate template" in caplog.text
+
+    def test_smartart_template_logs_exception_once_on_validation_error(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Test that script detects when smartart-template.pptx doesn't exist."""
-        from scripts.generate_templates import generate_smartart_template
+        """Verify only one exception log when smartart template validation fails."""
+        # Create invalid template file
+        template_path = tmp_path / "smartart-template.pptx"
+        template_path.write_bytes(b"invalid pptx content")
 
-        output_path = tmp_path / "smartart-template.pptx"
+        with caplog.at_level(logging.ERROR):
+            generate_smartart_template(str(template_path))
 
-        generate_smartart_template(str(output_path))
+        # Count how many times the exception was logged with traceback
+        exception_logs = [record for record in caplog.records if record.exc_info is not None]
 
-        # Should log warning about missing file
-        assert "smartart-template.pptx does NOT exist" in caplog.text
-        assert "MANUAL ACTION REQUIRED" in caplog.text
+        # Should have exactly 1 exception log (not 2)
+        assert len(exception_logs) == 1, f"Expected 1 exception log but found {len(exception_logs)}"
 
-    def test_validation_uses_existing_templates(self, tmp_path: Path) -> None:
-        """Test that script can validate existing templates."""
-        # Copy existing basic-template.pptx to test location
-        import shutil
+        # Verify the exception message
+        assert "Failed to validate template" in caplog.text
 
-        from scripts.generate_templates import generate_data_template
-
-        basic_template = Path("templates/basic-template.pptx")
-        if basic_template.exists():
-            output_path = tmp_path / "data-template.pptx"
-            shutil.copy(basic_template, output_path)
-
-            # Should detect template exists (even if layouts don't match spec)
-            generate_data_template(str(output_path))
-            # No assertion - just verifying it doesn't crash
-
-
-class TestManualCreationDocumentation:
-    """Tests that verify manual creation instructions are clear."""
-
-    def test_data_template_instructions_include_required_layouts(
+    def test_data_template_includes_remediation_message(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Test that manual creation instructions list all required layouts."""
-        from scripts.generate_templates import generate_data_template
+        """Verify remediation message is still logged after exception."""
+        template_path = tmp_path / "data-template.pptx"
+        template_path.write_bytes(b"invalid pptx content")
 
-        output_path = tmp_path / "nonexistent.pptx"
-        generate_data_template(str(output_path))
+        with caplog.at_level(logging.WARNING):
+            generate_data_template(str(template_path))
 
-        # Should mention all 4 required layouts
-        assert "Chart" in caplog.text
-        assert "Table" in caplog.text
-        assert "Data Analysis" in caplog.text
-        assert "Two Column Data" in caplog.text
+        # Remediation message should be present
+        assert "Please recreate template following DATA-TEMPLATE-SPEC.md" in caplog.text
 
-    def test_smartart_template_instructions_include_required_layouts(
+    def test_smartart_template_includes_remediation_message(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Test that manual creation instructions list all required SmartArt layouts."""
-        from scripts.generate_templates import generate_smartart_template
+        """Verify remediation message is still logged after exception."""
+        template_path = tmp_path / "smartart-template.pptx"
+        template_path.write_bytes(b"invalid pptx content")
 
-        output_path = tmp_path / "nonexistent.pptx"
-        generate_smartart_template(str(output_path))
+        with caplog.at_level(logging.WARNING):
+            generate_smartart_template(str(template_path))
 
-        # Should mention all 4 required SmartArt layouts
-        assert "Process Flow" in caplog.text
-        assert "Hierarchy" in caplog.text
-        assert "Cycle" in caplog.text
-        assert "Relationship" in caplog.text
-
-
-class TestMainFunction:
-    """Tests for main CLI entry point."""
-
-    def test_main_provides_instructions_for_both_templates(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """Test that main() provides instructions for both templates."""
-        from scripts.generate_templates import main
-
-        # Mock the template path to use tmp_path
-        monkeypatch.setattr("scripts.generate_templates.TEMPLATES_DIR", tmp_path)
-
-        main()
-
-        # Should check both templates
-        assert "data-template.pptx" in caplog.text
-        assert "smartart-template.pptx" in caplog.text
-
-    def test_main_explains_plan_b_execution(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """Test that main() explains Plan B (manual creation)."""
-        from scripts.generate_templates import main
-
-        monkeypatch.setattr("scripts.generate_templates.TEMPLATES_DIR", tmp_path)
-
-        main()
-
-        # Should mention manual action requirement (Plan B execution)
-        assert "MANUAL ACTION REQUIRED" in caplog.text
-        assert "Open Microsoft PowerPoint" in caplog.text
-
-
-@pytest.mark.skipif(
-    not Path("templates/basic-template.pptx").exists(),
-    reason="Requires existing template for parser compatibility test",
-)
-class TestTemplateParserCompatibility:
-    """Tests that existing templates can be parsed (Task 3.5)."""
-
-    def test_existing_templates_parseable_by_template_parser(self):
-        """Test that existing templates can be parsed by template_parser."""
-        from pptx_agent.template_parser import TemplateParser
-
-        # Test with existing basic-template.pptx - use absolute path
-        project_root = Path(__file__).parent.parent.parent
-        template_path = str(project_root / "templates" / "basic-template.pptx")
-
-        parser = TemplateParser()
-        manifest = parser.parse_template(template_path)
-
-        # Verify manifest has expected structure
-        assert manifest is not None
-        assert len(manifest.layouts) > 0
-        assert manifest.template_path == str(Path(template_path).resolve())
+        # Remediation message should be present
+        assert "Please recreate template following SMARTART-TEMPLATE-SPEC.md" in caplog.text

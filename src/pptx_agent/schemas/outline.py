@@ -59,8 +59,40 @@ class PresentationOutline(BaseModel):
     @field_validator("slides")
     @classmethod
     def validate_slides(cls, v: list[SlideContent]) -> list[SlideContent]:
-        """Validate that at least one slide is present."""
+        """Validate that at least one slide is present and slide numbers form continuous sequence.
+
+        Requirements:
+        - At least one slide must be present
+        - Slide numbers must start at 1
+        - Slide numbers must be continuous (no gaps)
+        - Slide numbers must be unique (no duplicates)
+        """
         if len(v) < 1:
             msg = "Presentation must contain at least one slide"
             raise ValueError(msg)
+
+        # Extract slide numbers
+        slide_numbers = [slide.slide_number for slide in v]
+
+        # Check for duplicates
+        if len(slide_numbers) != len(set(slide_numbers)):
+            msg = "Slide numbers must be unique - found duplicate slide numbers"
+            raise ValueError(msg)
+
+        # Sort to check continuity
+        sorted_numbers = sorted(slide_numbers)
+
+        # Check starts at 1
+        if sorted_numbers[0] != 1:
+            msg = f"Slide numbers must start at 1, found first slide number: {sorted_numbers[0]}"
+            raise ValueError(msg)
+
+        # Check continuous sequence (no gaps)
+        expected_sequence = list(range(1, len(v) + 1))
+        if sorted_numbers != expected_sequence:
+            msg = (
+                f"Slide numbers must form continuous sequence 1..{len(v)}, found: {sorted_numbers}"
+            )
+            raise ValueError(msg)
+
         return v

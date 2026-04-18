@@ -21,7 +21,6 @@ from pptx_agent.schemas.slide import SlideSchema
 from pptx_agent.schemas.template_manifest import TemplateManifest
 from pptx_agent.validators.exceptions import InvalidFileError
 from pptx_agent.validators.input_validator import InputValidationError
-from pptx_agent.validators.security import SecurityValidationResult
 
 
 class TestGeneratePresentation:
@@ -599,7 +598,7 @@ class TestGeneratePresentation:
     async def test_pipeline_detects_prompt_injection_patterns(
         self, tmp_path: Path, caplog: LogCaptureFixture
     ) -> None:
-        """Test that pipeline detects and handles prompt injection attempts."""
+        """Test that pipeline detects and rejects prompt injection attempts."""
         # Arrange
         caplog.set_level(logging.WARNING)
         malicious_input = (
@@ -610,51 +609,36 @@ class TestGeneratePresentation:
 
         with (
             patch("pptx_agent.pipeline.validate_and_sanitize") as mock_validate,
-            patch("pptx_agent.pipeline.detect_prompt_injection") as mock_detect_injection,
-            patch("pptx_agent.pipeline.analyze_story") as mock_analyze,
-            patch("pptx_agent.pipeline.generate_outline") as mock_gen_outline,
-            patch("pptx_agent.pipeline.validate_outline") as mock_val_outline,
-            patch("pptx_agent.pipeline.generate_content") as mock_gen_content,
-            patch("pptx_agent.pipeline.validate_content") as mock_val_content,
-            patch("pptx_agent.pipeline.build_presentation") as mock_build,
+            patch("pptx_agent.pipeline.flag_suspicious_phrases") as mock_flag_phrases,
         ):
             # Setup mocks
             mock_validate.return_value = malicious_input
 
-            # Mock detect_prompt_injection to return result with threats detected
-            mock_security_result = SecurityValidationResult(
-                has_threats=True,
-                detected_patterns=["ignore previous instructions"],
-                sanitized_text="Create a presentation. and do something else.",
-                original_text=malicious_input,
+            # Mock flag_suspicious_phrases to raise ValueError (new behavior)
+            mock_flag_phrases.side_effect = ValueError(
+                "Suspicious phrase detected: 'Ignore previous instructions'. "
+                "Input rejected as potential prompt injection."
             )
-            mock_detect_injection.return_value = mock_security_result
 
-            mock_analyze.return_value = MagicMock(spec=StoryAnalysis)
-            mock_outline = MagicMock(spec=PresentationOutline)
-            mock_gen_outline.return_value = mock_outline
-            mock_val_outline.return_value = mock_outline
-            mock_gen_content.return_value = MagicMock(spec=PresentationSchema)
-            mock_val_content.return_value = MagicMock(spec=PresentationSchema)
-            mock_build.return_value = output_path
-
-            # Act
-            await generate_presentation(malicious_input, template_path, output_path, use_llm=False)
+            # Act & Assert - pipeline should raise ValueError and reject input
+            with pytest.raises(
+                ValueError, match="Input validation failed.*Suspicious phrase detected"
+            ):
+                await generate_presentation(
+                    malicious_input, template_path, output_path, use_llm=False
+                )
 
             # Assert
-            # detect_prompt_injection should be called with validated input
-            mock_detect_injection.assert_called_once_with(malicious_input)
-
-            # analyze_story should be called with sanitized text (not original)
-            mock_analyze.assert_called_once_with(mock_security_result.sanitized_text, use_llm=False)
+            # flag_suspicious_phrases should be called with validated input
+            mock_flag_phrases.assert_called_once_with(malicious_input)
 
             # Check that warning was logged
             warning_logs = [
                 record
                 for record in caplog.records
-                if record.levelname == "WARNING" and "prompt injection" in record.message.lower()
+                if record.levelname == "WARNING" and "suspicious phrase" in record.message.lower()
             ]
-            assert len(warning_logs) > 0, "No warning logged for prompt injection detection"
+            assert len(warning_logs) > 0, "No warning logged for suspicious phrase detection"
 
     @pytest.mark.asyncio
     async def test_pipeline_passes_clean_input_through_injection_check(
@@ -668,7 +652,7 @@ class TestGeneratePresentation:
 
         with (
             patch("pptx_agent.pipeline.validate_and_sanitize") as mock_validate,
-            patch("pptx_agent.pipeline.detect_prompt_injection") as mock_detect_injection,
+            patch("pptx_agent.pipeline.flag_suspicious_phrases") as mock_flag_phrases,
             patch("pptx_agent.pipeline.analyze_story") as mock_analyze,
             patch("pptx_agent.pipeline.generate_outline") as mock_gen_outline,
             patch("pptx_agent.pipeline.validate_outline") as mock_val_outline,
@@ -679,14 +663,8 @@ class TestGeneratePresentation:
             # Setup mocks
             mock_validate.return_value = clean_input
 
-            # Mock detect_prompt_injection to return result with no threats
-            mock_security_result = SecurityValidationResult(
-                has_threats=False,
-                detected_patterns=[],
-                sanitized_text=clean_input,
-                original_text=clean_input,
-            )
-            mock_detect_injection.return_value = mock_security_result
+            # Mock flag_suspicious_phrases to NOT raise (clean input - new behavior)
+            mock_flag_phrases.return_value = None  # No exception raised
 
             mock_analyze.return_value = MagicMock(spec=StoryAnalysis)
             mock_outline = MagicMock(spec=PresentationOutline)
@@ -700,10 +678,10 @@ class TestGeneratePresentation:
             await generate_presentation(clean_input, template_path, output_path, use_llm=False)
 
             # Assert
-            # detect_prompt_injection should be called
-            mock_detect_injection.assert_called_once_with(clean_input)
+            # flag_suspicious_phrases should be called
+            mock_flag_phrases.assert_called_once_with(clean_input)
 
-            # analyze_story should be called with same clean text
+            # analyze_story should be called with same clean text (no modification)
             mock_analyze.assert_called_once_with(clean_input, use_llm=False)
 
     @pytest.mark.asyncio
@@ -721,14 +699,9 @@ class TestGeneratePresentation:
             call_order.append("validate_and_sanitize")
             return input_text
 
-        def track_injection(*args: object, **kwargs: object) -> SecurityValidationResult:
-            call_order.append("detect_prompt_injection")
-            return SecurityValidationResult(
-                has_threats=False,
-                detected_patterns=[],
-                sanitized_text=input_text,
-                original_text=input_text,
-            )
+        def track_flag_phrases(*args: object, **kwargs: object) -> None:
+            call_order.append("flag_suspicious_phrases")
+            # Don't raise - clean input
 
         def track_analyze(*args: object, **kwargs: object) -> Any:
             call_order.append("analyze_story")
@@ -736,7 +709,7 @@ class TestGeneratePresentation:
 
         with (
             patch("pptx_agent.pipeline.validate_and_sanitize", side_effect=track_validate),
-            patch("pptx_agent.pipeline.detect_prompt_injection", side_effect=track_injection),
+            patch("pptx_agent.pipeline.flag_suspicious_phrases", side_effect=track_flag_phrases),
             patch("pptx_agent.pipeline.analyze_story", side_effect=track_analyze),
             patch("pptx_agent.pipeline.generate_outline"),
             patch("pptx_agent.pipeline.validate_outline"),
@@ -749,9 +722,9 @@ class TestGeneratePresentation:
             # Act
             await generate_presentation(input_text, template_path, output_path, use_llm=False)
 
-            # Assert - verify correct order: validate -> detect_injection -> analyze
+            # Assert - verify correct order: validate -> flag_phrases -> analyze
             assert call_order[:3] == [
                 "validate_and_sanitize",
-                "detect_prompt_injection",
+                "flag_suspicious_phrases",
                 "analyze_story",
             ], f"Incorrect call order: {call_order}"

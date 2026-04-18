@@ -17,7 +17,7 @@ from unittest.mock import patch
 import pytest
 from pptx import Presentation
 
-from pptx_agent.config import (
+from pptx_agent.templates import (
     generate_basic_template,
     generate_japanese_template,
     validate_templates,

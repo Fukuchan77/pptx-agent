@@ -272,9 +272,9 @@ def _determine_layout_name(slide_number: int, total_slides: int) -> str:
     if slide_number == 1:
         return "Title Slide"
 
-    # Last slide could be title or content
+    # Last slide uses Section Header for better conclusion slide layout
     if slide_number == total_slides:
-        return "Title Slide"
+        return "Section Header"
 
     # Section dividers at regular intervals for longer presentations
     if total_slides > LONG_PRESENTATION_THRESHOLD and slide_number % SECTION_DIVIDER_INTERVAL == 0:

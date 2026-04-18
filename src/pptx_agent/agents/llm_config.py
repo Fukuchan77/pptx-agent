@@ -83,7 +83,7 @@ class CustomOpenAIProvider(Provider[AsyncOpenAI]):
     @property
     def base_url(self) -> str:
         """Return the base URL from client."""
-        return str(self._client.base_url) if self._client.base_url else "https://api.openai.com/v1"
+        return str(self._client.base_url)
 
     @property
     def name(self) -> str:

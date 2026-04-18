@@ -318,24 +318,8 @@ def reset_config() -> None:
         _config = None
 
 
-# ---------------------------------------------------------------------------
-# Backward-compatible re-exports from pptx_agent.templates
-# ---------------------------------------------------------------------------
-# These were originally defined here but have been moved to a dedicated module
-# (pptx_agent.templates) to respect the Single Responsibility Principle.
-# Re-exporting keeps existing ``from pptx_agent.config import …`` imports working.
-
-from pptx_agent.templates import (  # noqa: E402
-    generate_basic_template,
-    generate_japanese_template,
-    validate_templates,
-)
-
 __all__ = [
     "Config",
-    "generate_basic_template",
-    "generate_japanese_template",
     "get_config",
     "reset_config",
-    "validate_templates",
 ]

@@ -22,7 +22,7 @@ from pptx_agent.schemas.template_manifest import TemplateManifest
 from pptx_agent.validators.content_validator import validate_content
 from pptx_agent.validators.input_validator import validate_and_sanitize, validate_text_security
 from pptx_agent.validators.outline_validator import validate_outline
-from pptx_agent.validators.security import detect_prompt_injection
+from pptx_agent.validators.security import flag_suspicious_phrases
 
 logger = logging.getLogger(__name__)
 
@@ -84,14 +84,20 @@ async def generate_presentation(
     # Stage 0: Validate and sanitize input (length checks)
     input_text = validate_and_sanitize(input_text)
 
-    # Security: Detect and handle prompt injection attempts
-    security_result = detect_prompt_injection(input_text)
-    if security_result.has_threats:
-        logger.warning(
-            "Prompt injection patterns detected in input. Patterns: %s. Using sanitized version.",
-            security_result.detected_patterns,
+    # Security: Detect and reject suspicious phrases (best-effort signal)
+    # This is NOT a security boundary per CLI trust model, but provides
+    # early feedback for obviously suspicious patterns
+    try:
+        flag_suspicious_phrases(input_text)
+    except ValueError as e:
+        logger.warning("Suspicious phrase detected in input: %s", e)
+        # Re-raise with user-friendly message
+        msg = (
+            f"Input validation failed: {e}. "
+            "The input contains patterns that may indicate prompt injection. "
+            "Please review and modify your input text."
         )
-        input_text = security_result.sanitized_text
+        raise ValueError(msg) from e
 
     # Stage 1: Analyze story
     start = time.time()

@@ -1,4 +1,11 @@
-"""SmartArt wrapper with XML manipulation."""
+"""SmartArt wrapper with XML manipulation.
+
+Version Compatibility Note:
+    This module requires python-pptx>=1.0,<2.0 due to dependency on the
+    private Part._blob attribute for SmartArt XML manipulation. The version
+    constraint in pyproject.toml ensures compatibility. Runtime validation
+    occurs in populate_smartart() when _blob is actually accessed.
+"""
 
 import logging
 from typing import Any
@@ -171,67 +178,3 @@ class SmartArtWrapper:
                 encoding="UTF-8",
                 standalone=True,
             )
-
-    @staticmethod
-    def _populate_process_smartart(
-        slide: Slide,
-        placeholder_name: str,
-        nodes: list[dict[str, Any]],
-    ) -> None:
-        """Populate process flow SmartArt diagram.
-
-        Args:
-            slide: Slide containing SmartArt
-            placeholder_name: Name of placeholder containing SmartArt
-            nodes: List of node data for process steps
-        """
-        # Process SmartArt uses the same text replacement logic
-        SmartArtWrapper.populate_smartart(slide, placeholder_name, nodes)
-
-    @staticmethod
-    def _populate_hierarchy_smartart(
-        slide: Slide,
-        placeholder_name: str,
-        nodes: list[dict[str, Any]],
-    ) -> None:
-        """Populate organizational hierarchy SmartArt diagram.
-
-        Args:
-            slide: Slide containing SmartArt
-            placeholder_name: Name of placeholder containing SmartArt
-            nodes: List of node data for organizational structure
-        """
-        # Hierarchy SmartArt uses the same text replacement logic
-        SmartArtWrapper.populate_smartart(slide, placeholder_name, nodes)
-
-    @staticmethod
-    def _populate_cycle_smartart(
-        slide: Slide,
-        placeholder_name: str,
-        nodes: list[dict[str, Any]],
-    ) -> None:
-        """Populate cyclical process SmartArt diagram.
-
-        Args:
-            slide: Slide containing SmartArt
-            placeholder_name: Name of placeholder containing SmartArt
-            nodes: List of node data for cyclical steps
-        """
-        # Cycle SmartArt uses the same text replacement logic
-        SmartArtWrapper.populate_smartart(slide, placeholder_name, nodes)
-
-    @staticmethod
-    def _populate_relationship_smartart(
-        slide: Slide,
-        placeholder_name: str,
-        nodes: list[dict[str, Any]],
-    ) -> None:
-        """Populate relationship diagram SmartArt.
-
-        Args:
-            slide: Slide containing SmartArt
-            placeholder_name: Name of placeholder containing SmartArt
-            nodes: List of node data for relationship elements
-        """
-        # Relationship SmartArt uses the same text replacement logic
-        SmartArtWrapper.populate_smartart(slide, placeholder_name, nodes)

@@ -82,7 +82,7 @@ def generate_data_template(output_path: str) -> None:
 
         except Exception:
             logger.exception("Failed to validate template")
-            logger.exception("Please recreate template following DATA-TEMPLATE-SPEC.md")
+            logger.warning("Please recreate template following DATA-TEMPLATE-SPEC.md")
     else:
         logger.warning("data-template.pptx does NOT exist at: %s", output_path)
         logger.warning("")
@@ -151,7 +151,7 @@ def generate_smartart_template(output_path: str) -> None:
 
         except Exception:
             logger.exception("Failed to validate template")
-            logger.exception("Please recreate template following SMARTART-TEMPLATE-SPEC.md")
+            logger.warning("Please recreate template following SMARTART-TEMPLATE-SPEC.md")
     else:
         logger.warning("smartart-template.pptx does NOT exist at: %s", output_path)
         logger.warning("")

@@ -12,7 +12,8 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 # Prompt injection patterns to detect (case-insensitive)
-INJECTION_PATTERNS = [
+# English patterns
+INJECTION_PATTERNS_EN = [
     r"ignore\s+(?:previous|all|above|everything)",
     r"disregard\s+(?:previous|all|above)",
     r"forget\s+(?:your\s+)?instructions?",
@@ -22,6 +23,18 @@ INJECTION_PATTERNS = [
     r"new\s+instructions?",
 ]
 
+# Japanese patterns for prompt injection detection
+INJECTION_PATTERNS_JA = [
+    r"以前の指示を無視",  # "ignore previous instructions"
+    r"新しい指示",  # "new instructions"
+    r"システムプロンプト",  # "system prompt"
+    r"指示を忘れ",  # "forget instructions"
+    r"すべて無視",  # "ignore everything"
+]
+
+# Combined patterns for backward compatibility
+INJECTION_PATTERNS = INJECTION_PATTERNS_EN
+
 
 class SecurityValidationResult(BaseModel):
     """Result of security validation with detected threats and sanitized text."""
@@ -30,6 +43,65 @@ class SecurityValidationResult(BaseModel):
     detected_patterns: list[str]
     sanitized_text: str
     original_text: str
+
+
+def flag_suspicious_phrases(text: str) -> None:
+    """Detect suspicious phrases that may indicate prompt injection attempts.
+
+    This is a BEST-EFFORT detection mechanism and NOT a security boundary.
+    LLM prompt injection is fundamentally out-of-scope per the CLI trust model,
+    where the user already has full filesystem access and controls all inputs.
+
+    This function provides a signal for obviously suspicious patterns but makes
+    no guarantee of comprehensive detection. Adversarial users can trivially
+    bypass pattern matching.
+
+    The function preserves all whitespace and structure in the input text.
+    Multi-line content such as Markdown, code blocks, and bullet lists are
+    not modified.
+
+    Args:
+        text: Input text to check for suspicious patterns
+
+    Raises:
+        ValueError: If suspicious phrases are detected in the input text.
+                   The error message includes information about the detected pattern.
+
+    Requirements:
+        - 2.3.1: Raise ValueError on detection instead of silent sanitization
+        - 2.3.2: Preserve whitespace and multi-line content
+        - 2.3.3: Detect both English and Japanese suspicious patterns
+        - 2.3.4: Document as best-effort signal, not security boundary
+
+    Note:
+        This function does NOT modify the input text. Whitespace, newlines,
+        indentation, and all formatting are preserved exactly as provided.
+    """
+    text_lower = text.lower()
+
+    # Check English patterns
+    for pattern in INJECTION_PATTERNS_EN:
+        match = re.search(pattern, text_lower, re.IGNORECASE)
+        if match:
+            matched_text = text[match.start() : match.end()]
+            logger.warning("Suspicious phrase detected (English): %s", matched_text)
+            msg = (
+                f"Suspicious phrase detected: '{matched_text}'. "
+                "Input rejected as potential prompt injection."
+            )
+            raise ValueError(msg)
+
+    # Check Japanese patterns
+    for pattern in INJECTION_PATTERNS_JA:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            matched_text = text[match.start() : match.end()]
+            logger.warning("Suspicious phrase detected (Japanese): %s", matched_text)
+            msg = (
+                f"Suspicious phrase detected: '{matched_text}'. "
+                "Input rejected as potential prompt injection."
+            )
+            raise ValueError(msg)
 
 
 def detect_prompt_injection(text: str) -> SecurityValidationResult:
@@ -175,8 +247,14 @@ def validate_file_path(file_path: str, base_dir: str) -> bool:
     - Access outside base directory
     - URL-encoded traversal attempts
 
+    **IMPORTANT - URL Decoding Contract:**
+    This function performs URL decoding (urllib.parse.unquote) internally
+    on the input path ONCE. Callers MUST NOT double-decode the output or
+    apply additional URL decoding, as this could reintroduce security
+    vulnerabilities that were validated against.
+
     Args:
-        file_path: File path to validate
+        file_path: File path to validate (may be URL-encoded)
         base_dir: Base directory that file must be within
 
     Returns:
@@ -188,6 +266,42 @@ def validate_file_path(file_path: str, base_dir: str) -> bool:
         - Detect symlinks
         - Ensure path is within base directory
         - Allow safe relative paths
+        - Perform single URL decode internally
+
+    Examples:
+        Correct usage - pass raw path, use validated result directly:
+
+        >>> base = "/home/user/app"
+        >>> path = "documents/file.txt"  # Plain path
+        >>> if validate_file_path(path, base):
+        ...     # Safe to use path directly
+        ...     with open(Path(base) / path) as f:
+        ...         data = f.read()
+
+        >>> # URL-encoded path is handled automatically
+        >>> encoded_path = "images%2Fphoto.jpg"  # URL-encoded
+        >>> if validate_file_path(encoded_path, base):
+        ...     # Safe to use - function decoded it internally
+        ...     # DO NOT decode again!
+        ...     image_path = Path(base) / encoded_path  # ✗ WRONG - double decode
+        ...     image_path = Path(base) / urllib.parse.unquote(encoded_path)  # ✓ CORRECT
+
+        Incorrect usage - double decoding (security risk):
+
+        >>> # ✗ WRONG - Do not decode before calling
+        >>> decoded = urllib.parse.unquote(path)
+        >>> validate_file_path(decoded, base)  # Misses URL-encoded attacks
+
+        >>> # ✗ WRONG - Do not decode after validation
+        >>> if validate_file_path(path, base):
+        ...     # Double decoding could reintroduce traversal
+        ...     unsafe = urllib.parse.unquote(path)
+
+    Note:
+        For CLI usage where the user has filesystem access, this validation
+        provides defense-in-depth but is not a security boundary. The user
+        can already access files through other means. This validation prevents
+        accidents and catches obviously malicious patterns.
     """
     # URL decode the path to catch encoded traversal attempts
     try:

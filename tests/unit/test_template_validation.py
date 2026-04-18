@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from pptx_agent.config import validate_templates
+from pptx_agent.templates import validate_templates
 
 
 class TestTemplateValidation:

@@ -12,9 +12,9 @@ import sys
 import traceback
 from pathlib import Path
 
-from pptx_agent.config import validate_templates
 from pptx_agent.pipeline import generate_presentation
 from pptx_agent.schemas.template_manifest import TemplateManifest
+from pptx_agent.templates import validate_templates
 from pptx_agent.validators.exceptions import InvalidFileError, SecurityValidationError
 from pptx_agent.validators.input_validator import InputValidationError
 

@@ -18,6 +18,7 @@ from typing import Any, Literal
 from pydantic_ai import Agent
 
 from pptx_agent.agents.prompts import CONTENT_GENERATOR_PROMPT
+from pptx_agent.agents.utils import run_agent_with_fallback
 from pptx_agent.config import get_config
 from pptx_agent.schemas.outline import PresentationOutline, SlideContent
 from pptx_agent.schemas.presentation import PresentationSchema
@@ -67,8 +68,6 @@ async def generate_content(
 
         # Create model from config and run agent with fallback
         config = get_config()
-        from pptx_agent.agents.utils import run_agent_with_fallback  # noqa: PLC0415
-
         result = await run_agent_with_fallback(_content_agent, prompt, config)
         return result.output
     # Keep existing heuristic path unchanged
@@ -205,7 +204,7 @@ def _generate_content_blocks(  # noqa: PLR0911
 
     # Check for chart data (format: "chart:type|key1=value1,key2=value2")
     if content.startswith("chart:"):
-        return [_parse_chart_data(content, placeholder_name, slide_title)]
+        return [parse_chart_data(content, placeholder_name, slide_title)]
 
     # Check for table data (format: "table:header1|header2\nrow1|row2")
     if content.startswith("table:"):
@@ -361,7 +360,7 @@ def _generate_speaker_notes(
     return notes
 
 
-def _parse_chart_data(content: str, placeholder_name: str, title: str) -> ChartBlock:
+def parse_chart_data(content: str, placeholder_name: str, title: str) -> ChartBlock:
     """Parse chart data from content string.
 
     Format: "chart:type|key1=value1,key2=value2,key3=value3"
@@ -393,6 +392,13 @@ def _parse_chart_data(content: str, placeholder_name: str, title: str) -> ChartB
             try:
                 values.append(float(value.strip()))
             except ValueError:
+                # Log warning before fallback for debugging
+                logger.warning(
+                    "Invalid numeric value '%s' for category '%s' in chart data. "
+                    "Using fallback value 0.0",
+                    value.strip(),
+                    key.strip(),
+                )
                 values.append(0.0)
 
     # Create chart data structure
@@ -479,7 +485,7 @@ def _parse_mixed_content(
     # Add chart part if present
     if len(parts) > 1:
         chart_content = f"chart:{parts[1]}"
-        blocks.append(_parse_chart_data(chart_content, placeholder_name, title))
+        blocks.append(parse_chart_data(chart_content, placeholder_name, title))
 
     return blocks
 

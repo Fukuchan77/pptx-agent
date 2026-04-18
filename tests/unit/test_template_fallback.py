@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from pptx_agent.config import validate_templates
+from pptx_agent.templates import validate_templates
 
 
 class TestTemplateFallback:
