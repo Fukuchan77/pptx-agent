@@ -94,13 +94,13 @@ def make_test_config() -> Callable[..., Any]:
             "llm_api_base": None,
             "watsonx_project_id": None,
             "watsonx_url": None,
-            "allow_test_keys": True,  # Phase 3: Enable test mode to allow test API keys
         }
 
         # Merge overrides
         config_params = {**defaults, **overrides}
 
-        # Create config with test keys allowed
-        return Config(**config_params)  # type: ignore[arg-type]
+        # Create config with test keys allowed via validation context
+        # This is the only way to allow test keys after security hardening
+        return Config.model_validate(config_params, context={"allow_test_keys": True})
 
     return _make_config

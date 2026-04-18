@@ -24,7 +24,7 @@ class TestShapesExceptionHandling:
     def presentation_with_slide(self) -> tuple[PresentationWrapper, SlideWrapper]:
         """Create presentation and add a slide for testing."""
         wrapper = PresentationWrapper()
-        wrapper.load_template("templates/basic-template.pptx")
+        wrapper.load_template("tests/fixtures/basic-template.pptx")
         layouts = wrapper.get_layouts()
         slide = wrapper.add_slide(layouts[0])
         return wrapper, slide
@@ -93,7 +93,7 @@ class TestSlideExceptionHandling:
     def presentation_with_slide(self) -> tuple[PresentationWrapper, SlideWrapper]:
         """Create presentation and add a slide for testing."""
         wrapper = PresentationWrapper()
-        wrapper.load_template("templates/basic-template.pptx")
+        wrapper.load_template("tests/fixtures/basic-template.pptx")
         layouts = wrapper.get_layouts()
         slide = wrapper.add_slide(layouts[0])
         return wrapper, slide

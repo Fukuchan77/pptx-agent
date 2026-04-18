@@ -277,3 +277,125 @@ class TestDangerousCharacterSanitization:
         assert "\u202e" not in result
         assert "\x01" not in result
         assert "Normal text" in result
+
+
+class TestValidateTextSecurity:
+    """Tests for validate_text_security function (reject on detection)."""
+
+    def test_reject_null_bytes(self) -> None:
+        """Should raise ValueError when null bytes detected."""
+        from pptx_agent.validators.input_validator import validate_text_security
+
+        text_with_null = "Normal text\x00with null byte"
+
+        with pytest.raises(ValueError, match=r"(suspicious character|null)") as exc_info:
+            validate_text_security(text_with_null)
+
+        error_msg = str(exc_info.value).lower()
+        assert "suspicious character" in error_msg or "null" in error_msg
+        assert "position" in error_msg  # Should indicate where the character was found
+
+    def test_reject_control_characters(self) -> None:
+        """Should raise ValueError when control characters detected."""
+        from pptx_agent.validators.input_validator import validate_text_security
+
+        text_with_control = "Text\x01with\x02control"
+
+        with pytest.raises(ValueError, match=r"(suspicious character|control)") as exc_info:
+            validate_text_security(text_with_control)
+
+        error_msg = str(exc_info.value).lower()
+        assert "suspicious character" in error_msg or "control" in error_msg
+        assert "position" in error_msg
+
+    def test_reject_japanese_fullwidth_null(self) -> None:
+        """Should raise ValueError when Japanese full-width null detected."""
+        from pptx_agent.validators.input_validator import validate_text_security
+
+        text_with_fullwidth = "Normal\uff00text"
+
+        with pytest.raises(ValueError, match=r"(suspicious character|full-width)") as exc_info:
+            validate_text_security(text_with_fullwidth)
+
+        error_msg = str(exc_info.value).lower()
+        assert "suspicious character" in error_msg or "full-width" in error_msg
+        assert "position" in error_msg
+
+    def test_reject_zero_width_characters(self) -> None:
+        """Should raise ValueError when zero-width characters detected."""
+        from pptx_agent.validators.input_validator import validate_text_security
+
+        text_with_zw = "Text\u200bwith\u200czero\u200dwidth"
+
+        with pytest.raises(ValueError, match=r"(suspicious character|zero-width)") as exc_info:
+            validate_text_security(text_with_zw)
+
+        error_msg = str(exc_info.value).lower()
+        assert "suspicious character" in error_msg or "zero-width" in error_msg
+        assert "position" in error_msg
+
+    def test_accept_clean_text(self) -> None:
+        """Should accept clean text without raising exception."""
+        from pptx_agent.validators.input_validator import validate_text_security
+
+        clean_text = "This is normal text with no suspicious characters."
+        # Should not raise any exception
+        validate_text_security(clean_text)
+
+    def test_accept_japanese_text(self) -> None:
+        """Should accept legitimate Japanese text."""
+        from pptx_agent.validators.input_validator import validate_text_security
+
+        japanese_text = "これは日本語のテキストです。"
+        # Should not raise any exception
+        validate_text_security(japanese_text)
+
+
+class TestIntegrationTextSecurityPipeline:
+    """Integration tests for text security validation in pipeline."""
+
+    def test_pipeline_rejects_input_with_null_bytes(self) -> None:
+        """Pipeline should reject input containing null bytes."""
+        from pptx_agent.validators.input_validator import validate_text_security
+
+        malicious_input = "Normal text\x00with null byte"
+
+        # validate_text_security should raise ValueError
+        with pytest.raises(ValueError, match=r"(suspicious character|null)") as exc_info:
+            validate_text_security(malicious_input)
+
+        error_msg = str(exc_info.value)
+        assert "suspicious character" in error_msg.lower() or "null" in error_msg.lower()
+
+    def test_pipeline_rejects_input_with_control_chars(self) -> None:
+        """Pipeline should reject input containing control characters."""
+        from pptx_agent.validators.input_validator import validate_text_security
+
+        malicious_input = "Text\x01with\x02control"
+
+        with pytest.raises(ValueError, match=r"(suspicious character|control)") as exc_info:
+            validate_text_security(malicious_input)
+
+        error_msg = str(exc_info.value)
+        assert "suspicious character" in error_msg.lower() or "control" in error_msg.lower()
+
+    def test_pipeline_accepts_clean_input(self) -> None:
+        """Pipeline should accept clean input without raising exceptions."""
+        from pptx_agent.validators.input_validator import (
+            validate_and_sanitize,
+            validate_text_security,
+        )
+
+        clean_input = "This is a normal presentation about business strategy and market analysis."
+
+        # Should not raise any exception
+        validate_text_security(clean_input)
+        result = validate_and_sanitize(clean_input)
+
+        # Should return the cleaned text
+        assert result is not None
+        assert len(result) > 0
+
+        # Should return the cleaned text
+        assert result is not None
+        assert len(result) > 0

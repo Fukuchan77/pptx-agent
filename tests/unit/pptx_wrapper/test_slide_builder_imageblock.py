@@ -457,3 +457,188 @@ class TestImageBlockInRebuildSlide:
         # Act & Assert
         with pytest.raises(ValueError, match="Unsupported image format"):
             rebuild_slide_with_layout(pptx_path, 0, "Title and Content", slide_data)
+
+
+class TestImageBlockPathSecurity:
+    """Security tests for ImageBlock path validation (Task 9).
+
+    RED PHASE: These tests should FAIL because path validation is not implemented yet.
+    They will PASS after adding path validation in Task 9.2 and 9.4.
+    """
+
+    def test_path_traversal_attack_blocked(self, tmp_path: Path) -> None:
+        """Test that path traversal attacks are blocked.
+
+        Task 9.1 - RED PHASE: This test should FAIL because path validation is not implemented.
+        After adding validation in Task 9.2, this should PASS.
+        """
+        # Arrange - Create malicious path that tries to escape current directory
+        malicious_path = "../../../etc/passwd"
+
+        content = PresentationSchema(
+            title="Path Traversal Test",
+            slides=[
+                SlideSchema(
+                    layout_name="Title and Content",
+                    title="Malicious Path",
+                    content=[
+                        ImageBlock(
+                            placeholder_name="Content Placeholder 1",
+                            image_path=malicious_path,
+                            alt_text="Attack attempt",
+                        )
+                    ],
+                )
+            ],
+        )
+
+        template_path = "templates/basic-template.pptx"
+        output_path = str(tmp_path / "attack.pptx")
+
+        # Act & Assert - Should raise ValueError for path traversal attempt
+        with pytest.raises(ValueError, match="path.*outside.*working directory"):
+            build_presentation(content, template_path, output_path)
+
+    def test_absolute_path_outside_cwd_blocked(self, tmp_path: Path) -> None:
+        """Test that absolute paths outside cwd are blocked.
+
+        Task 9.3 - RED PHASE: This test should FAIL because absolute path validation is not implemented.
+        After enhancing validation in Task 9.4, this should PASS.
+        """
+        # Arrange - Create absolute path outside current working directory
+        malicious_path = "/etc/passwd"
+
+        content = PresentationSchema(
+            title="Absolute Path Test",
+            slides=[
+                SlideSchema(
+                    layout_name="Title and Content",
+                    title="Absolute Path",
+                    content=[
+                        ImageBlock(
+                            placeholder_name="Content Placeholder 1",
+                            image_path=malicious_path,
+                            alt_text="Absolute path",
+                        )
+                    ],
+                )
+            ],
+        )
+
+        template_path = "templates/basic-template.pptx"
+        output_path = str(tmp_path / "absolute.pptx")
+
+        # Act & Assert - Should raise ValueError for absolute path outside cwd
+        with pytest.raises(ValueError, match="path.*outside.*working directory"):
+            build_presentation(content, template_path, output_path)
+
+    def test_windows_path_traversal_blocked(self, tmp_path: Path) -> None:
+        """Test that Windows-style path traversal is blocked.
+
+        Task 9.1 (Windows variant) - RED PHASE: This test should FAIL.
+        """
+        # Arrange - Create Windows-style path traversal with valid image extension
+        malicious_path = "..\\..\\..\\windows\\system32\\config.png"
+
+        content = PresentationSchema(
+            title="Windows Path Traversal Test",
+            slides=[
+                SlideSchema(
+                    layout_name="Title and Content",
+                    title="Windows Attack",
+                    content=[
+                        ImageBlock(
+                            placeholder_name="Content Placeholder 1",
+                            image_path=malicious_path,
+                            alt_text="Windows attack",
+                        )
+                    ],
+                )
+            ],
+        )
+
+        template_path = "templates/basic-template.pptx"
+        output_path = str(tmp_path / "windows_attack.pptx")
+
+        # Act & Assert - Should raise ValueError or FileNotFoundError
+        # Note: On Unix systems, Windows backslashes are treated as regular filename characters,
+        # so this path doesn't actually traverse directories. The file simply doesn't exist.
+        # On Windows, this would be caught as path traversal. Either rejection is valid.
+        with pytest.raises((ValueError, FileNotFoundError)):
+            build_presentation(content, template_path, output_path)
+
+    def test_error_message_provides_guidance(self, tmp_path: Path) -> None:
+        """Test that error messages provide actionable guidance.
+
+        Task 9.5 - RED PHASE: This test should FAIL because error messages don't provide guidance yet.
+        After updating messages in Task 9.6, this should PASS.
+        """
+        # Arrange
+        malicious_path = "../../../etc/passwd"
+
+        content = PresentationSchema(
+            title="Error Message Test",
+            slides=[
+                SlideSchema(
+                    layout_name="Title and Content",
+                    title="Test",
+                    content=[
+                        ImageBlock(
+                            placeholder_name="Content Placeholder 1",
+                            image_path=malicious_path,
+                            alt_text="Test",
+                        )
+                    ],
+                )
+            ],
+        )
+
+        template_path = "templates/basic-template.pptx"
+        output_path = str(tmp_path / "test.pptx")
+
+        # Act & Assert - Error message should mention current working directory
+        with pytest.raises(ValueError, match="current working directory"):
+            build_presentation(content, template_path, output_path)
+
+    def test_valid_image_path_accepted(self, tmp_path: Path) -> None:
+        """Test that valid image paths within cwd are accepted.
+
+        Task 9.7 - Integration test: Verify path validation doesn't break normal functionality.
+        """
+        # Arrange - Create a valid image within current directory
+        valid_image = tmp_path / "valid_image.png"
+        valid_image.write_bytes(b"fake png data")
+
+        # Use relative path from current directory
+        import os
+
+        os.chdir(tmp_path)
+
+        content = PresentationSchema(
+            title="Valid Path Test",
+            slides=[
+                SlideSchema(
+                    layout_name="Title and Content",
+                    title="Valid Image",
+                    content=[
+                        ImageBlock(
+                            placeholder_name="Content Placeholder 1",
+                            image_path="valid_image.png",
+                            alt_text="Valid image",
+                        )
+                    ],
+                )
+            ],
+        )
+
+        template_path = str(
+            Path(__file__).parent.parent.parent.parent / "templates" / "basic-template.pptx"
+        )
+        output_path = "valid_output.pptx"
+
+        # Act & Assert - Should succeed without raising ValueError
+        from unittest.mock import patch
+
+        with patch("pptx_agent.pptx_wrapper.slide_builder.ImageWrapper"):
+            result = build_presentation(content, template_path, output_path)
+            assert result == output_path

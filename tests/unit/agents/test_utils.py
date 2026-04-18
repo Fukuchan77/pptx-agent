@@ -128,3 +128,63 @@ async def test_run_agent_with_fallback_raises_when_both_fail():
         # Act & Assert
         with pytest.raises(RuntimeError, match="All LLM providers failed"):
             await run_agent_with_fallback(test_agent, "test", mock_config)
+
+
+@pytest.mark.asyncio
+async def test_run_agent_with_fallback_disabled_reraises_primary_error():
+    """Test that primary exception is re-raised unchanged when fallback is disabled.
+
+    RED PHASE: This test should FAIL with current implementation because
+    the bare raise on line 47 is caught by the except block on line 48.
+    """
+    test_agent: Agent[None, TestOutputType] = Agent(output_type=TestOutputType)
+    mock_config = MagicMock(spec=Config)
+
+    primary_error = ValueError("Primary provider connection failed")
+
+    with (
+        patch("pptx_agent.agents.utils.create_model") as mock_create_model,
+        patch("pptx_agent.agents.utils.create_fallback_model") as mock_create_fallback,
+        patch.object(test_agent, "run", new_callable=AsyncMock) as mock_run,
+    ):
+        mock_create_model.return_value = "primary-model"
+        mock_create_fallback.return_value = None  # Fallback disabled
+        mock_run.side_effect = primary_error
+
+        # Act & Assert - should re-raise the original ValueError, not RuntimeError
+        with pytest.raises(ValueError, match="Primary provider connection failed"):
+            await run_agent_with_fallback(test_agent, "test", mock_config)
+
+
+@pytest.mark.asyncio
+async def test_run_agent_with_fallback_both_fail_distinguishes_errors():
+    """Test that error message clearly distinguishes primary vs fallback failures.
+
+    RED PHASE: This test should FAIL because current error message format
+    needs improvement to clearly distinguish the two errors.
+    """
+    test_agent: Agent[None, TestOutputType] = Agent(output_type=TestOutputType)
+    mock_config = MagicMock(spec=Config)
+
+    primary_error = ValueError("Primary provider timeout")
+    fallback_error = ConnectionError("Fallback provider unreachable")
+
+    with (
+        patch("pptx_agent.agents.utils.create_model") as mock_create_model,
+        patch("pptx_agent.agents.utils.create_fallback_model") as mock_create_fallback,
+        patch.object(test_agent, "run", new_callable=AsyncMock) as mock_run,
+    ):
+        mock_create_model.return_value = "primary-model"
+        mock_create_fallback.return_value = "fallback-model"
+        mock_run.side_effect = [primary_error, fallback_error]
+
+        # Act & Assert
+        with pytest.raises(RuntimeError) as exc_info:
+            await run_agent_with_fallback(test_agent, "test", mock_config)
+
+        # Error message should clearly show both errors
+        error_message = str(exc_info.value)
+        assert "Primary provider timeout" in error_message
+        assert "Fallback provider unreachable" in error_message
+        assert "Primary" in error_message or "primary" in error_message
+        assert "Fallback" in error_message or "fallback" in error_message

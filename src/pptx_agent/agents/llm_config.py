@@ -9,6 +9,8 @@ HTTP clients, and usage limits. Supports multiple LLM providers:
 
 import logging
 import os
+from collections.abc import Generator
+from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
 from httpx import AsyncClient, Timeout
@@ -33,6 +35,31 @@ else:
 from pptx_agent.config import Config
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def _scoped_watsonx_project(project_id: str) -> Generator[None, None, None]:
+    """Context manager for scoped watsonx project_id configuration.
+
+    Temporarily sets WATSONX_PROJECT_ID environment variable for LiteLLM,
+    then restores the original state. This ensures thread-safe operation
+    without permanent environment mutation.
+
+    Args:
+        project_id: watsonx project_id to set temporarily
+
+    Yields:
+        None
+    """
+    old_value = os.environ.get("WATSONX_PROJECT_ID")
+    try:
+        os.environ["WATSONX_PROJECT_ID"] = project_id
+        yield
+    finally:
+        if old_value is None:
+            os.environ.pop("WATSONX_PROJECT_ID", None)
+        else:
+            os.environ["WATSONX_PROJECT_ID"] = old_value
 
 
 class CustomOpenAIProvider(Provider[AsyncOpenAI]):
@@ -72,7 +99,7 @@ def _create_model_from_params(
     For watsonx provider, uses LiteLLMModel with project_id support.
     For other providers, uses OpenAIChatModel.
     """
-    # Special handling for watsonx - use LiteLLMModel with project_id
+    # Special handling for watsonx - use LiteLLMModel with scoped project_id
     if provider_type == "watsonx":
         if not HAS_LITELLM:
             msg = (
@@ -85,16 +112,21 @@ def _create_model_from_params(
         api_base = config.watsonx_url
         project_id = config.watsonx_project_id
 
-        # Set project_id as environment variable for LiteLLM to use
-        # LiteLLM will automatically pick this up when making watsonx API calls
+        # Use scoped context manager to set project_id temporarily
+        # LiteLLM reads WATSONX_PROJECT_ID from environment
         if project_id:
-            os.environ["WATSONX_PROJECT_ID"] = project_id
-
-        return LiteLLMModel(
-            model_name,
-            api_key=api_key or "",
-            api_base=api_base,
-        )
+            with _scoped_watsonx_project(project_id):
+                return LiteLLMModel(
+                    model_name,
+                    api_key=api_key or "",
+                    api_base=api_base,
+                )
+        else:
+            return LiteLLMModel(
+                model_name,
+                api_key=api_key or "",
+                api_base=api_base,
+            )
 
     # For other providers, use OpenAIChatModel with custom provider
     if provider_type == "openai":
@@ -200,18 +232,25 @@ def create_fallback_model(config: Config) -> "OpenAIChatModel | LiteLLMModel | N
 
 
 def create_http_client(config: Config) -> AsyncClient:
-    """Generate HTTP client with retry settings.
+    """Generate HTTP client with timeout configuration.
 
-    Configures exponential backoff retry with tenacity:
-    - Base delay: config.retry_base_delay (default 1s)
-    - Max delay: config.retry_max_delay (default 8s)
-    - Max retries: config.max_retries
+    Configures timeout settings for HTTP connections:
+    - Connect timeout: config.connect_timeout (default 10s)
+    - Read timeout: config.request_timeout (default 60s)
+    - Write timeout: config.write_timeout (default 10s)
+    - Pool timeout: config.pool_timeout (default 10s)
+
+    Note: Retry logic is NOT handled at the HTTP client level. Instead,
+    it is managed by pydantic-ai's built-in retry mechanism and tenacity
+    decorators on agent functions. This ensures retries are applied at
+    the appropriate semantic level (agent operations) rather than at the
+    transport layer.
 
     Args:
         config: Application configuration
 
     Returns:
-        AsyncClient: Configured HTTP client with timeout and retry
+        AsyncClient: Configured HTTP client with timeout settings
     """
     # Create timeout configuration
     timeout = Timeout(

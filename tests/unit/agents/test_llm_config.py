@@ -45,33 +45,37 @@ def openai_config():
 @pytest.fixture
 def watsonx_config():
     """Config for watsonx provider."""
-    return Config(
-        llm_provider="watsonx",
-        llm_model="meta-llama/llama-3-1-70b-instruct",
-        watsonx_url="https://us-south.ml.cloud.ibm.com",
-        watsonx_apikey="test-watsonx-key-1234567890",
-        watsonx_project_id="test-project-id",
-        environment="production",
-        max_retries=5,
-        request_timeout=120,
-        enable_fallback=True,
-        fallback_provider="anthropic",
-        fallback_model="claude-3-5-sonnet-20241022",
-        anthropic_api_key="test-anthropic-key-1234567890",
-        allow_test_keys=True,  # Phase 3: Allow test keys in test mode
+    return Config.model_validate(
+        {
+            "llm_provider": "watsonx",
+            "llm_model": "meta-llama/llama-3-1-70b-instruct",
+            "watsonx_url": "https://us-south.ml.cloud.ibm.com",
+            "watsonx_apikey": "test-watsonx-key-1234567890",
+            "watsonx_project_id": "test-project-id",
+            "environment": "production",
+            "max_retries": 5,
+            "request_timeout": 120,
+            "enable_fallback": True,
+            "fallback_provider": "anthropic",
+            "fallback_model": "claude-3-5-sonnet-20241022",
+            "anthropic_api_key": "test-anthropic-key-1234567890",
+        },
+        context={"allow_test_keys": True},
     )
 
 
 @pytest.fixture
 def anthropic_config():
     """Config for Anthropic provider."""
-    return Config(
-        llm_provider="anthropic",
-        llm_model="claude-3-5-sonnet-20241022",
-        anthropic_api_key="test-anthropic-key-1234567890",
-        environment="production",
-        enable_fallback=False,
-        allow_test_keys=True,  # Phase 3: Allow test keys in test mode
+    return Config.model_validate(
+        {
+            "llm_provider": "anthropic",
+            "llm_model": "claude-3-5-sonnet-20241022",
+            "anthropic_api_key": "test-anthropic-key-1234567890",
+            "environment": "production",
+            "enable_fallback": False,
+        },
+        context={"allow_test_keys": True},
     )
 
 

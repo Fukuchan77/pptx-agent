@@ -20,7 +20,7 @@ from pptx_agent.agents.story_analyzer import analyze_story
 from pptx_agent.pptx_wrapper.slide_builder import build_presentation
 from pptx_agent.schemas.template_manifest import TemplateManifest
 from pptx_agent.validators.content_validator import validate_content
-from pptx_agent.validators.input_validator import validate_and_sanitize
+from pptx_agent.validators.input_validator import validate_and_sanitize, validate_text_security
 from pptx_agent.validators.outline_validator import validate_outline
 from pptx_agent.validators.security import detect_prompt_injection
 
@@ -66,7 +66,22 @@ async def generate_presentation(
     """
     pipeline_start = time.time()
 
-    # Stage 0: Validate and sanitize input
+    # Stage 0: Security validation - reject suspicious input transparently
+    # Check for dangerous characters (null bytes, control chars, etc.)
+    # This raises ValueError if suspicious characters are detected
+    try:
+        validate_text_security(input_text)
+    except ValueError as e:
+        logger.exception("Input validation failed: suspicious characters detected.")
+        # Re-raise with more context for the user
+        msg = (
+            f"Input validation failed: {e}. "
+            "Please ensure your input does not contain null bytes, control characters, "
+            "or other suspicious patterns."
+        )
+        raise ValueError(msg) from e
+
+    # Stage 0: Validate and sanitize input (length checks)
     input_text = validate_and_sanitize(input_text)
 
     # Security: Detect and handle prompt injection attempts

@@ -47,11 +47,13 @@ class TestValidatePptxFile:
     def test_validate_pptx_file_high_compression_ratio(self, tmp_path: Path) -> None:
         """Test validation fails for suspicious compression ratio."""
         # Create a highly compressed file (compression ratio > 100)
+        # Must be under 10MB uncompressed to pass per-entry size check
         pptx_path = tmp_path / "compressed.pptx"
         with zipfile.ZipFile(pptx_path, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
             # Create highly compressible data that results in ratio > 100
-            # Use 50MB of repeating data that compresses to < 500KB
-            data = "a" * (50 * 1024 * 1024)
+            # Use 9MB of repeating data (under 10MB per-entry limit)
+            # This compresses to ~9KB with ratio ~1000x > 100
+            data = "a" * (9 * 1024 * 1024)
             zf.writestr("repeating.xml", data)
 
         with pytest.raises(CompressionRatioError) as exc_info:
@@ -105,6 +107,20 @@ class TestValidatePptxFile:
 
         assert "validation failed" in str(exc_info.value).lower()
         assert "does not exist" in str(exc_info.value).lower()
+
+    def test_validate_pptx_file_entry_exceeds_size_limit(self, tmp_path: Path) -> None:
+        """Test validation fails when a single entry exceeds 10MB size limit."""
+        pptx_path = tmp_path / "large_entry.pptx"
+        with zipfile.ZipFile(pptx_path, "w", zipfile.ZIP_STORED) as zf:
+            # Create a single entry with 11MB uncompressed data (exceeds 10MB limit)
+            zf.writestr("large_entry.xml", "x" * (11 * 1024 * 1024))
+
+        with pytest.raises(FileSizeLimitError) as exc_info:
+            validate_pptx_file(pptx_path)
+
+        error_msg = str(exc_info.value).lower()
+        assert "entry" in error_msg or "file" in error_msg
+        assert "10" in str(exc_info.value) or "limit" in error_msg
 
 
 class TestValidateTemplatePath:

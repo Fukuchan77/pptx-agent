@@ -3,6 +3,7 @@
 import logging
 from typing import Any
 
+from defusedxml.lxml import fromstring
 from lxml import etree
 from pptx.slide import Slide
 
@@ -127,7 +128,7 @@ class SmartArtWrapper:
                     raise ValueError(msg)
 
                 diagram_part = part_rels[data_rel_id].target_part
-                diagram_data = etree.fromstring(diagram_part.blob)
+                diagram_data = fromstring(diagram_part.blob)
 
             except (AttributeError, KeyError, etree.XMLSyntaxError) as e:
                 msg = f"Could not access SmartArt diagram data (XML parse may have failed): {e}"

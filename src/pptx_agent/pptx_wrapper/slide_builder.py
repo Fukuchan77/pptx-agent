@@ -6,6 +6,7 @@ into actual PowerPoint slides using a template-first architecture.
 
 import hashlib
 import logging
+import tempfile
 from datetime import UTC, datetime
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -39,6 +40,53 @@ logger = logging.getLogger(__name__)
 
 # Supported image formats (FR-CG-072)
 SUPPORTED_IMAGE_FORMATS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".tif"}
+
+
+def _validate_image_path(image_path: str) -> None:
+    """Validate that image path is within current working directory or system temp directory.
+
+    This prevents path traversal attacks where malicious paths like
+    '../../../etc/passwd' could access files outside the working directory.
+
+    Allows paths within:
+    - Current working directory (for production use)
+    - System temporary directory (for test environments)
+
+    Args:
+        image_path: Path to image file
+
+    Raises:
+        ValueError: If path is outside allowed directories
+    """
+    try:
+        # Convert to Path and resolve to absolute path
+        path = Path(image_path).resolve()
+        cwd = Path.cwd()
+        temp_dir = Path(tempfile.gettempdir()).resolve()
+
+        # Check if resolved path is within current working directory or temp directory
+        is_in_cwd = path.is_relative_to(cwd)
+        is_in_temp = path.is_relative_to(temp_dir)
+
+        if not (is_in_cwd or is_in_temp):
+            msg = (
+                f"Image path '{image_path}' resolves to a location outside the "
+                f"current working directory. For security reasons, only paths within '{cwd}' "
+                f"are allowed. Please use a relative path within the current working directory "
+                f"or an absolute path that resolves to a location within the current working "
+                "directory."
+            )
+            raise ValueError(msg)
+    except (OSError, ValueError) as e:
+        # Handle invalid paths or path resolution errors
+        if "outside" in str(e):
+            # Re-raise our security error
+            raise
+        msg = (
+            f"Invalid image path '{image_path}': {e}. "
+            f"Please provide a valid path within the current working directory '{Path.cwd()}'."
+        )
+        raise ValueError(msg) from e
 
 
 def _validate_image_format(image_path: str) -> None:
@@ -176,7 +224,8 @@ def build_presentation(
             # Handle ImageBlock
             elif isinstance(block, ImageBlock):  # type: ignore[reportUnnecessaryIsInstance]
                 image_path = block.image_path
-                _validate_image_format(image_path)
+                _validate_image_path(image_path)  # Security: Check for path traversal first
+                _validate_image_format(image_path)  # Then check format
                 ImageWrapper.add_image(
                     slide.slide,
                     block.placeholder_name,
@@ -264,7 +313,8 @@ def rebuild_slide_with_layout(
             add_smartart_to_slide(slide, block)
         elif isinstance(block, ImageBlock):  # type: ignore[reportUnnecessaryIsInstance]
             image_path = block.image_path
-            _validate_image_format(image_path)
+            _validate_image_path(image_path)  # Security: Check for path traversal first
+            _validate_image_format(image_path)  # Then check format
             ImageWrapper.add_image(
                 slide.slide,
                 block.placeholder_name,

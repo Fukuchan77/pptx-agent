@@ -22,7 +22,9 @@ class TestSmartArtIntegration:
     when building presentations.
     """
 
-    def test_build_presentation_with_smartart_block(self, tmp_path: Path) -> None:
+    def test_build_presentation_with_smartart_block(
+        self, tmp_path: Path, template_path: str
+    ) -> None:
         """Test that build_presentation handles SmartArtBlock content.
 
         RED PHASE: This test should FAIL because SmartArtBlock is not yet
@@ -50,7 +52,6 @@ class TestSmartArtIntegration:
             ],
         )
 
-        template_path = "templates/basic-template.pptx"
         output_path = str(tmp_path / "smartart_test.pptx")
 
         # Mock the add_smartart_to_slide function to verify it's called
@@ -72,7 +73,9 @@ class TestSmartArtIntegration:
             # Second argument should be the SmartArtBlock
             assert call_args[0][1] == smartart_block
 
-    def test_build_presentation_with_mixed_content_including_smartart(self, tmp_path: Path) -> None:
+    def test_build_presentation_with_mixed_content_including_smartart(
+        self, tmp_path: Path, template_path: str
+    ) -> None:
         """Test that SmartArt works alongside other content types.
 
         RED PHASE: This test should FAIL because SmartArtBlock is not handled.
@@ -106,7 +109,6 @@ class TestSmartArtIntegration:
             ],
         )
 
-        template_path = "templates/basic-template.pptx"
         output_path = str(tmp_path / "mixed_content.pptx")
 
         # Act
@@ -116,7 +118,9 @@ class TestSmartArtIntegration:
             # Assert
             assert Path(result_path).exists()
 
-    def test_build_presentation_calls_add_smartart_correctly(self, tmp_path: Path) -> None:
+    def test_build_presentation_calls_add_smartart_correctly(
+        self, tmp_path: Path, template_path: str
+    ) -> None:
         """Test that add_smartart_to_slide is called with correct parameters.
 
         RED PHASE: This test should FAIL - SmartArt not integrated yet.
@@ -142,7 +146,6 @@ class TestSmartArtIntegration:
             ],
         )
 
-        template_path = "templates/basic-template.pptx"
         output_path = str(tmp_path / "smartart_call_test.pptx")
 
         # Act
@@ -165,7 +168,9 @@ class TestRebuildSlideWithSmartArt:
     handles SmartArtBlock when rebuilding slides.
     """
 
-    def test_rebuild_slide_preserves_smartart_content(self, tmp_path: Path) -> None:
+    def test_rebuild_slide_preserves_smartart_content(
+        self, tmp_path: Path, template_path: str
+    ) -> None:
         """Test that rebuild_slide_with_layout handles SmartArtBlock.
 
         RED PHASE: This test should FAIL because rebuild function doesn't
@@ -189,7 +194,6 @@ class TestRebuildSlideWithSmartArt:
             ],
         )
 
-        template_path = "templates/basic-template.pptx"
         pptx_path = str(tmp_path / "rebuild_test.pptx")
 
         # Create initial presentation
@@ -228,7 +232,9 @@ class TestRebuildSlideWithSmartArt:
             assert smartart_arg.diagram_type == "process"
             assert len(smartart_arg.nodes) == 2
 
-    def test_rebuild_slide_with_mixed_content_including_smartart(self, tmp_path: Path) -> None:
+    def test_rebuild_slide_with_mixed_content_including_smartart(
+        self, tmp_path: Path, template_path: str
+    ) -> None:
         """Test rebuild with multiple block types including SmartArt.
 
         RED PHASE: This test should FAIL - SmartArt not handled in rebuild.
@@ -245,7 +251,6 @@ class TestRebuildSlideWithSmartArt:
             ],
         )
 
-        template_path = "templates/basic-template.pptx"
         pptx_path = str(tmp_path / "rebuild_mixed.pptx")
         build_presentation(initial_content, template_path, pptx_path)
 

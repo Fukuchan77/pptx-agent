@@ -9,6 +9,13 @@ logger = logging.getLogger(__name__)
 MIN_INPUT_LENGTH = 10
 MAX_INPUT_LENGTH = 30000
 
+# Control character code ranges for security validation
+CONTROL_CHAR_START = 0x01
+CONTROL_CHAR_END = 0x1F
+TAB = 0x09
+LINE_FEED = 0x0A
+CARRIAGE_RETURN = 0x0D
+
 # Dangerous characters to remove for security
 DANGEROUS_CHARS = [
     "\x00",  # Null byte
@@ -174,3 +181,99 @@ def validate_and_sanitize(
     )
 
     return stripped
+
+
+def validate_text_security(text: str) -> None:
+    """Validate text for security threats and raise ValueError if detected.
+
+    This function detects suspicious characters that may indicate malicious input:
+    - Null bytes (\\x00)
+    - Control characters (except common whitespace: \\t, \\n, \\r)
+    - Unicode bidirectional override characters (spoofing)
+    - Zero-width characters (obfuscation)
+    - Japanese full-width null (\\uff00)
+
+    Unlike sanitize_dangerous_characters(), this function does NOT modify the input.
+    Instead, it raises an exception to transparently reject suspicious input.
+
+    Args:
+        text: Input text to validate
+
+    Raises:
+        ValueError: If suspicious characters are detected, with details about
+                   what was found and where
+
+    Requirements:
+        - REQ-011: Reject input with null bytes
+        - REQ-012: Reject input with control characters
+        - REQ-013: Reject input with Japanese-specific malicious patterns
+        - REQ-014: Provide clear error messages with actionable guidance
+
+    Example:
+        >>> validate_text_security("Clean text")  # No exception
+        >>> validate_text_security("Bad\\x00text")  # Raises ValueError
+    """
+    if not text:
+        return  # Empty text is acceptable
+
+    # Check for null bytes
+    null_pos = text.find("\x00")
+    if null_pos != -1:
+        msg = (
+            f"Input contains suspicious character: null byte (\\x00) at position {null_pos}. "
+            "Please remove it before submitting."
+        )
+        raise ValueError(msg)
+
+    # Check for control characters (except tab, newline, carriage return)
+    for i, char in enumerate(text):
+        code = ord(char)
+        # Control characters are 0x01-0x1F, excluding tab(0x09), LF(0x0A), CR(0x0D)
+        if CONTROL_CHAR_START <= code <= CONTROL_CHAR_END and code not in (
+            TAB,
+            LINE_FEED,
+            CARRIAGE_RETURN,
+        ):
+            msg = (
+                f"Input contains suspicious character: control character "
+                f"(code {hex(code)}) at position {i}. "
+                "Please remove it before submitting."
+            )
+            raise ValueError(msg)
+
+    # Check for Unicode bidirectional override characters (spoofing)
+    for i, char in enumerate(text):
+        if char in ("\u202e", "\u202d"):
+            char_name = "right-to-left override" if char == "\u202e" else "left-to-right override"
+            msg = (
+                f"Input contains suspicious character: {char_name} "
+                f"(\\u{ord(char):04x}) at position {i}. "
+                "Please remove it before submitting."
+            )
+            raise ValueError(msg)
+
+    # Check for zero-width characters (obfuscation)
+    for i, char in enumerate(text):
+        if char in ("\u200b", "\u200c", "\u200d", "\ufeff"):
+            char_name = {
+                "\u200b": "zero-width space",
+                "\u200c": "zero-width non-joiner",
+                "\u200d": "zero-width joiner",
+                "\ufeff": "zero-width no-break space (BOM)",
+            }[char]
+            msg = (
+                f"Input contains suspicious character: {char_name} "
+                f"(\\u{ord(char):04x}) at position {i}. "
+                "Please remove it before submitting."
+            )
+            raise ValueError(msg)
+
+    # Check for Japanese full-width null (REQ-013)
+    fullwidth_null_pos = text.find("\uff00")
+    if fullwidth_null_pos != -1:
+        msg = (
+            f"Input contains suspicious character: full-width null (\\uff00) "
+            f"at position {fullwidth_null_pos}. "
+            "Please remove it before submitting."
+        )
+        raise ValueError(msg)

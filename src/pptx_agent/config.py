@@ -8,8 +8,11 @@ import re
 import threading
 from typing import Any, Literal
 
-from pydantic import Field, ValidationInfo, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+# Thread-local storage for tracking validation state
+_validation_state = threading.local()
+
+from pydantic import PrivateAttr, ValidationInfo, field_validator, model_validator  # noqa: E402
+from pydantic_settings import BaseSettings, SettingsConfigDict  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +54,13 @@ class Config(BaseSettings):
     llm_model: str
     llm_api_base: str | None = None
 
-    # Internal test mode flag
-    allow_test_keys: bool = Field(default=False, exclude=True)
-    """Internal flag to allow test API keys. Only used in test environments."""
+    # Internal test mode flag - PRIVATE to prevent environment variable bypass
+    _allow_test_keys: bool = PrivateAttr(default=False)
+    """Private attribute to prevent test key bypass via environment variables.
+
+    Can only be set via model_validate(..., context={"allow_test_keys": True}).
+    This ensures explicit opt-in for test mode and prevents accidental bypass.
+    """
 
     # Environment and retry settings
     environment: Literal["development", "production"] = "development"
@@ -96,25 +103,20 @@ class Config(BaseSettings):
 
     @field_validator("watsonx_apikey", "anthropic_api_key", "openai_api_key", mode="before")
     @classmethod
-    def validate_api_key_not_empty(cls, v: str | None, info: ValidationInfo) -> str | None:
-        """Validate that API keys have minimum length to prevent obviously invalid values.
+    def validate_api_key_not_empty(cls, v: str | None) -> str | None:
+        """Validate that API keys have minimum length and strip whitespace.
 
-        In production mode, also rejects keys matching test patterns like:
-        - Contains "test" (case-insensitive)
-        - Contains "dummy", "fake", "sample"
-        - Is a placeholder like "your-api-key-here"
-
-        In test mode (_allow_test_keys=True), test patterns are accepted.
+        Basic validation only - test pattern checking is done in model_validator
+        where validation context is accessible in BaseSettings.
 
         Args:
             v: The API key value to validate
-            info: Validation context containing _allow_test_keys flag
 
         Returns:
             The validated API key value with whitespace stripped (or None if None was provided)
 
         Raises:
-            ValueError: If the API key is too short or appears to be a test value in production
+            ValueError: If the API key is too short
         """
         if v is not None:
             stripped = v.strip()
@@ -122,13 +124,64 @@ class Config(BaseSettings):
                 msg = "API key appears to be invalid (too short)"
                 raise ValueError(msg)
 
-            # Get allow_test_keys from validation context
-            allow_test_keys = info.data.get("allow_test_keys", False)
+            # Check for placeholder patterns (always reject these)
+            placeholder_pattern = r"^(your|sk-xxx|placeholder|todo|replace)-?"
+            if re.match(placeholder_pattern, stripped, re.IGNORECASE):
+                msg = "API key appears to be a placeholder value — update .env with your actual key"
+                raise ValueError(msg)
 
+            return stripped
+        return None
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def validate_test_keys_with_context(
+        cls, values: Any, handler: Any, info: ValidationInfo
+    ) -> "Config":
+        """Validate test API keys using validation context.
+
+        In Pydantic v2 BaseSettings, field_validator doesn't receive validation context
+        from model_validate(..., context={...}). This wrap validator has access to the
+        context and performs test key validation after basic field validation.
+
+        BaseSettings calls this validator twice in a nested fashion:
+        1. Outer call: has the user's original context
+        2. Inner call (nested inside handler): context=None
+
+        We only validate in the outer call to avoid duplicate/conflicting validation.
+
+        Args:
+            values: Input values to validate
+            handler: The default validation handler
+            info: Validation info containing context
+
+        Returns:
+            The validated Config instance
+
+        Raises:
+            ValueError: If test keys are used without allow_test_keys=True in context
+        """
+        # Check if we're already validating (nested call detection)
+        # BaseSettings calls this validator twice - we only validate in the outer call
+        is_nested_call = getattr(_validation_state, "validating", False)
+
+        if is_nested_call:
+            # This is the nested inner call - just run handler and return
+            return handler(values)
+
+        # Mark that we're now validating (for nested call detection)
+        _validation_state.validating = True
+
+        try:
+            # Extract allow_test_keys from context (from outer call)
+            allow_test_keys = info.context.get("allow_test_keys", False) if info.context else False
+
+            # Call the default handler to perform field validation
+            result = handler(values)
+
+            # Perform test key validation only in production mode
             if not allow_test_keys:
-                # Production mode: check for test patterns
-                v_lower = stripped.lower()
-
+                # Production mode: check all API keys for test patterns
                 test_patterns = [
                     "test",
                     "dummy",
@@ -140,22 +193,23 @@ class Config(BaseSettings):
                     "xxx",
                 ]
 
-                for pattern in test_patterns:
-                    if pattern in v_lower:
-                        msg = (
-                            f"API key appears to be a test value (contains '{pattern}'). "
-                            f"Please use a real API key in production."
-                        )
-                        raise ValueError(msg)
+                # Check each API key field
+                for field_name in ["watsonx_apikey", "anthropic_api_key", "openai_api_key"]:
+                    key_value = getattr(result, field_name, None)
+                    if key_value:
+                        v_lower = key_value.lower()
+                        for pattern in test_patterns:
+                            if pattern in v_lower:
+                                msg = (
+                                    f"API key appears to be a test value (contains '{pattern}'). "
+                                    f"Please use a real API key in production."
+                                )
+                                raise ValueError(msg)
 
-            # Also check for placeholder patterns (always reject these)
-            placeholder_pattern = r"^(your|sk-xxx|placeholder|todo|replace)-?"
-            if re.match(placeholder_pattern, stripped, re.IGNORECASE):
-                msg = "API key appears to be a placeholder value — update .env with your actual key"
-                raise ValueError(msg)
-
-            return stripped
-        return None
+            return result
+        finally:
+            # Clear the validation flag
+            _validation_state.validating = False
 
     def model_post_init(self, __context: Any) -> None:
         """Validate provider-specific required fields and set environment-based defaults."""

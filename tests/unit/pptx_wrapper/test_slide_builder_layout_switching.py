@@ -27,7 +27,7 @@ class TestLayoutSwitching:
 
         assert callable(rebuild_slide_with_layout)
 
-    def test_rebuild_slide_with_different_layout(self, tmp_path: Path) -> None:
+    def test_rebuild_slide_with_different_layout(self, tmp_path: Path, template_path: str) -> None:
         """Test rebuilding a slide with a different layout.
 
         RED PHASE: This test should FAIL - rebuild_slide_with_layout not implemented.
@@ -56,7 +56,6 @@ class TestLayoutSwitching:
             ],
         )
 
-        template_path = "templates/basic-template.pptx"
         output_path = str(tmp_path / "layout_switch.pptx")
 
         # Act - build initial presentation
@@ -74,7 +73,7 @@ class TestLayoutSwitching:
         # Assert - file should still exist and be valid
         assert Path(output_path).exists()
 
-    def test_rebuild_slide_preserves_title(self, tmp_path: Path) -> None:
+    def test_rebuild_slide_preserves_title(self, tmp_path: Path, template_path: str) -> None:
         """Test that rebuilding a slide preserves the title.
 
         RED PHASE: This test should FAIL - functionality not implemented.
@@ -92,7 +91,6 @@ class TestLayoutSwitching:
             ],
         )
 
-        template_path = "templates/basic-template.pptx"
         output_path = str(tmp_path / "title_preserved.pptx")
 
         # Act
@@ -110,7 +108,7 @@ class TestLayoutSwitching:
         # For unit test, just verify no error occurred
         assert Path(output_path).exists()
 
-    def test_rebuild_slide_preserves_content(self, tmp_path: Path) -> None:
+    def test_rebuild_slide_preserves_content(self, tmp_path: Path, template_path: str) -> None:
         """Test that rebuilding a slide preserves content blocks.
 
         RED PHASE: This test should FAIL - content preservation not implemented.
@@ -134,7 +132,6 @@ class TestLayoutSwitching:
             ],
         )
 
-        template_path = "templates/basic-template.pptx"
         output_path = str(tmp_path / "content_preserved.pptx")
 
         # Act
@@ -151,7 +148,9 @@ class TestLayoutSwitching:
         # Assert
         assert Path(output_path).exists()
 
-    def test_rebuild_slide_invalid_index_raises_error(self, tmp_path: Path) -> None:
+    def test_rebuild_slide_invalid_index_raises_error(
+        self, tmp_path: Path, template_path: str
+    ) -> None:
         """Test that rebuilding with invalid slide index raises error.
 
         RED PHASE: This test should FAIL - error handling not implemented.
@@ -168,7 +167,6 @@ class TestLayoutSwitching:
             ],
         )
 
-        template_path = "templates/basic-template.pptx"
         output_path = str(tmp_path / "error_test.pptx")
 
         build_presentation(content, template_path, output_path)
@@ -182,7 +180,9 @@ class TestLayoutSwitching:
                 slide_data=content.slides[0],
             )
 
-    def test_rebuild_slide_invalid_layout_raises_error(self, tmp_path: Path) -> None:
+    def test_rebuild_slide_invalid_layout_raises_error(
+        self, tmp_path: Path, template_path: str
+    ) -> None:
         """Test that rebuilding with non-existent layout raises error.
 
         RED PHASE: This test should FAIL - layout validation not implemented.
@@ -199,7 +199,6 @@ class TestLayoutSwitching:
             ],
         )
 
-        template_path = "templates/basic-template.pptx"
         output_path = str(tmp_path / "invalid_layout.pptx")
 
         build_presentation(content, template_path, output_path)
@@ -213,7 +212,7 @@ class TestLayoutSwitching:
                 slide_data=content.slides[0],
             )
 
-    def test_rebuild_multiple_slides(self, tmp_path: Path) -> None:
+    def test_rebuild_multiple_slides(self, tmp_path: Path, template_path: str) -> None:
         """Test rebuilding multiple slides in sequence.
 
         RED PHASE: This test should FAIL - sequential rebuilding not tested.
@@ -231,7 +230,6 @@ class TestLayoutSwitching:
             ],
         )
 
-        template_path = "templates/basic-template.pptx"
         output_path = str(tmp_path / "multi_rebuild.pptx")
 
         # Act - build and rebuild slides
@@ -249,7 +247,7 @@ class TestLayoutSwitching:
         # Assert
         assert Path(output_path).exists()
 
-    def test_rebuild_slide_maintains_slide_count(self, tmp_path: Path) -> None:
+    def test_rebuild_slide_maintains_slide_count(self, tmp_path: Path, template_path: str) -> None:
         """Test that rebuilding doesn't change total slide count.
 
         RED PHASE: This test should FAIL - slide count preservation not verified.
@@ -264,7 +262,6 @@ class TestLayoutSwitching:
             ],
         )
 
-        template_path = "templates/basic-template.pptx"
         output_path = str(tmp_path / "slide_count.pptx")
 
         # Act

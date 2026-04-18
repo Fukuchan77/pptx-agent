@@ -15,19 +15,45 @@ from pptx_agent.validators.security import validate_xml_safety
 # Constants for validation limits
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 MAX_UNCOMPRESSED_SIZE = 500 * 1024 * 1024  # 500MB
+MAX_ENTRY_SIZE = 10 * 1024 * 1024  # 10MB per entry (zip bomb protection)
 MAX_COMPRESSION_RATIO = 100
 
 
 def validate_pptx_file(file_path: Path | str) -> None:
     """Validate PPTX file against ZIP bomb and size constraints.
 
+    This function implements multi-layered protection against malicious ZIP files:
+
+    1. **Compressed File Size Check (100MB limit)**:
+       - Validates the file size on disk before opening
+       - Prevents processing of excessively large files
+
+    2. **Per-Entry Size Check (10MB limit)**:
+       - Validates each individual entry's uncompressed size
+       - Prevents individual entries from consuming excessive memory
+       - Detects zip bombs before decompression occurs
+
+    3. **Total Uncompressed Size Check (500MB limit)**:
+       - Validates the total size of all entries when decompressed
+       - Provides defense-in-depth against zip bombs
+
+    4. **Compression Ratio Check (max 100x)**:
+       - Detects suspiciously high compression ratios (e.g., 1KB → 100MB)
+       - Normal PPTX files have ratios of 2x-20x for text, 1x-2x for images
+       - Ratios > 100x indicate potential zip bomb attacks
+
     Args:
         file_path: Path to the PPTX file to validate
 
     Raises:
         InvalidFileError: If file does not exist or is not a valid ZIP file
-        FileSizeLimitError: If file size or uncompressed size exceeds limits
-        CompressionRatioError: If compression ratio is suspicious
+        FileSizeLimitError: If file size, per-entry size, or uncompressed size exceeds limits
+        CompressionRatioError: If compression ratio is suspicious (potential zip bomb)
+
+    Security Note:
+        These checks provide protection against zip bomb attacks and resource exhaustion.
+        They are designed for CLI tool usage with locally stored files. For web service
+        deployment, consider additional measures such as sandboxing and rate limiting.
 
     """
     # Convert to Path object if string
@@ -53,20 +79,41 @@ def validate_pptx_file(file_path: Path | str) -> None:
     # Try to open as ZIP file
     try:
         with zipfile.ZipFile(file_path, "r") as zf:
-            # Calculate total uncompressed size and check compression ratio in a single loop
+            # ZIP BOMB PROTECTION: Validate each entry in the archive
+            # We check both per-entry size limits and compression ratios
+            # to detect malicious zip bombs before decompression
             total_uncompressed_size = 0
 
             for info in zf.infolist():
+                # Per-entry size limit (10MB): Prevents individual entries from consuming
+                # excessive memory during decompression. Legitimate PPTX entries are typically
+                # under 1MB (text) or a few MB (images), so 10MB is a reasonable upper bound.
+                if info.file_size > MAX_ENTRY_SIZE:
+                    msg = (
+                        f"Entry size limit exceeded: file '{info.filename}' has "
+                        f"uncompressed size of {info.file_size} bytes, "
+                        f"maximum allowed is {MAX_ENTRY_SIZE} bytes (10MB). "
+                        "Expected: entries under 10MB. If this is a legitimate file, "
+                        "consider splitting large entries or reducing file size."
+                    )
+                    raise FileSizeLimitError(msg)
+
                 total_uncompressed_size += info.file_size
 
-                # Check compression ratio for each file (avoid division by zero)
+                # Compression ratio check (max 100x): Detects suspiciously high compression
+                # ratios that indicate potential zip bombs
+                # (e.g., 1KB compressed → 100MB uncompressed).
+                # Normal PPTX files have ratios between 2x-20x for text/XML, 1x-2x for images.
+                # Ratio > 100x is a strong indicator of malicious content.
                 if info.compress_size > 0:
                     ratio = info.file_size / info.compress_size
                     if ratio > MAX_COMPRESSION_RATIO:
                         msg = (
                             f"Suspicious compression ratio detected: file '{info.filename}' has "
                             f"compression ratio of {ratio:.1f}x, maximum allowed is "
-                            f"{MAX_COMPRESSION_RATIO}x. Expected: valid compression ratio."
+                            f"{MAX_COMPRESSION_RATIO}x. This may indicate a zip bomb attack. "
+                            "Expected: valid compression ratio. Please verify the file is "
+                            "legitimate and not corrupted."
                         )
                         raise CompressionRatioError(msg)
 

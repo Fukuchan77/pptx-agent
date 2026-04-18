@@ -140,8 +140,9 @@ class TestTemplateParserCompatibility:
         """Test that existing templates can be parsed by template_parser."""
         from pptx_agent.template_parser import TemplateParser
 
-        # Test with existing basic-template.pptx
-        template_path = "templates/basic-template.pptx"
+        # Test with existing basic-template.pptx - use absolute path
+        project_root = Path(__file__).parent.parent.parent
+        template_path = str(project_root / "templates" / "basic-template.pptx")
 
         parser = TemplateParser()
         manifest = parser.parse_template(template_path)

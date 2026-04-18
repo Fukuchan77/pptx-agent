@@ -116,14 +116,16 @@ class TestConfigValidConfiguration:
 
     def test_watsonx_config_complete_works(self) -> None:
         """Valid watsonx configuration should work."""
-        config = Config(
-            llm_provider="watsonx",
-            llm_model="ibm/granite-13b-chat-v2",
-            watsonx_url="https://us-south.ml.cloud.ibm.com",
-            watsonx_apikey="test-api-key",
-            watsonx_project_id="test-project-id",
-            allow_test_keys=True,
-        )  # type: ignore[call-arg]
+        config = Config.model_validate(
+            {
+                "llm_provider": "watsonx",
+                "llm_model": "ibm/granite-13b-chat-v2",
+                "watsonx_url": "https://us-south.ml.cloud.ibm.com",
+                "watsonx_apikey": "test-api-key",
+                "watsonx_project_id": "test-project-id",
+            },
+            context={"allow_test_keys": True},
+        )
 
         assert config.llm_provider == "watsonx"
         assert config.llm_model == "ibm/granite-13b-chat-v2"
@@ -133,12 +135,14 @@ class TestConfigValidConfiguration:
 
     def test_anthropic_config_complete_works(self) -> None:
         """Valid anthropic configuration should work."""
-        config = Config(
-            llm_provider="anthropic",
-            llm_model="claude-3-5-sonnet-20241022",
-            anthropic_api_key="sk-ant-test-key",
-            allow_test_keys=True,
-        )  # type: ignore[call-arg]
+        config = Config.model_validate(
+            {
+                "llm_provider": "anthropic",
+                "llm_model": "claude-3-5-sonnet-20241022",
+                "anthropic_api_key": "sk-ant-test-key",
+            },
+            context={"allow_test_keys": True},
+        )
 
         assert config.llm_provider == "anthropic"
         assert config.llm_model == "claude-3-5-sonnet-20241022"
@@ -223,38 +227,44 @@ class TestConfigAPIKeyFormatValidation:
 
     def test_watsonx_apikey_valid_length_passes(self) -> None:
         """API key with 10 or more characters should pass validation."""
-        config = Config(
-            llm_provider="watsonx",
-            llm_model="test-model",
-            watsonx_url="https://us-south.ml.cloud.ibm.com",
-            watsonx_apikey="valid-key-123",
-            watsonx_project_id="test-project-id",
-            allow_test_keys=True,
-        )  # type: ignore[call-arg]
+        config = Config.model_validate(
+            {
+                "llm_provider": "watsonx",
+                "llm_model": "test-model",
+                "watsonx_url": "https://us-south.ml.cloud.ibm.com",
+                "watsonx_apikey": "valid-key-123",
+                "watsonx_project_id": "test-project-id",
+            },
+            context={"allow_test_keys": True},
+        )
 
         assert config.watsonx_apikey == "valid-key-123"
 
     def test_anthropic_api_key_valid_length_passes(self) -> None:
         """API key with 10 or more characters should pass validation."""
-        config = Config(
-            llm_provider="anthropic",
-            llm_model="claude-3-5-sonnet-20241022",
-            anthropic_api_key="sk-ant-valid-key",
-            allow_test_keys=True,
-        )  # type: ignore[call-arg]
+        config = Config.model_validate(
+            {
+                "llm_provider": "anthropic",
+                "llm_model": "claude-3-5-sonnet-20241022",
+                "anthropic_api_key": "sk-ant-valid-key",
+            },
+            context={"allow_test_keys": True},
+        )
 
         assert config.anthropic_api_key == "sk-ant-valid-key"
 
     def test_watsonx_apikey_strips_whitespace(self) -> None:
         """API key with leading/trailing whitespace should be stripped."""
-        config = Config(
-            llm_provider="watsonx",
-            llm_model="test-model",
-            watsonx_url="https://us-south.ml.cloud.ibm.com",
-            watsonx_apikey="  valid-key-123  ",
-            watsonx_project_id="test-project-id",
-            allow_test_keys=True,
-        )  # type: ignore[call-arg]
+        config = Config.model_validate(
+            {
+                "llm_provider": "watsonx",
+                "llm_model": "test-model",
+                "watsonx_url": "https://us-south.ml.cloud.ibm.com",
+                "watsonx_apikey": "  valid-key-123  ",
+                "watsonx_project_id": "test-project-id",
+            },
+            context={"allow_test_keys": True},
+        )
 
         assert config.watsonx_apikey == "valid-key-123", (
             "API key should be stripped of leading/trailing whitespace"
@@ -262,12 +272,14 @@ class TestConfigAPIKeyFormatValidation:
 
     def test_anthropic_api_key_strips_whitespace(self) -> None:
         """API key with leading/trailing whitespace should be stripped."""
-        config = Config(
-            llm_provider="anthropic",
-            llm_model="claude-3-5-sonnet-20241022",
-            anthropic_api_key="  sk-ant-valid-key  ",
-            allow_test_keys=True,
-        )  # type: ignore[call-arg]
+        config = Config.model_validate(
+            {
+                "llm_provider": "anthropic",
+                "llm_model": "claude-3-5-sonnet-20241022",
+                "anthropic_api_key": "  sk-ant-valid-key  ",
+            },
+            context={"allow_test_keys": True},
+        )
 
         assert config.anthropic_api_key == "sk-ant-valid-key", (
             "API key should be stripped of leading/trailing whitespace"
@@ -301,15 +313,17 @@ class TestConfigRetryStrategies:
 
     def test_development_environment_has_fail_fast_retry_config(self) -> None:
         """Development environment should have retries=1, timeout=60s."""
-        config = Config(
-            llm_provider="watsonx",
-            llm_model="test-model",
-            watsonx_url="https://us-south.ml.cloud.ibm.com",
-            watsonx_apikey="test-api-key",
-            watsonx_project_id="test-project-id",
-            environment="development",
-            allow_test_keys=True,
-        )  # type: ignore[call-arg]
+        config = Config.model_validate(
+            {
+                "llm_provider": "watsonx",
+                "llm_model": "test-model",
+                "watsonx_url": "https://us-south.ml.cloud.ibm.com",
+                "watsonx_apikey": "test-api-key",
+                "watsonx_project_id": "test-project-id",
+                "environment": "development",
+            },
+            context={"allow_test_keys": True},
+        )
 
         assert config.environment == "development"
         assert config.max_retries == 1
@@ -317,15 +331,17 @@ class TestConfigRetryStrategies:
 
     def test_production_environment_has_resilience_retry_config(self) -> None:
         """Production environment should have retries=5, timeout=120s."""
-        config = Config(
-            llm_provider="watsonx",
-            llm_model="test-model",
-            watsonx_url="https://us-south.ml.cloud.ibm.com",
-            watsonx_apikey="test-api-key",
-            watsonx_project_id="test-project-id",
-            environment="production",
-            allow_test_keys=True,
-        )  # type: ignore[call-arg]
+        config = Config.model_validate(
+            {
+                "llm_provider": "watsonx",
+                "llm_model": "test-model",
+                "watsonx_url": "https://us-south.ml.cloud.ibm.com",
+                "watsonx_apikey": "test-api-key",
+                "watsonx_project_id": "test-project-id",
+                "environment": "production",
+            },
+            context={"allow_test_keys": True},
+        )
 
         assert config.environment == "production"
         assert config.max_retries == 5
@@ -333,14 +349,16 @@ class TestConfigRetryStrategies:
 
     def test_default_environment_is_development(self) -> None:
         """Default environment should be development."""
-        config = Config(
-            llm_provider="watsonx",
-            llm_model="test-model",
-            watsonx_url="https://us-south.ml.cloud.ibm.com",
-            watsonx_apikey="test-api-key",
-            watsonx_project_id="test-project-id",
-            allow_test_keys=True,
-        )  # type: ignore[call-arg]
+        config = Config.model_validate(
+            {
+                "llm_provider": "watsonx",
+                "llm_model": "test-model",
+                "watsonx_url": "https://us-south.ml.cloud.ibm.com",
+                "watsonx_apikey": "test-api-key",
+                "watsonx_project_id": "test-project-id",
+            },
+            context={"allow_test_keys": True},
+        )
 
         assert config.environment == "development"
         assert config.max_retries == 1
@@ -351,27 +369,31 @@ class TestConfigTimeouts:
 
     def test_outline_generation_timeout_is_120_seconds(self) -> None:
         """Outline generation should have 120s timeout."""
-        config = Config(
-            llm_provider="watsonx",
-            llm_model="test-model",
-            watsonx_url="https://us-south.ml.cloud.ibm.com",
-            watsonx_apikey="test-api-key",
-            watsonx_project_id="test-project-id",
-            allow_test_keys=True,
-        )  # type: ignore[call-arg]
+        config = Config.model_validate(
+            {
+                "llm_provider": "watsonx",
+                "llm_model": "test-model",
+                "watsonx_url": "https://us-south.ml.cloud.ibm.com",
+                "watsonx_apikey": "test-api-key",
+                "watsonx_project_id": "test-project-id",
+            },
+            context={"allow_test_keys": True},
+        )
 
         assert config.outline_timeout == 120
 
     def test_slide_generation_timeout_is_60_seconds(self) -> None:
         """Individual slide generation should have 60s timeout."""
-        config = Config(
-            llm_provider="watsonx",
-            llm_model="test-model",
-            watsonx_url="https://us-south.ml.cloud.ibm.com",
-            watsonx_apikey="test-api-key",
-            watsonx_project_id="test-project-id",
-            allow_test_keys=True,
-        )  # type: ignore[call-arg]
+        config = Config.model_validate(
+            {
+                "llm_provider": "watsonx",
+                "llm_model": "test-model",
+                "watsonx_url": "https://us-south.ml.cloud.ibm.com",
+                "watsonx_apikey": "test-api-key",
+                "watsonx_project_id": "test-project-id",
+            },
+            context={"allow_test_keys": True},
+        )
 
         assert config.slide_timeout == 60
 
@@ -381,27 +403,31 @@ class TestConfigUsageLimits:
 
     def test_max_requests_limit_is_20(self) -> None:
         """Maximum requests should be limited to 20."""
-        config = Config(
-            llm_provider="watsonx",
-            llm_model="test-model",
-            watsonx_url="https://us-south.ml.cloud.ibm.com",
-            watsonx_apikey="test-api-key",
-            watsonx_project_id="test-project-id",
-            allow_test_keys=True,
-        )  # type: ignore[call-arg]
+        config = Config.model_validate(
+            {
+                "llm_provider": "watsonx",
+                "llm_model": "test-model",
+                "watsonx_url": "https://us-south.ml.cloud.ibm.com",
+                "watsonx_apikey": "test-api-key",
+                "watsonx_project_id": "test-project-id",
+            },
+            context={"allow_test_keys": True},
+        )
 
         assert config.max_requests == 20
 
     def test_max_response_tokens_limit_is_50000(self) -> None:
         """Maximum response tokens should be limited to 50,000."""
-        config = Config(
-            llm_provider="watsonx",
-            llm_model="test-model",
-            watsonx_url="https://us-south.ml.cloud.ibm.com",
-            watsonx_apikey="test-api-key",
-            watsonx_project_id="test-project-id",
-            allow_test_keys=True,
-        )  # type: ignore[call-arg]
+        config = Config.model_validate(
+            {
+                "llm_provider": "watsonx",
+                "llm_model": "test-model",
+                "watsonx_url": "https://us-south.ml.cloud.ibm.com",
+                "watsonx_apikey": "test-api-key",
+                "watsonx_project_id": "test-project-id",
+            },
+            context={"allow_test_keys": True},
+        )
 
         assert config.max_response_tokens == 50000
 
@@ -411,14 +437,16 @@ class TestConfigHTTPRetry:
 
     def test_http_retry_has_exponential_backoff_config(self) -> None:
         """HTTP retry should have exponential backoff configuration."""
-        config = Config(
-            llm_provider="watsonx",
-            llm_model="test-model",
-            watsonx_url="https://us-south.ml.cloud.ibm.com",
-            watsonx_apikey="test-api-key",
-            watsonx_project_id="test-project-id",
-            allow_test_keys=True,
-        )  # type: ignore[call-arg]
+        config = Config.model_validate(
+            {
+                "llm_provider": "watsonx",
+                "llm_model": "test-model",
+                "watsonx_url": "https://us-south.ml.cloud.ibm.com",
+                "watsonx_apikey": "test-api-key",
+                "watsonx_project_id": "test-project-id",
+            },
+            context={"allow_test_keys": True},
+        )
 
         # Should have exponential backoff params: base_delay, max_delay
         assert hasattr(config, "retry_base_delay")
@@ -428,14 +456,16 @@ class TestConfigHTTPRetry:
 
     def test_agent_level_retry_is_3_attempts(self) -> None:
         """Agent-level validation failures should retry 3 times."""
-        config = Config(
-            llm_provider="watsonx",
-            llm_model="test-model",
-            watsonx_url="https://us-south.ml.cloud.ibm.com",
-            watsonx_apikey="test-api-key",
-            watsonx_project_id="test-project-id",
-            allow_test_keys=True,
-        )  # type: ignore[call-arg]
+        config = Config.model_validate(
+            {
+                "llm_provider": "watsonx",
+                "llm_model": "test-model",
+                "watsonx_url": "https://us-south.ml.cloud.ibm.com",
+                "watsonx_apikey": "test-api-key",
+                "watsonx_project_id": "test-project-id",
+            },
+            context={"allow_test_keys": True},
+        )
 
         assert config.agent_retries == 3
 
@@ -445,16 +475,18 @@ class TestConfigProviderFallback:
 
     def test_production_enables_provider_fallback(self) -> None:
         """Production environment should enable provider fallback."""
-        config = Config(
-            llm_provider="watsonx",
-            llm_model="test-model",
-            watsonx_url="https://us-south.ml.cloud.ibm.com",
-            watsonx_apikey="test-api-key",
-            watsonx_project_id="test-project-id",
-            anthropic_api_key="sk-ant-fallback-key",
-            environment="production",
-            allow_test_keys=True,
-        )  # type: ignore[call-arg]
+        config = Config.model_validate(
+            {
+                "llm_provider": "watsonx",
+                "llm_model": "test-model",
+                "watsonx_url": "https://us-south.ml.cloud.ibm.com",
+                "watsonx_apikey": "test-api-key",
+                "watsonx_project_id": "test-project-id",
+                "anthropic_api_key": "sk-ant-fallback-key",
+                "environment": "production",
+            },
+            context={"allow_test_keys": True},
+        )
 
         assert config.enable_fallback is True
         assert config.fallback_provider == "anthropic"
@@ -462,51 +494,57 @@ class TestConfigProviderFallback:
 
     def test_development_disables_provider_fallback(self) -> None:
         """Development environment should disable provider fallback."""
-        config = Config(
-            llm_provider="watsonx",
-            llm_model="test-model",
-            watsonx_url="https://us-south.ml.cloud.ibm.com",
-            watsonx_apikey="test-api-key",
-            watsonx_project_id="test-project-id",
-            environment="development",
-            allow_test_keys=True,
-        )  # type: ignore[call-arg]
+        config = Config.model_validate(
+            {
+                "llm_provider": "watsonx",
+                "llm_model": "test-model",
+                "watsonx_url": "https://us-south.ml.cloud.ibm.com",
+                "watsonx_apikey": "test-api-key",
+                "watsonx_project_id": "test-project-id",
+                "environment": "development",
+            },
+            context={"allow_test_keys": True},
+        )
 
         assert config.enable_fallback is False
 
     def test_openai_fallback_requires_openai_api_key(self) -> None:
         """OpenAI fallback provider should require OPENAI_API_KEY."""
-        config = Config(
-            llm_provider="watsonx",
-            llm_model="test-model",
-            watsonx_url="https://us-south.ml.cloud.ibm.com",
-            watsonx_apikey="test-api-key",
-            watsonx_project_id="test-project-id",
-            openai_api_key="sk-test-openai-key",
-            environment="production",
-            enable_fallback=True,
-            fallback_provider="openai",
-            fallback_model="gpt-4",
-            allow_test_keys=True,
-        )  # type: ignore[call-arg]
+        config = Config.model_validate(
+            {
+                "llm_provider": "watsonx",
+                "llm_model": "test-model",
+                "watsonx_url": "https://us-south.ml.cloud.ibm.com",
+                "watsonx_apikey": "test-api-key",
+                "watsonx_project_id": "test-project-id",
+                "openai_api_key": "sk-test-openai-key",
+                "environment": "production",
+                "enable_fallback": True,
+                "fallback_provider": "openai",
+                "fallback_model": "gpt-4",
+            },
+            context={"allow_test_keys": True},
+        )
 
         assert config.enable_fallback is True
         assert config.fallback_provider == "openai"
 
     def test_openai_fallback_disables_when_key_missing(self) -> None:
         """OpenAI fallback should disable when OPENAI_API_KEY is missing."""
-        config = Config(
-            llm_provider="watsonx",
-            llm_model="test-model",
-            watsonx_url="https://us-south.ml.cloud.ibm.com",
-            watsonx_apikey="test-api-key",
-            watsonx_project_id="test-project-id",
-            environment="production",
-            enable_fallback=True,
-            fallback_provider="openai",
-            fallback_model="gpt-4",
-            allow_test_keys=True,
-        )  # type: ignore[call-arg]
+        config = Config.model_validate(
+            {
+                "llm_provider": "watsonx",
+                "llm_model": "test-model",
+                "watsonx_url": "https://us-south.ml.cloud.ibm.com",
+                "watsonx_apikey": "test-api-key",
+                "watsonx_project_id": "test-project-id",
+                "environment": "production",
+                "enable_fallback": True,
+                "fallback_provider": "openai",
+                "fallback_model": "gpt-4",
+            },
+            context={"allow_test_keys": True},
+        )
 
         # Should disable fallback when openai_api_key is not provided
         assert config.enable_fallback is False
@@ -651,7 +689,7 @@ class TestConfigTestKeyValidation:
                 )  # type: ignore[call-arg]
 
     def test_config_allows_test_keys_when_explicitly_enabled(self) -> None:
-        """Verify test API keys are allowed when allow_test_keys=True."""
+        """Verify test API keys are allowed when using validation context."""
         test_key_patterns = [
             "test-api-key",
             "test_key_12345",
@@ -659,13 +697,15 @@ class TestConfigTestKeyValidation:
         ]
 
         for test_key in test_key_patterns:
-            # Should not raise when allow_test_keys=True
-            config = Config(
-                llm_provider="openai",
-                llm_model="gpt-4",
-                openai_api_key=test_key,
-                allow_test_keys=True,  # Test mode
-            )  # type: ignore[call-arg]
+            # Should not raise when context={"allow_test_keys": True}
+            config = Config.model_validate(
+                {
+                    "llm_provider": "openai",
+                    "llm_model": "gpt-4",
+                    "openai_api_key": test_key,
+                },
+                context={"allow_test_keys": True},
+            )
             assert config.openai_api_key == test_key
 
     def test_config_allows_real_looking_keys(self) -> None:
@@ -703,3 +743,86 @@ class TestConfigTestKeyValidation:
                 llm_model="gpt-4",
                 openai_api_key=None,
             )  # type: ignore[call-arg]
+
+
+class TestConfigTestKeyContextRestriction:
+    """Test that allow_test_keys can only be set via validation context, not environment."""
+
+    def test_allow_test_keys_via_environment_variable_is_ignored(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Verify ALLOW_TEST_KEYS environment variable is ignored and test keys are rejected.
+
+        This test ensures that allow_test_keys cannot be bypassed via environment variables.
+        The only way to enable test keys should be through explicit context parameter.
+        """
+        # Set ALLOW_TEST_KEYS in environment
+        monkeypatch.setenv("ALLOW_TEST_KEYS", "true")
+        monkeypatch.setenv("ALLOW_TEST_KEYS", "1")  # Try multiple formats
+
+        # Try to create config with test API key
+        # Even with ALLOW_TEST_KEYS=true in environment, should reject test keys
+        with pytest.raises(ValueError, match="API key appears to be a test value"):
+            Config(
+                llm_provider="openai",
+                llm_model="gpt-4",
+                openai_api_key="test-api-key-12345",
+            )  # type: ignore[call-arg]
+
+    def test_allow_test_keys_via_constructor_is_ignored(self) -> None:
+        """Verify allow_test_keys cannot be set via constructor parameter.
+
+        After refactoring, allow_test_keys should be a private attribute
+        that cannot be set via constructor. This ensures test key bypass
+        requires explicit opt-in via validation context.
+        """
+        # Try to set allow_test_keys via constructor - should be ignored
+        with pytest.raises(ValueError, match="API key appears to be a test value"):
+            Config(
+                llm_provider="openai",
+                llm_model="gpt-4",
+                openai_api_key="test-api-key-12345",
+                allow_test_keys=True,  # type: ignore[call-arg] # Should be ignored after refactoring
+            )  # type: ignore[call-arg]
+
+    def test_allow_test_keys_via_context_parameter_works(self) -> None:
+        """Verify test keys can be allowed via explicit validation context.
+
+        This is the ONLY way to allow test keys after refactoring.
+        Using model_validate with context={"allow_test_keys": True}.
+        """
+        # Use model_validate with context - this SHOULD work
+        config = Config.model_validate(
+            {
+                "llm_provider": "openai",
+                "llm_model": "gpt-4",
+                "openai_api_key": "test-api-key-12345",
+            },
+            context={"allow_test_keys": True},
+        )
+
+        assert config.llm_provider == "openai"
+        assert config.openai_api_key == "test-api-key-12345"
+
+    def test_allow_test_keys_context_false_rejects_test_keys(self) -> None:
+        """Verify test keys are rejected when context explicitly sets allow_test_keys=False."""
+        with pytest.raises(ValueError, match="API key appears to be a test value"):
+            Config.model_validate(
+                {
+                    "llm_provider": "openai",
+                    "llm_model": "gpt-4",
+                    "openai_api_key": "test-api-key-12345",
+                },
+                context={"allow_test_keys": False},
+            )
+
+    def test_allow_test_keys_no_context_rejects_test_keys(self) -> None:
+        """Verify test keys are rejected when no context is provided."""
+        with pytest.raises(ValueError, match="API key appears to be a test value"):
+            Config.model_validate(
+                {
+                    "llm_provider": "openai",
+                    "llm_model": "gpt-4",
+                    "openai_api_key": "test-api-key-12345",
+                }
+            )

@@ -14,17 +14,19 @@ def test_config_ignores_env_file_during_tests() -> None:
     prevents .env file values from affecting test configurations.
     """
     # Create config with specific values
-    config = Config(
-        llm_provider="watsonx",
-        llm_model="test-model",
-        watsonx_url="https://us-south.ml.cloud.ibm.com",
-        watsonx_apikey="test-api-key-fixture",
-        watsonx_project_id="test-project-id",
-        environment="production",
-        max_retries=5,
-        request_timeout=120,
-        allow_test_keys=True,  # Phase 3: Allow test keys in test mode
-    )  # type: ignore[call-arg]
+    config = Config.model_validate(
+        {
+            "llm_provider": "watsonx",
+            "llm_model": "test-model",
+            "watsonx_url": "https://us-south.ml.cloud.ibm.com",
+            "watsonx_apikey": "test-api-key-fixture",
+            "watsonx_project_id": "test-project-id",
+            "environment": "production",
+            "max_retries": 5,
+            "request_timeout": 120,
+        },
+        context={"allow_test_keys": True},
+    )
 
     # Values should match what we passed, not what's in .env
     assert config.max_retries == 5, "max_retries should be 5, not overridden by .env"
@@ -34,15 +36,17 @@ def test_config_ignores_env_file_during_tests() -> None:
 
 def test_config_development_environment_not_overridden() -> None:
     """Development environment config should not be overridden by .env."""
-    config = Config(
-        llm_provider="watsonx",
-        llm_model="test-model",
-        watsonx_url="https://us-south.ml.cloud.ibm.com",
-        watsonx_apikey="test-api-key-dev",
-        watsonx_project_id="test-project-id",
-        environment="development",
-        allow_test_keys=True,  # Phase 3: Allow test keys in test mode
-    )  # type: ignore[call-arg]
+    config = Config.model_validate(
+        {
+            "llm_provider": "watsonx",
+            "llm_model": "test-model",
+            "watsonx_url": "https://us-south.ml.cloud.ibm.com",
+            "watsonx_apikey": "test-api-key-dev",
+            "watsonx_project_id": "test-project-id",
+            "environment": "development",
+        },
+        context={"allow_test_keys": True},
+    )
 
     # Development should have retries=1, timeout=60 (not .env values)
     assert config.max_retries == 1, "Development should have max_retries=1"

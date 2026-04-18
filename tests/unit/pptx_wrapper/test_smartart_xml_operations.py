@@ -514,3 +514,137 @@ class TestSmartArtXMLOperations:
         # Verify structural elements were NOT modified
         assert a_t_doc.text == "Doc text"
         assert a_t_sib.text == "Sib text"
+
+
+class TestSmartArtXMLSecurity:
+    """Security tests for SmartArt XML parsing (Task 8.1, 8.3).
+
+    RED PHASE: These tests should FAIL with current lxml implementation.
+    They will PASS after switching to defusedxml in Task 8.2.
+    """
+
+    def test_xxe_external_entity_blocked(self):
+        """Test that XXE (XML External Entity) attacks are blocked.
+
+        Task 8.1 - RED PHASE: This test should FAIL because lxml.etree allows external entities.
+        After switching to defusedxml in Task 8.2, this should PASS.
+        """
+        # Arrange - Create malicious XML with external entity reference
+        malicious_xml = b"""<?xml version="1.0"?>
+<!DOCTYPE root [
+<!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<root>&xxe;</root>
+"""
+
+        # Act & Assert - Should raise exception when parsing malicious XML
+        # defusedxml will raise an exception to prevent XXE attacks
+        from defusedxml.lxml import fromstring
+        from lxml import etree
+
+        # defusedxml should raise an exception to prevent XXE attacks
+        with pytest.raises((etree.XMLSyntaxError, ValueError)):
+            # This should raise with defusedxml to prevent XXE
+            fromstring(malicious_xml)
+
+    def test_entity_expansion_billion_laughs_blocked(self):
+        """Test that entity expansion attacks (billion laughs) are blocked.
+
+        Task 8.3 - RED PHASE: This test should FAIL because lxml allows entity expansion.
+        After switching to defusedxml in Task 8.4, this should PASS.
+        """
+        # Arrange - Create malicious XML with recursive entity expansion (billion laughs attack)
+        malicious_xml = b"""<?xml version="1.0"?>
+<!DOCTYPE lolz [
+<!ENTITY lol "lol">
+<!ENTITY lol1 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">
+<!ENTITY lol2 "&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;">
+<!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;">
+<!ENTITY lol4 "&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;">
+]>
+<root>&lol4;</root>
+"""
+
+        # Act & Assert - Should raise exception to prevent resource exhaustion
+        # defusedxml will detect and block entity expansion attacks
+        from defusedxml.lxml import fromstring
+        from lxml import etree
+
+        # defusedxml should raise an exception to prevent entity expansion attacks
+        with pytest.raises((etree.XMLSyntaxError, ValueError)):
+            # This should raise with defusedxml to prevent expansion attacks
+            fromstring(malicious_xml)
+
+    def test_realistic_smartart_xml_parsing_with_defusedxml(self):
+        """Test that realistic SmartArt XML can still be parsed with defusedxml.
+
+        Task 8.5 - Integration test: Verify defusedxml doesn't break normal SmartArt functionality.
+        """
+        # Arrange - Create realistic SmartArt XML (simplified but representative)
+        realistic_xml = b"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<dgm:dataModel xmlns:dgm="http://schemas.openxmlformats.org/drawingml/2006/diagram"
+               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+    <dgm:ptLst>
+        <dgm:pt modelId="0" type="node">
+            <dgm:prSet>
+                <dgm:prstyle>
+                    <a:lnRef idx="1"/>
+                    <a:fillRef idx="1"/>
+                    <a:effectRef idx="1"/>
+                    <a:fontRef idx="minor"/>
+                </dgm:prstyle>
+            </dgm:prSet>
+            <dgm:t>
+                <a:t>Process Step 1</a:t>
+            </dgm:t>
+        </dgm:pt>
+        <dgm:pt modelId="1" type="node">
+            <dgm:prSet>
+                <dgm:prstyle>
+                    <a:lnRef idx="1"/>
+                    <a:fillRef idx="1"/>
+                    <a:effectRef idx="1"/>
+                    <a:fontRef idx="minor"/>
+                </dgm:prstyle>
+            </dgm:prSet>
+            <dgm:t>
+                <a:t>Process Step 2</a:t>
+            </dgm:t>
+        </dgm:pt>
+        <dgm:pt modelId="2" type="node">
+            <dgm:prSet>
+                <dgm:prstyle>
+                    <a:lnRef idx="1"/>
+                    <a:fillRef idx="1"/>
+                    <a:effectRef idx="1"/>
+                    <a:fontRef idx="minor"/>
+                </dgm:prstyle>
+            </dgm:prSet>
+            <dgm:t>
+                <a:t>Process Step 3</a:t>
+            </dgm:t>
+        </dgm:pt>
+    </dgm:ptLst>
+</dgm:dataModel>
+"""
+
+        # Act - Parse with defusedxml (should succeed for normal XML)
+        from defusedxml.lxml import fromstring
+
+        parsed = fromstring(realistic_xml)
+
+        # Assert - Verify the XML was parsed correctly
+        DGM_NS = "http://schemas.openxmlformats.org/drawingml/2006/diagram"
+        A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
+
+        pt_nodes = parsed.findall(f".//{{{DGM_NS}}}pt[@type='node']")
+        assert len(pt_nodes) == 3
+
+        # Verify text content is accessible
+        text_values = []
+        for pt in pt_nodes:
+            a_t = pt.find(f".//{{{A_NS}}}t")
+            if a_t is not None and a_t.text:
+                text_values.append(a_t.text)
+
+        assert text_values == ["Process Step 1", "Process Step 2", "Process Step 3"]

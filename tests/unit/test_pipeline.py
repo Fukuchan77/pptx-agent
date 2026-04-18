@@ -493,37 +493,23 @@ class TestGeneratePresentation:
             mock_analyze.assert_called_once_with(input_text, use_llm=False)
 
     @pytest.mark.asyncio
-    async def test_pipeline_sanitizes_control_characters(self, tmp_path: Path) -> None:
-        """Test that pipeline properly sanitizes control characters from input."""
+    async def test_pipeline_rejects_control_characters(self, tmp_path: Path) -> None:
+        """Test that pipeline rejects input with control characters for security.
+
+        The pipeline performs security validation BEFORE sanitization to reject
+        suspicious input transparently. Control characters indicate potential
+        attacks and should be rejected rather than silently removed.
+        """
         # Arrange
         input_with_control = "Test\x00presentation\x01with\x02control\x03chars"
-        expected_sanitized = "Testpresentationwithcontrolchars"
         template_path = "templates/basic-template.pptx"
         output_path = str(tmp_path / "output.pptx")
 
-        with (
-            patch("pptx_agent.pipeline.validate_and_sanitize") as mock_validate,
-            patch("pptx_agent.pipeline.analyze_story") as mock_analyze,
-            patch("pptx_agent.pipeline.generate_outline"),
-            patch("pptx_agent.pipeline.validate_outline"),
-            patch("pptx_agent.pipeline.generate_content"),
-            patch("pptx_agent.pipeline.validate_content"),
-            patch("pptx_agent.pipeline.build_presentation") as mock_build,
-        ):
-            # Setup mocks - validate_and_sanitize returns sanitized text
-            mock_validate.return_value = expected_sanitized
-            mock_analyze.return_value = MagicMock(spec=StoryAnalysis)
-            mock_build.return_value = output_path
-
-            # Act
+        # Act & Assert - pipeline should reject control characters
+        with pytest.raises(ValueError, match="Input validation failed.*null byte"):
             await generate_presentation(
                 input_with_control, template_path, output_path, use_llm=False
             )
-
-            # Assert - validate_and_sanitize was called with dirty input
-            mock_validate.assert_called_once_with(input_with_control)
-            # analyze_story was called with clean input
-            mock_analyze.assert_called_once_with(expected_sanitized, use_llm=False)
 
     @pytest.mark.asyncio
     async def test_pipeline_rejects_too_short_input(self, tmp_path: Path) -> None:
