@@ -1,0 +1,372 @@
+{
+  "template_name": "basic-template",
+  "layouts": [
+    {
+      "name": "Title Slide",
+      "placeholders": [
+        {
+          "name": "Title 1",
+          "type": "CENTER_TITLE",
+          "max_chars": 680
+        },
+        {
+          "name": "Subtitle 2",
+          "type": "SUBTITLE",
+          "max_chars": 630
+        },
+        {
+          "name": "Date Placeholder 3",
+          "type": "DATE",
+          "max_chars": 50
+        },
+        {
+          "name": "Footer Placeholder 4",
+          "type": "FOOTER",
+          "max_chars": 50
+        },
+        {
+          "name": "Slide Number Placeholder 5",
+          "type": "SLIDE_NUMBER",
+          "max_chars": 50
+        }
+      ],
+      "has_smartart": false,
+      "smartart_node_count": null
+    },
+    {
+      "name": "Title and Content",
+      "placeholders": [
+        {
+          "name": "Title 1",
+          "type": "TITLE",
+          "max_chars": 540
+        },
+        {
+          "name": "Content Placeholder 2",
+          "type": "OBJECT",
+          "max_chars": 2160
+        },
+        {
+          "name": "Date Placeholder 3",
+          "type": "DATE",
+          "max_chars": 50
+        },
+        {
+          "name": "Footer Placeholder 4",
+          "type": "FOOTER",
+          "max_chars": 50
+        },
+        {
+          "name": "Slide Number Placeholder 5",
+          "type": "SLIDE_NUMBER",
+          "max_chars": 50
+        }
+      ],
+      "has_smartart": false,
+      "smartart_node_count": null
+    },
+    {
+      "name": "Section Header",
+      "placeholders": [
+        {
+          "name": "Title 1",
+          "type": "TITLE",
+          "max_chars": 595
+        },
+        {
+          "name": "Text Placeholder 2",
+          "type": "BODY",
+          "max_chars": 680
+        },
+        {
+          "name": "Date Placeholder 3",
+          "type": "DATE",
+          "max_chars": 50
+        },
+        {
+          "name": "Footer Placeholder 4",
+          "type": "FOOTER",
+          "max_chars": 50
+        },
+        {
+          "name": "Slide Number Placeholder 5",
+          "type": "SLIDE_NUMBER",
+          "max_chars": 50
+        }
+      ],
+      "has_smartart": false,
+      "smartart_node_count": null
+    },
+    {
+      "name": "Two Content",
+      "placeholders": [
+        {
+          "name": "Title 1",
+          "type": "TITLE",
+          "max_chars": 540
+        },
+        {
+          "name": "Content Placeholder 2",
+          "type": "OBJECT",
+          "max_chars": 1056
+        },
+        {
+          "name": "Content Placeholder 3",
+          "type": "OBJECT",
+          "max_chars": 1056
+        },
+        {
+          "name": "Date Placeholder 4",
+          "type": "DATE",
+          "max_chars": 50
+        },
+        {
+          "name": "Footer Placeholder 5",
+          "type": "FOOTER",
+          "max_chars": 50
+        },
+        {
+          "name": "Slide Number Placeholder 6",
+          "type": "SLIDE_NUMBER",
+          "max_chars": 50
+        }
+      ],
+      "has_smartart": false,
+      "smartart_node_count": null
+    },
+    {
+      "name": "Comparison",
+      "placeholders": [
+        {
+          "name": "Title 1",
+          "type": "TITLE",
+          "max_chars": 540
+        },
+        {
+          "name": "Text Placeholder 2",
+          "type": "BODY",
+          "max_chars": 132
+        },
+        {
+          "name": "Content Placeholder 3",
+          "type": "OBJECT",
+          "max_chars": 924
+        },
+        {
+          "name": "Text Placeholder 4",
+          "type": "BODY",
+          "max_chars": 132
+        },
+        {
+          "name": "Content Placeholder 5",
+          "type": "OBJECT",
+          "max_chars": 924
+        },
+        {
+          "name": "Date Placeholder 6",
+          "type": "DATE",
+          "max_chars": 50
+        },
+        {
+          "name": "Footer Placeholder 7",
+          "type": "FOOTER",
+          "max_chars": 50
+        },
+        {
+          "name": "Slide Number Placeholder 8",
+          "type": "SLIDE_NUMBER",
+          "max_chars": 50
+        }
+      ],
+      "has_smartart": false,
+      "smartart_node_count": null
+    },
+    {
+      "name": "Title Only",
+      "placeholders": [
+        {
+          "name": "Title 1",
+          "type": "TITLE",
+          "max_chars": 540
+        },
+        {
+          "name": "Date Placeholder 2",
+          "type": "DATE",
+          "max_chars": 50
+        },
+        {
+          "name": "Footer Placeholder 3",
+          "type": "FOOTER",
+          "max_chars": 50
+        },
+        {
+          "name": "Slide Number Placeholder 4",
+          "type": "SLIDE_NUMBER",
+          "max_chars": 50
+        }
+      ],
+      "has_smartart": false,
+      "smartart_node_count": null
+    },
+    {
+      "name": "Blank",
+      "placeholders": [
+        {
+          "name": "Date Placeholder 1",
+          "type": "DATE",
+          "max_chars": 50
+        },
+        {
+          "name": "Footer Placeholder 2",
+          "type": "FOOTER",
+          "max_chars": 50
+        },
+        {
+          "name": "Slide Number Placeholder 3",
+          "type": "SLIDE_NUMBER",
+          "max_chars": 50
+        }
+      ],
+      "has_smartart": false,
+      "smartart_node_count": null
+    },
+    {
+      "name": "Content with Caption",
+      "placeholders": [
+        {
+          "name": "Title 1",
+          "type": "TITLE",
+          "max_chars": 192
+        },
+        {
+          "name": "Content Placeholder 2",
+          "type": "OBJECT",
+          "max_chars": 1760
+        },
+        {
+          "name": "Text Placeholder 3",
+          "type": "BODY",
+          "max_chars": 800
+        },
+        {
+          "name": "Date Placeholder 4",
+          "type": "DATE",
+          "max_chars": 50
+        },
+        {
+          "name": "Footer Placeholder 5",
+          "type": "FOOTER",
+          "max_chars": 50
+        },
+        {
+          "name": "Slide Number Placeholder 6",
+          "type": "SLIDE_NUMBER",
+          "max_chars": 50
+        }
+      ],
+      "has_smartart": false,
+      "smartart_node_count": null
+    },
+    {
+      "name": "Picture with Caption",
+      "placeholders": [
+        {
+          "name": "Title 1",
+          "type": "TITLE",
+          "max_chars": 180
+        },
+        {
+          "name": "Picture Placeholder 2",
+          "type": "PICTURE",
+          "max_chars": 1320
+        },
+        {
+          "name": "Text Placeholder 3",
+          "type": "BODY",
+          "max_chars": 240
+        },
+        {
+          "name": "Date Placeholder 4",
+          "type": "DATE",
+          "max_chars": 50
+        },
+        {
+          "name": "Footer Placeholder 5",
+          "type": "FOOTER",
+          "max_chars": 50
+        },
+        {
+          "name": "Slide Number Placeholder 6",
+          "type": "SLIDE_NUMBER",
+          "max_chars": 50
+        }
+      ],
+      "has_smartart": false,
+      "smartart_node_count": null
+    },
+    {
+      "name": "Title and Vertical Text",
+      "placeholders": [
+        {
+          "name": "Title 1",
+          "type": "TITLE",
+          "max_chars": 540
+        },
+        {
+          "name": "Vertical Text Placeholder 2",
+          "type": "BODY",
+          "max_chars": 2160
+        },
+        {
+          "name": "Date Placeholder 3",
+          "type": "DATE",
+          "max_chars": 50
+        },
+        {
+          "name": "Footer Placeholder 4",
+          "type": "FOOTER",
+          "max_chars": 50
+        },
+        {
+          "name": "Slide Number Placeholder 5",
+          "type": "SLIDE_NUMBER",
+          "max_chars": 50
+        }
+      ],
+      "has_smartart": false,
+      "smartart_node_count": null
+    },
+    {
+      "name": "Vertical Title and Text",
+      "placeholders": [
+        {
+          "name": "Vertical Title 1",
+          "type": "TITLE",
+          "max_chars": 682
+        },
+        {
+          "name": "Vertical Text Placeholder 2",
+          "type": "BODY",
+          "max_chars": 2015
+        },
+        {
+          "name": "Date Placeholder 3",
+          "type": "DATE",
+          "max_chars": 50
+        },
+        {
+          "name": "Footer Placeholder 4",
+          "type": "FOOTER",
+          "max_chars": 50
+        },
+        {
+          "name": "Slide Number Placeholder 5",
+          "type": "SLIDE_NUMBER",
+          "max_chars": 50
+        }
+      ],
+      "has_smartart": false,
+      "smartart_node_count": null
+    }
+  ]
+}

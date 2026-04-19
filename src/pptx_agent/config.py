@@ -4,6 +4,7 @@ Loads configuration from environment variables with support for .env files.
 """
 
 import logging
+import os
 import re
 import threading
 from typing import Any, Literal
@@ -12,7 +13,11 @@ from typing import Any, Literal
 _validation_state = threading.local()
 
 from pydantic import PrivateAttr, ValidationInfo, field_validator, model_validator  # noqa: E402
-from pydantic_settings import BaseSettings, SettingsConfigDict  # noqa: E402
+from pydantic_settings import (  # noqa: E402
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +45,7 @@ class Config(BaseSettings):
         ENVIRONMENT: 'development' or 'production' (default: development)
         MAX_RETRIES: Maximum HTTP retries (default: auto-set based on environment)
         REQUEST_TIMEOUT: Request timeout in seconds (default: auto-set based on environment)
+        PPTX_AGENT_IGNORE_ENV_FILE: Set to '1' to disable .env file loading (for testing)
     """
 
     model_config = SettingsConfigDict(
@@ -48,6 +54,28 @@ class Config(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],  # noqa: ARG003
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """Customize settings sources to conditionally disable .env file loading.
+
+        This method is called at instance creation time, allowing us to check
+        PPTX_AGENT_IGNORE_ENV_FILE dynamically and disable .env loading for tests.
+        """
+        # Check if we should ignore .env file (for test isolation)
+        if os.getenv("PPTX_AGENT_IGNORE_ENV_FILE"):
+            # Return sources WITHOUT dotenv_settings to disable .env file loading
+            return (init_settings, env_settings, file_secret_settings)
+
+        # Normal operation: include all sources
+        return (init_settings, env_settings, dotenv_settings, file_secret_settings)
 
     # Common settings
     llm_provider: Literal["watsonx", "anthropic", "openai"]

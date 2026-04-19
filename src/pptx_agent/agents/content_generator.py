@@ -212,7 +212,7 @@ def _generate_content_blocks(  # noqa: PLR0911
 
     # Check for chart data (format: "chart:type|key1=value1,key2=value2")
     if content.startswith("chart:"):
-        return [_parse_chart_data(content, placeholder_name, slide_title)]
+        return [parse_chart_data(content, placeholder_name, slide_title)]
 
     # Check for table data (format: "table:header1|header2\nrow1|row2")
     if content.startswith("table:"):
@@ -361,11 +361,15 @@ def _generate_speaker_notes(
     return notes
 
 
-def _parse_chart_data(content: str, placeholder_name: str, title: str) -> ChartBlock:
-    """Parse chart data from content string (internal helper).
+def parse_chart_data(content: str, placeholder_name: str, title: str) -> ChartBlock:
+    """Parse chart data from content string.
 
     Format: "chart:type|key1=value1,key2=value2,key3=value3"
     Example: "chart:bar|Q1=100,Q2=150,Q3=200"
+
+    Handles invalid numeric values gracefully by logging a warning and using
+    0.0 as a fallback value, ensuring chart generation continues even with
+    malformed input data.
 
     Args:
         content: Content string starting with "chart:"
@@ -486,7 +490,7 @@ def _parse_mixed_content(
     # Add chart part if present
     if len(parts) > 1:
         chart_content = f"chart:{parts[1]}"
-        blocks.append(_parse_chart_data(chart_content, placeholder_name, title))
+        blocks.append(parse_chart_data(chart_content, placeholder_name, title))
 
     return blocks
 

@@ -36,6 +36,23 @@ def isolate_config_from_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         # Anthropic-specific
         "ANTHROPIC_API_KEY",
         "ANTHROPIC_BASE_URL",
+        # Environment and retry settings (Phase 8)
+        "ENVIRONMENT",
+        "MAX_RETRIES",
+        "REQUEST_TIMEOUT",
+        "OUTLINE_TIMEOUT",
+        "SLIDE_TIMEOUT",
+        "MAX_REQUESTS",
+        "MAX_RESPONSE_TOKENS",
+        "RETRY_BASE_DELAY",
+        "RETRY_MAX_DELAY",
+        "CONNECT_TIMEOUT",
+        "WRITE_TIMEOUT",
+        "POOL_TIMEOUT",
+        "AGENT_RETRIES",
+        "ENABLE_FALLBACK",
+        "FALLBACK_PROVIDER",
+        "FALLBACK_MODEL",
         # Log settings
         "LOG_LEVEL",
         "LOG_FORMAT",
@@ -94,6 +111,11 @@ def make_test_config() -> Callable[..., Any]:
             "llm_api_base": None,
             "watsonx_project_id": None,
             "watsonx_url": None,
+            # Phase 8: Explicitly set to None to override any .env file values
+            # This ensures environment-specific defaults in Config.model_post_init are used
+            "max_retries": None,
+            "request_timeout": None,
+            "enable_fallback": None,
         }
 
         # Merge overrides

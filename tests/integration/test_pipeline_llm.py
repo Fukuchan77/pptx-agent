@@ -119,7 +119,7 @@ def mock_config():
     config.llm_model = "gpt-4"
     config.llm_api_key = "test-api-key"
     config.fallback_provider = "anthropic"
-    config.fallback_model = "claude-3-5-sonnet-20241022"
+    config.fallback_model = "claude-sonnet-4-6"
     config.fallback_api_key = "test-fallback-key"
     return config
 

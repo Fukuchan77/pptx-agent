@@ -69,7 +69,7 @@ class TestErrorResilienceConfiguration:
         assert config.request_timeout == 120
         assert config.enable_fallback is True
         assert config.fallback_provider == "anthropic"
-        assert config.fallback_model == "claude-3-5-sonnet-20241022"
+        assert config.fallback_model == "claude-sonnet-4-6"
 
         # Same timeouts, limits, and retry config as development
         assert config.outline_timeout == 120
