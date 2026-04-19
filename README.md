@@ -128,7 +128,7 @@ uv run python -m pptx_agent.main \
   --input examples/01-business-quarterly-review.txt \
   --template templates/basic-template.pptx \
   --output proposal.pptx \
-  --manifest basic-manifest.json
+  --manifest templates/basic-manifest.json
 ```
 
 ### Verbose Mode (Debugging)
@@ -214,14 +214,17 @@ pptx-agent/
 
 ## Architecture
 
-The system follows a pipeline architecture:
+The system follows a pipeline architecture with 7 main stages:
 
 1. **Story Analyzer**: Analyzes and summarizes input text
 2. **Outline Generator**: Creates presentation structure with slide types
-3. **Content Generator**: Generates detailed content for each slide
-4. **Validators**: Validates outline and content against template constraints
-5. **Slide Builder**: Populates PowerPoint slides with content
-6. **Overflow Resolver**: Handles text overflow through staged strategies
+3. **Outline Validator**: Validates outline against template constraints
+4. **Content Generator**: Generates detailed content for each slide
+5. **Content Validator**: Validates content against template capacity
+6. **Slide Builder**: Populates PowerPoint slides with content
+7. **Overflow Resolver**: Handles text overflow through staged strategies
+
+For detailed technical information about each pipeline component, see the [API Reference](docs/api-reference.md).
 
 ### LLM Integration
 
@@ -251,7 +254,7 @@ mise run test-cov
 
 ### Test Configuration
 
-**Unit Tests**: Automatically isolated from environment variables. Use [`make_test_config()`](tests/conftest.py:103) fixture:
+**Unit Tests**: Automatically isolated from environment variables. Use [`make_test_config()`](tests/conftest.py:64) fixture:
 
 ```python
 def test_something(make_test_config):
@@ -287,10 +290,10 @@ We welcome contributions! Please see:
 
 ## License
 
-[Add license information]
+This project is licensed under the MIT License — see LICENSE for details.
 
 ## Acknowledgments
 
 - Built with [python-pptx](https://python-pptx.readthedocs.io/)
 - LLM integration via [Pydantic AI](https://ai.pydantic.dev/)
-- Uses Pydantic AI's multi-provider support (OpenAI, Anthropic, etc.)
+- Multi-provider LLM support via [LiteLLM](https://docs.litellm.ai/) (OpenAI, Anthropic, watsonx, etc.)

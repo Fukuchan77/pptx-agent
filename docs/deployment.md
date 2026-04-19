@@ -1,5 +1,8 @@
 # Production Deployment Guide
 
+> **Language**: This document is available in English only.
+> **言語**: このドキュメントは英語版のみ提供されています。
+
 ## Table of Contents
 
 1. [Overview](#overview)
@@ -121,12 +124,14 @@ sudo chown -R pptx-agent:pptx-agent /opt/pptx-agent
    ```bash
    # /opt/pptx-agent/.env
    LLM_PROVIDER=watsonx
-   LLM_MODEL=ibm/granite-13b-chat-v2
+   LLM_MODEL=ibm/granite-4-h-small
    WATSONX_URL=https://us-south.ml.cloud.ibm.com
    WATSONX_APIKEY=your-production-api-key
    WATSONX_PROJECT_ID=your-project-id
    ENVIRONMENT=production
    ```
+
+   **Note**: For the latest available models, refer to the [IBM watsonx.ai Foundation Models](https://www.ibm.com/products/watsonx-ai/foundation-models) catalog.
 
 3. **Verify Connection**:
    ```bash
@@ -145,7 +150,7 @@ sudo chown -R pptx-agent:pptx-agent /opt/pptx-agent
    # Add to .env
    ENABLE_FALLBACK=true
    FALLBACK_PROVIDER=anthropic
-   FALLBACK_MODEL=claude-3-5-sonnet-20241022
+   FALLBACK_MODEL=claude-sonnet-4-6
    ANTHROPIC_API_KEY=sk-ant-api03-your-key
    ```
 

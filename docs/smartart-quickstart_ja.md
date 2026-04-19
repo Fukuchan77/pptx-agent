@@ -30,17 +30,24 @@
 - **テスト**: [test_smartart_real_templates.py](../tests/integration/test_smartart_real_templates.py)は`prs.slides`をイテレート → 通常のスライドが必要
 - **本番**: [TemplateParser](../src/pptx_agent/template_parser/parser.py)は`prs.slide_layouts`を解析 → スライドレイアウトが必要
 
-## 現在の状況
+## 前提条件と期待状態
 
-✅ ファイル名を修正済み: `tests/fixtures/smartart_test_template.pptx`
-❌ このファイルには**本物のSmartArt図形がまだ含まれていません**
+### 前提条件
 
-検証結果:
+- Microsoft PowerPointアプリケーション（Microsoft 365またはデスクトップ版）
+- リポジトリの`tests/fixtures/`ディレクトリへのアクセス権
+- PowerPointでのSmartArt挿入操作の基本的な理解
 
-```
-Slide 1-4: Rectangle, TextBox のみ（SmartArtではない）
-❌ No SmartArt shapes found (only placeholder shapes)
-```
+### 完成時の期待状態
+
+テンプレートファイル`tests/fixtures/smartart_test_template.pptx`には以下が含まれる必要があります：
+
+- **スライド1**: Process Flow（基本プロセスSmartArt、3ノード）
+- **スライド2**: Hierarchy（組織図SmartArt、3ノード）
+- **スライド3**: Cycle（基本的な循環SmartArt、4ノード）
+- **スライド4**: Relationship（基本ベンSmartArt、3ノード）
+
+すべてのSmartArt図形は適切にフォーマットされ、指定されたテキストコンテンツを含む必要があります。
 
 ## 必要な作業（PowerPointで手動）
 

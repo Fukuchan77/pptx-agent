@@ -1,5 +1,8 @@
 # API Reference - AI PowerPoint Presentation Generator
 
+> **Language**: This document is available in English only.
+> **言語**: このドキュメントは英語版のみ提供されています。
+
 ## Table of Contents
 
 1. [Main Entry Points](#main-entry-points)
@@ -55,12 +58,14 @@ uv run python -m pptx_agent.main \
 Main pipeline function that orchestrates the complete presentation generation workflow.
 
 ```python
-def generate_presentation(
+async def generate_presentation(
     input_text: str,
     template_path: str,
     output_path: str,
     template_manifest: TemplateManifest | None = None,
     output_language: Literal["en", "ja"] | None = None,
+    *,
+    use_llm: bool = True,
 ) -> str
 ```
 
@@ -85,17 +90,22 @@ def generate_presentation(
 **Example**:
 
 ```python
+import asyncio
 from pathlib import Path
 from pptx_agent.pipeline import generate_presentation
 
-input_text = Path("input.txt").read_text()
-result = generate_presentation(
-    input_text=input_text,
-    template_path="templates/basic-template.pptx",
-    output_path="output.pptx",
-    output_language="en"
-)
-print(f"Generated: {result}")
+async def main():
+    input_text = Path("input.txt").read_text()
+    result = await generate_presentation(
+        input_text=input_text,
+        template_path="templates/basic-template.pptx",
+        output_path="output.pptx",
+        output_language="en"
+    )
+    print(f"Generated: {result}")
+
+# Run the async function
+asyncio.run(main())
 ```
 
 ## Agents
@@ -104,13 +114,20 @@ print(f"Generated: {result}")
 
 **Module**: `pptx_agent.agents.story_analyzer`
 
-#### `analyze_story(text: str) -> StoryAnalysis`
+#### `analyze_story(text: str, *, use_llm: bool = True) -> StoryAnalysis`
 
 Analyzes input text to extract story elements.
+
+**Signature**:
+
+```python
+async def analyze_story(text: str, *, use_llm: bool = True) -> StoryAnalysis
+```
 
 **Parameters**:
 
 - `text` (`str`): Input text to analyze (plain text or Markdown)
+- `use_llm` (`bool`): If True, use LLM for analysis. If False, use heuristic fallback (default: True)
 
 **Returns**:
 
@@ -129,30 +146,47 @@ Analyzes input text to extract story elements.
 **Example**:
 
 ```python
+import asyncio
 from pptx_agent.agents.story_analyzer import analyze_story
 
-text = """
-# AI in Healthcare
-Artificial Intelligence is transforming medical diagnosis...
-"""
+async def main():
+    text = """
+    # AI in Healthcare
+    Artificial Intelligence is transforming medical diagnosis...
+    """
 
-analysis = analyze_story(text)
-print(f"Topic: {analysis.topic}")
-print(f"Language: {analysis.language}")
-print(f"Tone: {analysis.tone}")
+    analysis = await analyze_story(text)
+    print(f"Topic: {analysis.topic}")
+    print(f"Language: {analysis.language}")
+    print(f"Tone: {analysis.tone}")
+
+asyncio.run(main())
 ```
 
 ### Outline Generator
 
 **Module**: `pptx_agent.agents.outline_generator`
 
-#### `generate_outline(story: StoryAnalysis) -> PresentationOutline`
+#### `generate_outline(story: StoryAnalysis, manifest: TemplateManifest | None = None, *, use_llm: bool = True) -> PresentationOutline`
 
 Generates presentation outline from story analysis.
+
+**Signature**:
+
+```python
+async def generate_outline(
+    story: StoryAnalysis,
+    manifest: TemplateManifest | None = None,
+    *,
+    use_llm: bool = True
+) -> PresentationOutline
+```
 
 **Parameters**:
 
 - `story` (`StoryAnalysis`): Story analysis object
+- `manifest` (`TemplateManifest | None`): Optional template manifest for validation
+- `use_llm` (`bool`): If True, use LLM for generation. If False, use heuristic fallback (default: True)
 
 **Returns**:
 
@@ -168,30 +202,46 @@ Generates presentation outline from story analysis.
 **Example**:
 
 ```python
+import asyncio
 from pptx_agent.agents.story_analyzer import analyze_story
 from pptx_agent.agents.outline_generator import generate_outline
 
-story = analyze_story("Your text here...")
-outline = generate_outline(story)
+async def main():
+    story = await analyze_story("Your text here...")
+    outline = await generate_outline(story)
 
-print(f"Title: {outline.title}")
-print(f"Slides: {len(outline.slides)}")
-for slide in outline.slides:
-    print(f"  - Slide {slide.slide_number}: {slide.title}")
+    print(f"Title: {outline.title}")
+    print(f"Slides: {len(outline.slides)}")
+    for slide in outline.slides:
+        print(f"  - Slide {slide.slide_number}: {slide.title}")
+
+asyncio.run(main())
 ```
 
 ### Content Generator
 
 **Module**: `pptx_agent.agents.content_generator`
 
-#### `generate_content(outline: PresentationOutline, manifest: TemplateManifest | None = None) -> PresentationSchema`
+#### `generate_content(outline: PresentationOutline, manifest: TemplateManifest | None = None, *, use_llm: bool = True) -> PresentationSchema`
 
 Generates detailed content for each slide in the outline.
+
+**Signature**:
+
+```python
+async def generate_content(
+    outline: PresentationOutline,
+    manifest: TemplateManifest | None = None,
+    *,
+    use_llm: bool = True
+) -> PresentationSchema
+```
 
 **Parameters**:
 
 - `outline` (`PresentationOutline`): Presentation outline
 - `manifest` (`TemplateManifest | None`): Optional template manifest for layout validation
+- `use_llm` (`bool`): If True, use LLM for generation. If False, use heuristic fallback (default: True)
 
 **Returns**:
 
@@ -200,10 +250,14 @@ Generates detailed content for each slide in the outline.
 **Example**:
 
 ```python
+import asyncio
 from pptx_agent.agents.content_generator import generate_content
 
-content = generate_content(outline, template_manifest)
-print(f"Generated {len(content.slides)} slides")
+async def main():
+    content = await generate_content(outline, template_manifest)
+    print(f"Generated {len(content.slides)} slides")
+
+asyncio.run(main())
 ```
 
 ### Overflow Resolver
@@ -222,12 +276,12 @@ Analyzes text overflow and determines resolution strategy.
 
 **Returns**:
 
-  - `strategy` (`OverflowStrategy`): Recommended strategy
-  - `overflow_detected` (`bool`): Whether overflow was detected
-  - `overflow_percentage` (`float`): Percentage of overflow
-  - `suggested_layout` (`str | None`): Alternative layout name if applicable
-  - `split_point` (`int | None`): Best character index to split at
-  - `target_length` (`int | None`): Target length for summarization
+- `strategy` (`OverflowStrategy`): Recommended strategy
+- `overflow_detected` (`bool`): Whether overflow was detected
+- `overflow_percentage` (`float`): Percentage of overflow
+- `suggested_layout` (`str | None`): Alternative layout name if applicable
+- `split_point` (`int | None`): Best character index to split at
+- `target_length` (`int | None`): Target length for summarization
 
 **Example**:
 

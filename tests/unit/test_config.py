@@ -55,7 +55,7 @@ class TestConfigSecureErrorMessages:
         ) as exc_info:
             Config(
                 llm_provider="anthropic",
-                llm_model="claude-3-5-sonnet-20241022",
+                llm_model="claude-sonnet-4-6",
             )  # type: ignore[call-arg]
 
         error_msg = str(exc_info.value)
@@ -99,7 +99,7 @@ class TestConfigSecureErrorMessages:
         ) as exc_info:
             Config(
                 llm_provider="anthropic",
-                llm_model="claude-3-5-sonnet-20241022",
+                llm_model="claude-sonnet-4-6",
             )  # type: ignore[call-arg]
 
         error_msg = str(exc_info.value)
@@ -138,14 +138,14 @@ class TestConfigValidConfiguration:
         config = Config.model_validate(
             {
                 "llm_provider": "anthropic",
-                "llm_model": "claude-3-5-sonnet-20241022",
+                "llm_model": "claude-sonnet-4-6",
                 "anthropic_api_key": "sk-ant-test-key",
             },
             context={"allow_test_keys": True},
         )
 
         assert config.llm_provider == "anthropic"
-        assert config.llm_model == "claude-3-5-sonnet-20241022"
+        assert config.llm_model == "claude-sonnet-4-6"
         assert config.anthropic_api_key == "sk-ant-test-key"
 
 
@@ -203,7 +203,7 @@ class TestConfigAPIKeyFormatValidation:
         with pytest.raises(ValueError, match="API key appears to be invalid"):
             Config(
                 llm_provider="anthropic",
-                llm_model="claude-3-5-sonnet-20241022",
+                llm_model="claude-sonnet-4-6",
                 anthropic_api_key="",
             )  # type: ignore[call-arg]
 
@@ -212,7 +212,7 @@ class TestConfigAPIKeyFormatValidation:
         with pytest.raises(ValueError, match="API key appears to be invalid"):
             Config(
                 llm_provider="anthropic",
-                llm_model="claude-3-5-sonnet-20241022",
+                llm_model="claude-sonnet-4-6",
                 anthropic_api_key="short",
             )  # type: ignore[call-arg]
 
@@ -221,7 +221,7 @@ class TestConfigAPIKeyFormatValidation:
         with pytest.raises(ValueError, match="API key appears to be invalid"):
             Config(
                 llm_provider="anthropic",
-                llm_model="claude-3-5-sonnet-20241022",
+                llm_model="claude-sonnet-4-6",
                 anthropic_api_key="     ",
             )  # type: ignore[call-arg]
 
@@ -245,7 +245,7 @@ class TestConfigAPIKeyFormatValidation:
         config = Config.model_validate(
             {
                 "llm_provider": "anthropic",
-                "llm_model": "claude-3-5-sonnet-20241022",
+                "llm_model": "claude-sonnet-4-6",
                 "anthropic_api_key": "sk-ant-valid-key",
             },
             context={"allow_test_keys": True},
@@ -275,7 +275,7 @@ class TestConfigAPIKeyFormatValidation:
         config = Config.model_validate(
             {
                 "llm_provider": "anthropic",
-                "llm_model": "claude-3-5-sonnet-20241022",
+                "llm_model": "claude-sonnet-4-6",
                 "anthropic_api_key": "  sk-ant-valid-key  ",
             },
             context={"allow_test_keys": True},
@@ -303,7 +303,7 @@ class TestConfigAPIKeyFormatValidation:
         with pytest.raises(ValueError, match="Required configuration for anthropic"):
             Config(
                 llm_provider="anthropic",
-                llm_model="claude-3-5-sonnet-20241022",
+                llm_model="claude-sonnet-4-6",
                 anthropic_api_key=None,
             )  # type: ignore[call-arg]
 

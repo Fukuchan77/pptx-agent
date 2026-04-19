@@ -24,7 +24,7 @@ def isolate_config_from_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         # LLM settings
         "LLM_PROVIDER",
         "LLM_MODEL",
-        "LLM_BASE_URL",
+        "LLM_API_BASE",
         "LLM_API_KEY",
         # Watsonx-specific
         "WATSONX_PROJECT_ID",

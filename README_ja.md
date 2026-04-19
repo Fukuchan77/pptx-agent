@@ -128,7 +128,7 @@ uv run python -m pptx_agent.main \
   --input examples/01-business-quarterly-review.txt \
   --template templates/basic-template.pptx \
   --output proposal.pptx \
-  --manifest basic-manifest.json
+  --manifest templates/basic-manifest.json
 ```
 
 ### 詳細モード (デバッグ用)
@@ -214,14 +214,17 @@ pptx-agent/
 
 ## アーキテクチャ
 
-システムはパイプライン・アーキテクチャに従っています:
+システムは7つの主要ステージからなるパイプライン・アーキテクチャに従っています:
 
 1. **ストーリーアナライザー**: 入力テキストを分析して要約します
 2. **アウトラインジェネレーター**: スライドタイプを含むプレゼンテーションの構造を作成します
-3. **コンテンツジェネレーター**: 各スライドの詳細なコンテンツを生成します
-4. **バリデーター**: テンプレートの制約に対してアウトラインとコンテンツを検証します
-5. **スライドビルダー**: PowerPointのスライドにコンテンツを入力します
-6. **オーバーフローリゾルバー**: 段階的な戦略を通じてテキストのオーバーフローを処理します
+3. **アウトラインバリデーター**: テンプレートの制約に対してアウトラインを検証します
+4. **コンテンツジェネレーター**: 各スライドの詳細なコンテンツを生成します
+5. **コンテンツバリデーター**: テンプレート容量に対してコンテンツを検証します
+6. **スライドビルダー**: PowerPointのスライドにコンテンツを入力します
+7. **オーバーフローリゾルバー**: 段階的な戦略を通じてテキストのオーバーフローを処理します
+
+各パイプラインコンポーネントの詳細な技術情報については、[API リファレンス](docs/api-reference.md)を参照してください。
 
 ### LLMの統合
 
@@ -251,7 +254,7 @@ mise run test-cov
 
 ### テスト設定
 
-**単体テスト**: 環境変数から自動的に隔離されます。[`make_test_config()`](tests/conftest.py:103)フィクスチャを使用してください:
+**単体テスト**: 環境変数から自動的に隔離されます。[`make_test_config()`](tests/conftest.py:64)フィクスチャを使用してください:
 
 ```python
 def test_something(make_test_config):
@@ -287,10 +290,10 @@ def test_something(make_test_config):
 
 ## ライセンス
 
-[ライセンス情報を追加]
+このプロジェクトはMITライセンスの下でライセンスされています — 詳細はLICENSEを参照してください。
 
 ## 謝辞
 
 - [python-pptx](https://python-pptx.readthedocs.io/) で構築されています
 - [Pydantic AI](https://ai.pydantic.dev/) を介したLLM統合
-- Pydantic AIのマルチプロバイダーサポート (OpenAI、Anthropicなど) を使用
+- [LiteLLM](https://docs.litellm.ai/) によるマルチプロバイダーLLMサポート (OpenAI、Anthropic、watsonxなど)

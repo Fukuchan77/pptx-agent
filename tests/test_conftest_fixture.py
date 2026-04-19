@@ -61,7 +61,7 @@ def test_isolate_config_clears_all_env_vars(isolate_config_from_environment: Any
     config_env_vars = [
         "LLM_PROVIDER",
         "LLM_MODEL",
-        "LLM_BASE_URL",
+        "LLM_API_BASE",
         "LLM_API_KEY",
         "WATSONX_PROJECT_ID",
         "WATSONX_URL",
@@ -92,7 +92,7 @@ def test_isolate_config_restores_after_test(monkeypatch: pytest.MonkeyPatch) -> 
     config_env_vars = [
         "LLM_PROVIDER",
         "LLM_MODEL",
-        "LLM_BASE_URL",
+        "LLM_API_BASE",
         "LLM_API_KEY",
         "WATSONX_PROJECT_ID",
         "WATSONX_URL",

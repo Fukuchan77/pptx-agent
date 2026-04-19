@@ -57,7 +57,7 @@ def watsonx_config():
             "request_timeout": 120,
             "enable_fallback": True,
             "fallback_provider": "anthropic",
-            "fallback_model": "claude-3-5-sonnet-20241022",
+            "fallback_model": "claude-sonnet-4-6",
             "anthropic_api_key": "test-anthropic-key-1234567890",
         },
         context={"allow_test_keys": True},
@@ -70,7 +70,7 @@ def anthropic_config():
     return Config.model_validate(
         {
             "llm_provider": "anthropic",
-            "llm_model": "claude-3-5-sonnet-20241022",
+            "llm_model": "claude-sonnet-4-6",
             "anthropic_api_key": "test-anthropic-key-1234567890",
             "environment": "production",
             "enable_fallback": False,

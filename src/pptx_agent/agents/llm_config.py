@@ -221,7 +221,7 @@ def create_fallback_model(config: Config) -> "OpenAIChatModel | LiteLLMModel | N
     elif config.fallback_provider == "watsonx":
         api_key = config.watsonx_apikey
 
-    fallback_model_name = config.fallback_model or "claude-3-5-sonnet-20241022"
+    fallback_model_name = config.fallback_model or "claude-sonnet-4-6"
 
     try:
         return _create_model_from_params(

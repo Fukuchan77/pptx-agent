@@ -1,5 +1,8 @@
 # Developer Guide - AI PowerPoint Presentation Generator
 
+> **Language**: This document is available in English only.
+> **言語**: このドキュメントは英語版のみ提供されています。
+
 ## Table of Contents
 
 1. [Development Environment Setup](#development-environment-setup)
@@ -8,10 +11,6 @@
 4. [Development Workflow](#development-workflow)
 5. [Testing Guidelines](#testing-guidelines)
 6. [Adding New Features](#adding-new-features)
-7. [Module Documentation](#module-documentation)
-8. [Debugging and Troubleshooting](#debugging-and-troubleshooting)
-9. [Code Standards](#code-standards)
-10. [Contributing Guidelines](#contributing-guidelines)
 
 ## Development Environment Setup
 
@@ -151,12 +150,21 @@ pptx-agent/
 │   ├── pipeline.py           # Pipeline orchestration
 │   ├── config.py             # Configuration management
 │   ├── constants.py          # Project-wide constants
+│   ├── templates.py          # Template handling utilities
 │   │
 │   ├── agents/               # LLM agents
+│   │   ├── analyzer_config.py     # Analyzer configuration
+│   │   ├── llm_config.py          # LLM provider configuration
+│   │   ├── utils.py               # Agent utilities
 │   │   ├── story_analyzer.py      # Input text analysis
 │   │   ├── outline_generator.py   # Outline generation
 │   │   ├── content_generator.py   # Slide content generation
-│   │   └── overflow_resolver.py   # Text overflow resolution
+│   │   ├── overflow_resolver.py   # Text overflow resolution
+│   │   └── prompts/               # Prompt templates
+│   │       ├── content_generator.py
+│   │       ├── outline_generator.py
+│   │       ├── speaker_notes.py
+│   │       └── story_analyzer.py
 │   │
 │   ├── schemas/              # Pydantic models
 │   │   ├── outline.py        # Outline structures
@@ -213,9 +221,10 @@ pptx-agent/
 │
 ├── templates/                # Sample PowerPoint templates
 ├── docs/                     # Documentation
-├── specs/                    # SDD specifications
 └── examples/                 # Example inputs and outputs
 ```
+
+**Note**: This shows the main modules and directories. Some subdirectories and utility files are omitted for clarity.
 
 ### Module Responsibilities
 

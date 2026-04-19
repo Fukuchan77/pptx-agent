@@ -30,17 +30,24 @@ This explains how to create a SmartArt template for passing integration tests in
 - **Tests**: [test_smartart_real_templates.py](../tests/integration/test_smartart_real_templates.py) iterates over `prs.slides` → requires regular slides
 - **Production**: [TemplateParser](../src/pptx_agent/template_parser/parser.py) parses `prs.slide_layouts` → requires slide layouts
 
-## Current Status
+## Prerequisites and Expected State
 
-✅ Filename corrected: `tests/fixtures/smartart_test_template.pptx`
-❌ This file **does not yet contain real SmartArt shapes**
+### Prerequisites
 
-Verification result:
+- Microsoft PowerPoint application (Microsoft 365 or desktop version)
+- Access to the repository's `tests/fixtures/` directory
+- Basic familiarity with SmartArt insertion in PowerPoint
 
-```
-Slide 1-4: Only Rectangle, TextBox (not SmartArt)
-❌ No SmartArt shapes found (only placeholder shapes)
-```
+### Expected State After Completion
+
+The template file `tests/fixtures/smartart_test_template.pptx` should contain:
+
+- **Slide 1**: Process Flow (Basic Process SmartArt with 3 nodes)
+- **Slide 2**: Hierarchy (Organization Chart SmartArt with 3 nodes)
+- **Slide 3**: Cycle (Basic Cycle SmartArt with 4 nodes)
+- **Slide 4**: Relationship (Basic Venn SmartArt with 3 nodes)
+
+All SmartArt shapes must be properly formatted and contain the specified text content.
 
 ## Required Manual Steps (PowerPoint)
 

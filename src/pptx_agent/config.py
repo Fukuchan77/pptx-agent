@@ -229,7 +229,7 @@ class Config(BaseSettings):
             self.fallback_provider = "anthropic"
             # Set default fallback model if not specified
             if self.fallback_model is None:
-                self.fallback_model = "claude-3-5-sonnet-20241022"
+                self.fallback_model = "claude-sonnet-4-6"
 
         # Validate fallback configuration details
         if self.enable_fallback and self.fallback_provider:

@@ -53,7 +53,7 @@ The AI PowerPoint Presentation Generator is a command-line tool that automatical
 
    ```bash
    LLM_PROVIDER=anthropic
-   LLM_MODEL=claude-3-5-sonnet-20241022
+   LLM_MODEL=claude-sonnet-4-6
    ANTHROPIC_API_KEY=your-api-key-here
    ```
 
@@ -149,7 +149,7 @@ touch .env
 
 ```env
 LLM_PROVIDER=anthropic
-LLM_MODEL=claude-3-5-sonnet-20241022
+LLM_MODEL=claude-sonnet-4-6
 ANTHROPIC_API_KEY=sk-ant-api03-...
 ENVIRONMENT=production
 ```
@@ -171,7 +171,7 @@ ENVIRONMENT=development
 
 ```env
 LLM_PROVIDER=openai
-LLM_MODEL=gpt-4-turbo-preview
+LLM_MODEL=gpt-5.4
 OPENAI_API_KEY=sk-...
 ENVIRONMENT=production
 ```
@@ -180,12 +180,14 @@ ENVIRONMENT=production
 
 ```env
 LLM_PROVIDER=watsonx
-LLM_MODEL=ibm/granite-13b-chat-v2
+LLM_MODEL=ibm/granite-4-h-small
 WATSONX_URL=https://us-south.ml.cloud.ibm.com
 WATSONX_APIKEY=your-watsonx-api-key
 WATSONX_PROJECT_ID=your-project-id
 ENVIRONMENT=production
 ```
+
+**Get API Key and Browse Models**: [IBM watsonx.ai](https://www.ibm.com/products/watsonx-ai/foundation-models)
 
 ### Environment Settings
 
@@ -220,7 +222,7 @@ Configure fallback provider for production resilience:
 ```env
 ENABLE_FALLBACK=true
 FALLBACK_PROVIDER=anthropic
-FALLBACK_MODEL=claude-3-5-sonnet-20241022
+FALLBACK_MODEL=claude-sonnet-4-6
 ANTHROPIC_API_KEY=sk-ant-api03-...
 ```
 
