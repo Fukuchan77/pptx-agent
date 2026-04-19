@@ -5,7 +5,7 @@ import re
 import urllib.parse
 from pathlib import Path
 
-from defusedxml import ElementTree
+from lxml import etree
 from pydantic import BaseModel
 
 # Configure logger
@@ -32,7 +32,7 @@ INJECTION_PATTERNS_JA = [
     r"すべて無視",  # "ignore everything"
 ]
 
-# Combined patterns for backward compatibility
+# Alias for INJECTION_PATTERNS_EN — backward compatibility
 INJECTION_PATTERNS = INJECTION_PATTERNS_EN
 
 
@@ -217,15 +217,17 @@ def validate_xml_safety(xml_content: str) -> bool:
         logger.warning("XML security validation: SYSTEM reference detected")
         return False
 
-    # Try to parse XML with defusedxml (which disables dangerous features)
+    # Try to parse XML with secure parser (which disables dangerous features)
     try:
-        # defusedxml automatically prevents:
-        # - External entity expansion
+        # Secure XML parser prevents:
+        # - External entity expansion (resolve_entities=False)
+        # - Network access (no_network=True)
         # - DTD processing
-        # - XInclude processing
+        # huge_tree=True allows large XML (safe because size is pre-validated)
         # This will raise an exception if dangerous XML is encountered
-        ElementTree.fromstring(xml_content)
-    except ElementTree.ParseError:
+        parser = etree.XMLParser(resolve_entities=False, no_network=True, huge_tree=True)
+        etree.fromstring(xml_content.encode("utf-8"), parser=parser)
+    except etree.ParseError:
         # If XML is malformed, it's suspicious
         logger.warning("XML security validation: ParseError - malformed or malicious XML")
         return False

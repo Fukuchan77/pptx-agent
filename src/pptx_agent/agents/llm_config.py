@@ -42,8 +42,13 @@ def _scoped_watsonx_project(project_id: str) -> Generator[None, None, None]:
     """Context manager for scoped watsonx project_id configuration.
 
     Temporarily sets WATSONX_PROJECT_ID environment variable for LiteLLM,
-    then restores the original state. This ensures thread-safe operation
-    without permanent environment mutation.
+    then restores the original state in the finally block. This ensures
+    the environment is restored even if an exception occurs.
+
+    Note: This modifies the process-global os.environ. To prevent race
+    conditions in async contexts, the `with` block MUST NOT contain any
+    `await` statements. If awaitable operations are needed, ensure they
+    occur outside the context manager scope.
 
     Args:
         project_id: watsonx project_id to set temporarily

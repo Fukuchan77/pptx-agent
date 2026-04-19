@@ -66,7 +66,7 @@ async def generate_presentation(
     """
     pipeline_start = time.time()
 
-    # Stage 0: Security validation - reject suspicious input transparently
+    # Stage 0a: Security validation - reject suspicious input transparently
     # Check for dangerous characters (null bytes, control chars, etc.)
     # This raises ValueError if suspicious characters are detected
     try:
@@ -81,7 +81,7 @@ async def generate_presentation(
         )
         raise ValueError(msg) from e
 
-    # Stage 0: Validate and sanitize input (length checks)
+    # Stage 0b: Sanitize and length-check input
     input_text = validate_and_sanitize(input_text)
 
     # Security: Detect and reject suspicious phrases (best-effort signal)

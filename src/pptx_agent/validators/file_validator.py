@@ -86,9 +86,7 @@ def validate_pptx_file(file_path: Path | str) -> None:
             total_uncompressed_size = 0
 
             for info in zf.infolist():
-                # Per-entry size limit (10MB): Prevents individual entries from consuming
-                # excessive memory during decompression. Legitimate PPTX entries are typically
-                # under 1MB (text) or a few MB (images), so 10MB is a reasonable upper bound.
+                # Per-entry size check (10MB limit)
                 if info.file_size > MAX_ENTRY_SIZE:
                     msg = (
                         f"Entry size limit exceeded: file '{info.filename}' has "
@@ -101,11 +99,7 @@ def validate_pptx_file(file_path: Path | str) -> None:
 
                 total_uncompressed_size += info.file_size
 
-                # Compression ratio check (max 100x): Detects suspiciously high compression
-                # ratios that indicate potential zip bombs
-                # (e.g., 1KB compressed → 100MB uncompressed).
-                # Normal PPTX files have ratios between 2x-20x for text/XML, 1x-2x for images.
-                # Ratio > 100x is a strong indicator of malicious content.
+                # Compression ratio check (max 100x)
                 if info.compress_size > 0:
                     ratio = info.file_size / info.compress_size
                     if ratio > MAX_COMPRESSION_RATIO:
@@ -188,42 +182,57 @@ def validate_no_symlinks(file_path: Path | str) -> None:
         raise SecurityValidationError(msg)
 
     # Check if any parent directory is a symlink
-    # Strategy: Resolve both cwd and file path, then check if file is under cwd
-    # This allows cwd itself to be a symlink without triggering false positives
+    # IMPORTANT: Check for symlinks BEFORE resolving paths, as resolve() follows symlinks
+    # Strategy: Walk up the absolute path and check each component for symlinks
+    # Allow cwd itself to be a symlink to support common dev scenarios
     try:
-        # Get the resolved (real) current working directory and file path
+        # Get resolved cwd (Path.cwd() already resolves symlinks on most systems)
         resolved_cwd = Path.cwd().resolve()
-        resolved_file = file_path.resolve()
 
-        # Try to make the resolved file path relative to resolved cwd
+        # Check if the file path (when resolved) is under or related to cwd
+        # This determines if we should apply the pragmatic symlink acceptance
         try:
-            # If this succeeds, the file is within cwd (after resolving all symlinks)
-            # This means any symlinks in the path are part of cwd itself, which is acceptable
-            resolved_file.relative_to(resolved_cwd)
-            # No additional symlinks beyond cwd - accept the file
-
+            file_path.resolve().relative_to(resolved_cwd)
+            file_under_cwd = True
         except ValueError:
-            # File is not relative to cwd (outside cwd directory)
-            # In this case, check the entire absolute path for symlinks
-            # We exclude the resolved cwd from checking to avoid false positives
-            current = file_path.absolute().parent
-            while current != current.parent:
-                # Skip checking if this directory is part of or above the resolved cwd
-                try:
-                    resolved_cwd.relative_to(current.resolve())
-                    # current is an ancestor of cwd, skip it
-                    current = current.parent
-                    continue
-                except ValueError:
-                    pass
+            file_under_cwd = False
 
-                if current.is_symlink():
-                    msg = (
-                        f"Symlink validation failed: path contains symlink at '{current}'. "
-                        "Expected: regular file path without symlinks."
-                    )
-                    raise SecurityValidationError(msg) from None
-                current = current.parent
+        # Convert to absolute path but DON'T resolve yet (we need to check for symlinks first)
+        abs_path = file_path.absolute()
+
+        # Walk up parent directories and check for symlinks
+        current = abs_path.parent
+        while current != current.parent:
+            # Check if this directory is a symlink
+            if current.is_symlink():
+                # Pragmatic approach: Allow ONLY symlinks that are part of the cwd path itself
+                # (i.e., cwd or its ancestors). This prevents false positives when running
+                # from a symlinked directory while still catching security issues with
+                # unrelated symlinked directories.
+                if file_under_cwd:
+                    try:
+                        current_resolved = current.resolve()
+                        # Check if the symlink is cwd itself or an ancestor of cwd
+                        # by verifying that resolved_cwd is under current_resolved
+                        try:
+                            resolved_cwd.relative_to(current_resolved)
+                            # current is cwd or an ancestor of cwd - acceptable
+                            current = current.parent
+                            continue
+                        except ValueError:
+                            # current is NOT in the cwd path - reject it
+                            pass
+                    except (OSError, RuntimeError):
+                        pass
+
+                # This is a symlink that's not part of the cwd path - reject it
+                msg = (
+                    f"Symlink validation failed: path contains symlink at '{current}'. "
+                    "Expected: regular file path without symlinks."
+                )
+                raise SecurityValidationError(msg)
+
+            current = current.parent
 
     except (OSError, RuntimeError) as e:
         msg = f"Symlink validation failed: error while validating path. Details: {e}"
@@ -254,8 +263,8 @@ def validate_pptx_structure(file_path: Path | str) -> None:
     - Ensures all XML content is valid UTF-8 (standard for Office-generated PPTX)
     - Rejects files with suspicious non-UTF-8 encodings
 
-    **Layer 5: defusedxml Parsing**
-    - Final validation using defusedxml library
+    **Layer 5: Secure XML Parsing**
+    - Final validation using secure XML parser (lxml with resolve_entities=False)
     - Automatically prevents XXE and entity expansion attacks
     - Only executes after all previous layers pass
 
@@ -294,9 +303,7 @@ def validate_pptx_structure(file_path: Path | str) -> None:
             # Check all XML files in the PPTX
             for file_info in zf.infolist():
                 if file_info.filename.endswith(".xml") or file_info.filename.endswith(".rels"):
-                    # Per-entry size check (10MB limit): Prevents oversized XML entries
-                    # from being loaded into memory before defusedxml parsing.
-                    # This provides defense-in-depth against zip bombs and resource exhaustion.
+                    # Per-entry size check (10MB limit)
                     if file_info.file_size > MAX_ENTRY_SIZE:
                         msg = (
                             f"XML entry size limit exceeded: file '{file_info.filename}' has "
@@ -307,9 +314,7 @@ def validate_pptx_structure(file_path: Path | str) -> None:
                         )
                         raise FileSizeLimitError(msg)
 
-                    # Compression anomaly detection: Detect suspicious entries where
-                    # compress_size==0 but file_size>0, which may indicate corrupted
-                    # archive or zip bomb attempt.
+                    # Compression anomaly detection
                     if file_info.compress_size == 0 and file_info.file_size > 0:
                         msg = (
                             f"Compression anomaly detected: file '{file_info.filename}' has "
@@ -322,11 +327,7 @@ def validate_pptx_structure(file_path: Path | str) -> None:
 
                     content = zf.read(file_info.filename)
 
-                    # Detect entity declarations (Billion Laughs attack, entity expansion)
-                    # Standard PPTX files don't contain <!ENTITY>, so if present,
-                    # it indicates malicious modification.
-                    # Limitation: Bypasses using non-UTF-8 encoding are not detectable,
-                    # but Office products generate PPTX in UTF-8, so this is acceptable for CLI use.
+                    # Detect entity declarations (Billion Laughs attack)
                     if entity_pattern.search(content):
                         msg = (
                             f"XML security validation failed: malicious entity declaration "
@@ -336,9 +337,6 @@ def validate_pptx_structure(file_path: Path | str) -> None:
                         raise SecurityValidationError(msg)
 
                     # Detect XXE (external entity references)
-                    # <!DOCTYPE> itself is legitimately used in some XML, so we detect
-                    # external entity references by the combination with SYSTEM keyword.
-                    # This prevents file system access and network requests.
                     if doctype_pattern.search(content) and system_pattern.search(content):
                         msg = (
                             f"XML security validation failed: external entity reference (XXE) "
@@ -347,8 +345,7 @@ def validate_pptx_structure(file_path: Path | str) -> None:
                         )
                         raise SecurityValidationError(msg)
 
-                    # Defense-in-depth: validate via defusedxml parser
-                    # after regex pre-checks pass.
+                    # Defense-in-depth: validate via secure XML parser
                     try:
                         decoded_content = content.decode("utf-8")
                     except UnicodeDecodeError as e:
@@ -362,7 +359,7 @@ def validate_pptx_structure(file_path: Path | str) -> None:
 
                     if not validate_xml_safety(decoded_content):
                         msg = (
-                            f"XML security validation failed: defusedxml detected "
+                            f"XML security validation failed: secure XML parser detected "
                             f"a potential threat in '{file_info.filename}'. "
                             "Expected: XML without malicious patterns."
                         )

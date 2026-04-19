@@ -21,10 +21,12 @@ class TestShapesExceptionHandling:
     """Tests for shapes.py exception handling (line 260)."""
 
     @pytest.fixture
-    def presentation_with_slide(self) -> tuple[PresentationWrapper, SlideWrapper]:
+    def presentation_with_slide(
+        self, basic_template_path: str
+    ) -> tuple[PresentationWrapper, SlideWrapper]:
         """Create presentation and add a slide for testing."""
         wrapper = PresentationWrapper()
-        wrapper.load_template("tests/fixtures/basic-template.pptx")
+        wrapper.load_template(basic_template_path)
         layouts = wrapper.get_layouts()
         slide = wrapper.add_slide(layouts[0])
         return wrapper, slide
@@ -90,10 +92,12 @@ class TestSlideExceptionHandling:
     """Tests for slide.py exception handling (line 65)."""
 
     @pytest.fixture
-    def presentation_with_slide(self) -> tuple[PresentationWrapper, SlideWrapper]:
+    def presentation_with_slide(
+        self, basic_template_path: str
+    ) -> tuple[PresentationWrapper, SlideWrapper]:
         """Create presentation and add a slide for testing."""
         wrapper = PresentationWrapper()
-        wrapper.load_template("tests/fixtures/basic-template.pptx")
+        wrapper.load_template(basic_template_path)
         layouts = wrapper.get_layouts()
         slide = wrapper.add_slide(layouts[0])
         return wrapper, slide

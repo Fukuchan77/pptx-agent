@@ -13,16 +13,16 @@ class TestPptxStructureSizeLimits:
     """Test cases for per-entry size limits in validate_pptx_structure.
 
     These tests verify that validate_pptx_structure() rejects oversized XML
-    entries BEFORE calling defusedxml parser, preventing memory exhaustion.
+    entries BEFORE calling secure XML parser, preventing memory exhaustion.
 
     Requirements: 2.4.1, 2.4.2, 2.4.3, 2.4.4 from spec.md
     """
 
-    def test_rejects_oversized_xml_entry_before_defusedxml(self, tmp_path: Path) -> None:
-        """Test that oversized XML entry is rejected before defusedxml parsing.
+    def test_rejects_oversized_xml_entry_before_parser(self, tmp_path: Path) -> None:
+        """Test that oversized XML entry is rejected before XML parsing.
 
         Requirement 2.4.1, 2.4.4: Per-entry size limit (10MB) enforced before
-        defusedxml parser is called.
+        secure XML parser is called.
         """
         pptx_path = tmp_path / "oversized_entry.pptx"
 

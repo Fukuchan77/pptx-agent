@@ -4,7 +4,7 @@ import logging
 
 import pytest
 
-from pptx_agent.agents.content_generator import parse_chart_data
+from pptx_agent.agents.content_generator import _parse_chart_data
 
 
 class TestChartDataParsingRobustness:
@@ -21,7 +21,7 @@ class TestChartDataParsingRobustness:
 
         # Act
         with caplog.at_level(logging.WARNING):
-            result = parse_chart_data(content, placeholder_name, title)
+            result = _parse_chart_data(content, placeholder_name, title)
 
         # Assert - warning should be logged
         assert len(caplog.records) == 1
@@ -47,7 +47,7 @@ class TestChartDataParsingRobustness:
 
         # Act
         with caplog.at_level(logging.WARNING):
-            result = parse_chart_data(content, placeholder_name, title)
+            result = _parse_chart_data(content, placeholder_name, title)
 
         # Assert - two warnings should be logged
         assert len(caplog.records) == 2
@@ -72,7 +72,7 @@ class TestChartDataParsingRobustness:
 
         # Act
         with caplog.at_level(logging.WARNING):
-            result = parse_chart_data(content, placeholder_name, title)
+            result = _parse_chart_data(content, placeholder_name, title)
 
         # Assert - warning should be logged for empty value
         assert len(caplog.records) >= 1
@@ -93,7 +93,7 @@ class TestChartDataParsingRobustness:
 
         # Act
         with caplog.at_level(logging.WARNING):
-            result = parse_chart_data(content, placeholder_name, title)
+            result = _parse_chart_data(content, placeholder_name, title)
 
         # Assert - no warnings should be logged
         assert len(caplog.records) == 0
@@ -113,7 +113,7 @@ class TestChartDataParsingRobustness:
 
         # Act
         with caplog.at_level(logging.WARNING):
-            result = parse_chart_data(content, placeholder_name, title)
+            result = _parse_chart_data(content, placeholder_name, title)
 
         # Assert - warning should contain the invalid value
         assert len(caplog.records) == 1

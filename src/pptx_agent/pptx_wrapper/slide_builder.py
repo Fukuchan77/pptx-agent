@@ -42,6 +42,14 @@ logger = logging.getLogger(__name__)
 SUPPORTED_IMAGE_FORMATS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".tif"}
 
 
+class _PathSecurityError(ValueError):
+    """Custom exception for path security violations.
+
+    Used to distinguish security-related path errors from general path errors,
+    avoiding string-based exception identification which is fragile and error-prone.
+    """
+
+
 def _validate_image_path(image_path: str) -> None:
     """Validate that image path is within current working directory or system temp directory.
 
@@ -76,12 +84,12 @@ def _validate_image_path(image_path: str) -> None:
                 f"or an absolute path that resolves to a location within the current working "
                 "directory."
             )
-            raise ValueError(msg)
+            raise _PathSecurityError(msg)
+    except _PathSecurityError:
+        # Re-raise security errors as-is without wrapping
+        raise
     except (OSError, ValueError) as e:
-        # Handle invalid paths or path resolution errors
-        if "outside" in str(e):
-            # Re-raise our security error
-            raise
+        # Handle invalid paths or path resolution errors (non-security)
         msg = (
             f"Invalid image path '{image_path}': {e}. "
             f"Please provide a valid path within the current working directory '{Path.cwd()}'."
