@@ -73,6 +73,9 @@ templates/smartart-test-template.pptx
 .env.*.local
 
 # AI coding work folders
+.bob/
+.claude/
 .sdd/
 .serena/
+.specify/
 specs/

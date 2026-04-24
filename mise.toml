@@ -18,6 +18,18 @@ run = "uv run pytest"
 description = "Run pytest with coverage report"
 run = "uv run pytest --cov=src/pptx_agent --cov-report=term-missing --cov-report=html"
 
+[tasks."test-qa"]
+description = "Run QA module tests only"
+run = "uv run pytest tests/unit/qa tests/integration/test_qa*.py -v"
+
+[tasks."test-fixer"]
+description = "Run fixer module tests only"
+run = "uv run pytest tests/unit/fixer tests/integration/test_fix*.py -v"
+
+[tasks."test-cache"]
+description = "Run cache module tests only"
+run = "uv run pytest tests/unit/cache -v"
+
 [tasks.lint]
 description = "Run ruff linter checks"
 run = "uv run ruff check ."
