@@ -15,6 +15,7 @@ from pptx import Presentation
 from pptx.enum.shapes import PP_PLACEHOLDER_TYPE
 from pptx.slide import SlideLayout
 
+from pptx_agent.cache import CacheManager
 from pptx_agent.constants import (
     CHAR_WIDTH_INCHES,
     DEFAULT_PLACEHOLDER_CHARS,
@@ -33,7 +34,11 @@ class TemplateParser:
     """Parser for extracting metadata from PowerPoint templates.
 
     Extracts information about slide layouts, placeholders, and their
-    properties from PPTX template files.
+    properties from PPTX template files. Supports caching for improved
+    performance with repeated template use.
+
+    Attributes:
+        cache_manager: Optional cache manager for template manifest caching
     """
 
     # Mapping of python-pptx placeholder types to string names
@@ -60,7 +65,20 @@ class TemplateParser:
         PP_PLACEHOLDER_TYPE.MIXED: "MIXED",
     }
 
-    def parse_template(self, template_path: str) -> TemplateMetadata:
+    def __init__(self, cache_manager: CacheManager | None = None) -> None:
+        """Initialize template parser.
+
+        Args:
+            cache_manager: Optional cache manager for manifest caching.
+                          If None, caching is disabled.
+        """
+        self.cache_manager = cache_manager
+
+    def parse_template(
+        self,
+        template_path: str,
+        use_cache: bool = True,
+    ) -> TemplateMetadata:
         """Parse a PowerPoint template and extract metadata.
 
         Args:

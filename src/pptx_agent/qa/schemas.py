@@ -1,8 +1,9 @@
 """QA schemas for quality issue reporting."""
 
 from enum import StrEnum
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_serializer
 
 
 class Severity(StrEnum):
@@ -36,7 +37,7 @@ class QAIssue(BaseModel):
     severity: Severity
     slide_index: int = Field(..., ge=0, description="Zero-based slide index")
     shape_index: int | None = Field(
-        None,
+        default=None,
         ge=0,
         description="Zero-based shape index if applicable",
     )
@@ -46,7 +47,7 @@ class QAIssue(BaseModel):
         description="Whether issue can be auto-fixed",
     )
     suggested_fix: str | None = Field(
-        None,
+        default=None,
         description="Suggested manual fix if not auto-fixable",
     )
 
@@ -74,7 +75,32 @@ class QAReport(BaseModel):
         ge=0,
         description="Number of fix loop iterations",
     )
-    passed: bool = Field(default=True, description="True if error_count == 0")
+
+    @property
+    def passed(self) -> bool:
+        """Check if QA passed (no errors).
+
+        Returns:
+            True if error_count == 0, False otherwise
+        """
+        return self.error_count == 0
+
+    @model_serializer
+    def serialize_model(self) -> dict[str, Any]:
+        """Serialize model including computed properties.
+
+        Returns:
+            Dictionary with all fields including passed property
+        """
+        return {
+            "total_issues": self.total_issues,
+            "error_count": self.error_count,
+            "warning_count": self.warning_count,
+            "info_count": self.info_count,
+            "issues": [issue.model_dump() for issue in self.issues],
+            "fix_iterations": self.fix_iterations,
+            "passed": self.passed,
+        }
 
     def to_json(self) -> str:
         """Serialize to JSON string for machine processing.

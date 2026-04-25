@@ -99,6 +99,7 @@ ignore = [
     "ANN201",  # Missing return type annotation for public function
     "PLR2004", # Magic value used in comparison
     "ARG001",  # Unused function argument
+    "ARG002",  # Unused method argument (mock methods must match interface signatures)
     "PLC0415", # Import outside top-level (lazy imports in tests are ok)
     "SLF001",  # Private member access (necessary for testing internals)
     "PT017",   # Assertions in except blocks (acceptable test pattern)
@@ -124,7 +125,7 @@ ignore = [
 "src/pptx_agent/pptx_wrapper/shapes.py" = ["SLF001", "S110", "SIM105"]  # Private XML access, defensive error handling
 "src/pptx_agent/pptx_wrapper/slide.py" = ["PLR0912", "S110"]  # Complex placeholder matching logic
 "src/pptx_agent/pptx_wrapper/smartart.py" = ["ARG004", "SIM102", "TRY301", "B904", "PLR0912", "PLR0915", "SLF001"]  # NotImplementedError stub, complex XML parsing
-"src/pptx_agent/template_parser/parser.py" = ["ANN001"]  # python-pptx types not annotatable
+"src/pptx_agent/template_parser/parser.py" = ["ANN001", "ARG002"]  # python-pptx types not annotatable; use_cache reserved for future API
 "src/pptx_agent/validators.py" = ["ARG001"]  # Future expansion placeholder
 "src/pptx_agent/validators/content_validator.py" = ["ARG001", "PLR0911", "PLR0912"]  # Validator complexity
 "src/pptx_agent/validators/file_validator.py" = ["ARG001", "PLR0911"]  # Validator complexity
