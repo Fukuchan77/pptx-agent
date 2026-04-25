@@ -247,6 +247,18 @@ Examples:
     )
 
     parser.add_argument(
+        "-l",
+        "--language",
+        type=str,
+        choices=["en", "ja"],
+        metavar="LANG",
+        help=(
+            "Language override for capacity calculations: 'en' for English, "
+            "'ja' for Japanese (auto-detected if not specified)"
+        ),
+    )
+
+    parser.add_argument(
         "--autofix",
         action="store_true",
         help="Enable automatic issue fixing (experimental)",
@@ -301,9 +313,11 @@ def qa_command(args: argparse.Namespace) -> int:
 
         if args.verbose:
             print("Running QA validation...")
+            if args.language:
+                print(f"Language override: {args.language}")
 
-        # Run QA validation
-        engine = QAEngine()
+        # Run QA validation with optional language override
+        engine = QAEngine(language=args.language)
         report = engine.validate(wrapper)
 
         if args.verbose:
@@ -320,7 +334,12 @@ def qa_command(args: argparse.Namespace) -> int:
             # when FixEngine is fully integrated with QA workflow
 
         # Generate report output
-        report_content = report.to_markdown() if args.format == "markdown" else report.to_json()
+        if args.format == "markdown":
+            # Pass language to markdown report for localized labels
+            report_language = args.language if args.language else "en"
+            report_content = report.to_markdown(language=report_language)
+        else:
+            report_content = report.to_json()
 
         # Output report
         if args.report:

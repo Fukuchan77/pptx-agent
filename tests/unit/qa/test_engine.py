@@ -52,7 +52,11 @@ def mock_presentation() -> Mock:
     Returns:
         Mock PresentationWrapper instance
     """
-    return Mock(spec=PresentationWrapper)
+    mock = Mock(spec=PresentationWrapper)
+    # Language detection short-circuits when is_loaded is False,
+    # avoiding iteration of prs.slides (which is a non-iterable Mock).
+    mock.is_loaded = False
+    return mock
 
 
 @pytest.fixture

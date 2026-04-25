@@ -1,7 +1,7 @@
 """QA schemas for quality issue reporting."""
 
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_serializer
 
@@ -18,6 +18,43 @@ class Severity(StrEnum):
     ERROR = "error"
     WARNING = "warning"
     INFO = "info"
+
+
+# Translation dictionaries for common QA messages
+_TRANSLATIONS = {
+    "en": {
+        "qa_report": "QA Report",
+        "summary": "Summary",
+        "status": "Status",
+        "passed": "PASSED",
+        "failed": "FAILED",
+        "total_issues": "Total Issues",
+        "errors": "Errors",
+        "warnings": "Warnings",
+        "info": "Info",
+        "fix_iterations": "Fix Iterations",
+        "slide": "Slide",
+        "shape": "Shape",
+        "auto_fixable": "auto-fixable",
+        "suggested_fix": "Suggested fix",
+    },
+    "ja": {
+        "qa_report": "品質保証レポート",
+        "summary": "概要",
+        "status": "ステータス",
+        "passed": "合格",
+        "failed": "不合格",
+        "total_issues": "問題総数",
+        "errors": "エラー",
+        "warnings": "警告",
+        "info": "情報",
+        "fix_iterations": "修正回数",
+        "slide": "スライド",
+        "shape": "図形",
+        "auto_fixable": "自動修正可能",
+        "suggested_fix": "推奨される修正",
+    },
+}
 
 
 class QAIssue(BaseModel):
@@ -110,48 +147,54 @@ class QAReport(BaseModel):
         """
         return self.model_dump_json(indent=2)
 
-    def to_markdown(self) -> str:
-        """Generate human-readable Markdown report.
+    def to_markdown(self, language: Literal["ja", "en"] = "en") -> str:
+        """Generate human-readable Markdown report with language support.
+
+        Args:
+            language: Language for report labels ("en" or "ja")
 
         Returns:
             Markdown formatted report string
         """
-        lines = ["# QA Report", ""]
+        t = _TRANSLATIONS[language]
+        lines = [f"# {t['qa_report']}", ""]
 
         # Summary section
-        lines.append("## Summary")
-        lines.append(f"- **Status**: {'✅ PASSED' if self.passed else '❌ FAILED'}")
-        lines.append(f"- **Total Issues**: {self.total_issues}")
-        lines.append(f"- **Errors**: {self.error_count}")
-        lines.append(f"- **Warnings**: {self.warning_count}")
-        lines.append(f"- **Info**: {self.info_count}")
+        lines.append(f"## {t['summary']}")
+        status_text = t["passed"] if self.passed else t["failed"]
+        status_emoji = "✅" if self.passed else "❌"
+        lines.append(f"- **{t['status']}**: {status_emoji} {status_text}")
+        lines.append(f"- **{t['total_issues']}**: {self.total_issues}")
+        lines.append(f"- **{t['errors']}**: {self.error_count}")
+        lines.append(f"- **{t['warnings']}**: {self.warning_count}")
+        lines.append(f"- **{t['info']}**: {self.info_count}")
         if self.fix_iterations > 0:
-            lines.append(f"- **Fix Iterations**: {self.fix_iterations}")
+            lines.append(f"- **{t['fix_iterations']}**: {self.fix_iterations}")
         lines.append("")
 
         # Issues by severity
         if self.error_count > 0:
-            lines.append("## \u274c Errors")
+            lines.append(f"## \u274c {t['errors']}")
             lines.extend(
-                self._format_issue(issue)
+                self._format_issue(issue, language)
                 for issue in self.issues
                 if issue.severity == Severity.ERROR
             )
             lines.append("")
 
         if self.warning_count > 0:
-            lines.append("## \u26a0\ufe0f Warnings")
+            lines.append(f"## \u26a0\ufe0f {t['warnings']}")
             lines.extend(
-                self._format_issue(issue)
+                self._format_issue(issue, language)
                 for issue in self.issues
                 if issue.severity == Severity.WARNING
             )
             lines.append("")
 
         if self.info_count > 0:
-            lines.append("## \u2139\ufe0f Info")
+            lines.append(f"## \u2139\ufe0f {t['info']}")
             lines.extend(
-                self._format_issue(issue)
+                self._format_issue(issue, language)
                 for issue in self.issues
                 if issue.severity == Severity.INFO
             )
@@ -159,24 +202,26 @@ class QAReport(BaseModel):
 
         return "\n".join(lines)
 
-    def _format_issue(self, issue: QAIssue) -> str:
-        """Format a single issue for Markdown output.
+    def _format_issue(self, issue: QAIssue, language: Literal["ja", "en"] = "en") -> str:
+        """Format a single issue for Markdown output with language support.
 
         Args:
             issue: QA issue to format
+            language: Language for labels ("en" or "ja")
 
         Returns:
             Formatted issue string
         """
-        location = f"Slide {issue.slide_index + 1}"
+        t = _TRANSLATIONS[language]
+        location = f"{t['slide']} {issue.slide_index + 1}"
         if issue.shape_index is not None:
-            location += f", Shape {issue.shape_index + 1}"
+            location += f", {t['shape']} {issue.shape_index + 1}"
 
-        fix_info = " (auto-fixable)" if issue.auto_fixable else ""
+        fix_info = f" ({t['auto_fixable']})" if issue.auto_fixable else ""
         result = f"- **[{issue.rule_id}]** {location}: {issue.message}{fix_info}"
 
         if issue.suggested_fix and not issue.auto_fixable:
-            result += f"\n  - *Suggested fix*: {issue.suggested_fix}"
+            result += f"\n  - *{t['suggested_fix']}*: {issue.suggested_fix}"
 
         return result
 

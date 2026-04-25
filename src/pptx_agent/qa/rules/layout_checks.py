@@ -9,33 +9,47 @@ This module implements layout-related quality checks including:
 - Minimum font size detection (QA-L-006)
 """
 
-from typing import Any
+from typing import Any, Literal, cast
 
 from pptx.enum.shapes import MSO_SHAPE_TYPE, PP_PLACEHOLDER_TYPE
 from pptx.util import Pt
 
 from pptx_agent.pptx_wrapper.presentation import PresentationWrapper
 from pptx_agent.qa.schemas import QAIssue, Severity
+from pptx_agent.utils.language_detector import detect_language
+from pptx_agent.utils.text_capacity import calculate_effective_capacity
 
 # Text overflow threshold in characters
 _TEXT_OVERFLOW_CHAR_THRESHOLD = 500
 
 
 class TextOverflowRule:
-    """QA-L-001: Detect text frame overflow.
+    """QA-L-001: Detect text frame overflow with language-aware capacity checks.
 
     Checks if text content exceeds the bounds of text frames, which can
     cause text to be cut off or display incorrectly in presentations.
+    Uses language detection to apply appropriate capacity multipliers
+    (0.55x for Japanese, 1.0x for English).
 
     Attributes:
         rule_id: Unique identifier "QA-L-001"
         description: Human-readable description
         auto_fixable: True - can be fixed via font reduction or summarization
+        language: Optional language override ("ja" or "en")
     """
 
     rule_id = "QA-L-001"
-    description = "Detect text overflow in text frames"
+    description = "Detect text overflow in text frames (language-aware)"
     auto_fixable = True
+
+    def __init__(self, language: Literal["ja", "en"] | None = None) -> None:
+        """Initialize rule with optional language override.
+
+        Args:
+            language: Optional language override ("ja" or "en").
+                     If None, language is auto-detected per text frame.
+        """
+        self.language = language
 
     def validate(self, presentation: PresentationWrapper) -> list[QAIssue]:
         """Validate presentation for text overflow issues.
@@ -57,11 +71,25 @@ class TextOverflowRule:
                 if not hasattr(shape, "text_frame") or not shape.has_text_frame:
                     continue
 
-                # Check if text overflows
-                # In python-pptx, we can detect overflow by checking if text
-                # exceeds reasonable bounds based on shape dimensions
-                if self._has_text_overflow(shape):
-                    text_frame = shape.text_frame  # type: ignore[attr-defined]
+                # Check if text overflows using language-aware capacity
+                text_frame = shape.text_frame  # type: ignore[attr-defined]
+                text = text_frame.text
+
+                # Detect language for this text frame (use override if provided)
+                if self.language is not None:
+                    detected_lang = self.language
+                else:
+                    detected_lang = detect_language(text)
+
+                # Cast to help type checker (detect_language returns Literal["ja", "en"])
+                lang = cast("Literal['ja', 'en']", detected_lang)
+
+                if self._has_text_overflow(shape, lang):
+                    # Calculate effective capacity for better error message
+                    effective_capacity = calculate_effective_capacity(
+                        _TEXT_OVERFLOW_CHAR_THRESHOLD, lang
+                    )
+
                     issues.append(
                         QAIssue(
                             rule_id=self.rule_id,
@@ -70,7 +98,9 @@ class TextOverflowRule:
                             shape_index=shape_idx,
                             message=(
                                 f"Text overflow detected in text frame "
-                                f"(estimated {len(text_frame.text)} characters)"
+                                f"({len(text)} characters, "
+                                f"effective capacity: {effective_capacity} "
+                                f"for {lang.upper()} text)"
                             ),
                             auto_fixable=True,
                             suggested_fix="Reduce font size, switch layout, or summarize content",
@@ -79,11 +109,12 @@ class TextOverflowRule:
 
         return issues
 
-    def _has_text_overflow(self, shape: Any) -> bool:
-        """Check if shape has text overflow.
+    def _has_text_overflow(self, shape: Any, language: Literal["ja", "en"]) -> bool:
+        """Check if shape has text overflow using language-aware capacity.
 
         Args:
             shape: Shape to check
+            language: Language of the text ("ja" or "en")
 
         Returns:
             True if text overflows, False otherwise
@@ -92,12 +123,13 @@ class TextOverflowRule:
             text_frame = shape.text_frame
             text = text_frame.text
 
-            # Simple heuristic: if text is very long relative to shape size,
-            # it likely overflows. This is a simplified check.
-            # In production, we'd use more sophisticated capacity calculations.
+            # Calculate effective capacity based on language
+            effective_capacity = calculate_effective_capacity(
+                _TEXT_OVERFLOW_CHAR_THRESHOLD, language
+            )
 
-            # Rough estimate: threshold characters is a lot for most text frames
-            if len(text) > _TEXT_OVERFLOW_CHAR_THRESHOLD:
+            # Check if text exceeds language-aware capacity
+            if len(text) > effective_capacity:
                 return True
 
             # Check if shape has overflow method (custom implementation)
