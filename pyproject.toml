@@ -116,6 +116,7 @@ ignore = [
 ]
 "src/pptx_agent/config.py" = ["PLW0603", "PYI063", "ANN001"]  # Global singleton, pydantic hooks
 "src/pptx_agent/main.py" = ["T201", "PLR0911", "PLR0912"]  # CLI uses print, many error returns, complex routing
+"src/pptx_agent/interfaces/cli.py" = ["T201", "PLR0912", "PLR0915"]  # CLI uses print, complex routing with many branches
 "src/pptx_agent/pipeline.py" = ["PLR0913", "PLR0915"]  # Core pipeline needs many arguments and statements
 "src/pptx_agent/pptx_wrapper/slide_builder.py" = ["TRY301"]  # Security validation needs direct raises
 "src/pptx_agent/agents/content_generator.py" = ["ARG001"]  # Unused args required for API parity

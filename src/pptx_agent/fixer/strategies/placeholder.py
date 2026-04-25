@@ -83,7 +83,7 @@ class PlaceholderPopulationStrategy:
                     message="Placeholder has no text frame",
                 )
 
-            text_frame = getattr(shape, "text_frame")
+            text_frame = shape.text_frame  # type: ignore[attr-defined]
 
             # Check if already has content
             if text_frame.text.strip():

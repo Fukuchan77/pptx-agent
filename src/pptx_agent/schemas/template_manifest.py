@@ -84,3 +84,14 @@ class TemplateManifest(BaseModel):
             if layout.name == name:
                 return layout
         return None
+
+    def to_json(self, indent: int = 2) -> str:
+        """Export manifest as JSON string.
+
+        Args:
+            indent: Number of spaces for indentation (default: 2)
+
+        Returns:
+            JSON string representation of the manifest
+        """
+        return self.model_dump_json(indent=indent)

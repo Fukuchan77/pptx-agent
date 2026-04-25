@@ -94,7 +94,7 @@ class FontReductionStrategy:
                     message="Shape has no text frame",
                 )
 
-            text_frame = getattr(shape, "text_frame")
+            text_frame = shape.text_frame  # type: ignore[attr-defined]
             changes_made: list[str] = []
             all_at_minimum = True
 
@@ -293,7 +293,7 @@ class ContentSummarizationStrategy:
                     message="Shape has no text frame",
                 )
 
-            text_frame = getattr(shape, "text_frame")
+            text_frame = shape.text_frame  # type: ignore[attr-defined]
             original_text = text_frame.text
 
             # Check if text is already short

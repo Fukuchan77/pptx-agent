@@ -61,7 +61,7 @@ class TextOverflowRule:
                 # In python-pptx, we can detect overflow by checking if text
                 # exceeds reasonable bounds based on shape dimensions
                 if self._has_text_overflow(shape):
-                    text_frame = getattr(shape, "text_frame")
+                    text_frame = shape.text_frame  # type: ignore[attr-defined]
                     issues.append(
                         QAIssue(
                             rule_id=self.rule_id,
@@ -475,7 +475,7 @@ class MinimumFontSizeRule:
                     continue
 
                 # Check font sizes in text frame
-                if self._has_small_font(getattr(shape, "text_frame")):
+                if self._has_small_font(shape.text_frame):  # type: ignore[attr-defined]
                     issues.append(
                         QAIssue(
                             rule_id=self.rule_id,

@@ -66,7 +66,7 @@ class StyleResetStrategy:
                     message="Shape has no text frame",
                 )
 
-            text_frame = getattr(shape, "text_frame")
+            text_frame = shape.text_frame  # type: ignore[attr-defined]
             changes_made: list[str] = []
 
             # Get master slide defaults
@@ -83,7 +83,7 @@ class StyleResetStrategy:
                 try:
                     for master_shape in master.shapes:
                         if hasattr(master_shape, "text_frame") and master_shape.has_text_frame:
-                            master_tf = getattr(master_shape, "text_frame")
+                            master_tf = master_shape.text_frame  # type: ignore[attr-defined]
                             if hasattr(master_tf, "paragraphs") and master_tf.paragraphs:
                                 first_para = master_tf.paragraphs[0]
                                 if hasattr(first_para, "runs") and first_para.runs:
