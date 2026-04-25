@@ -5,7 +5,14 @@ detecting issues like text overflow, empty placeholders, and style violations.
 """
 
 from pptx_agent.qa.engine import QAEngine
-from pptx_agent.qa.rules import QARule, QARuleRegistry, get_global_registry
+
+# Import to auto-register default rules
+from pptx_agent.qa.rules import (
+    QARule,
+    QARuleRegistry,
+    get_global_registry,
+    register_defaults,  # noqa: F401  # pyright: ignore[reportUnusedImport]
+)
 from pptx_agent.qa.schemas import QAIssue, QAReport, Severity
 
 __all__ = [

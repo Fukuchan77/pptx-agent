@@ -40,6 +40,30 @@ class PresentationWrapper:
         self._template_path = str(validated_path)
 
     @property
+    def is_loaded(self) -> bool:
+        """Return True if a template has been loaded.
+
+        Returns:
+            True if a template is loaded, False otherwise
+        """
+        return self._prs is not None
+
+    @property
+    def prs(self) -> "Presentation":
+        """Return the underlying python-pptx Presentation object.
+
+        Returns:
+            The underlying Presentation object
+
+        Raises:
+            ValueError: If template not loaded
+        """
+        if self._prs is None:
+            msg = "Template must be loaded"
+            raise ValueError(msg)
+        return self._prs
+
+    @property
     def core_properties(self) -> Any:
         """Return core properties of the presentation.
 
