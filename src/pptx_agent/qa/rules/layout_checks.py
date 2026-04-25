@@ -40,6 +40,7 @@ class TextOverflowRule:
 
     rule_id = "QA-L-001"
     description = "Detect text overflow in text frames (language-aware)"
+    severity = "error"
     auto_fixable = True
 
     def __init__(self, language: Literal["ja", "en"] | None = None) -> None:
@@ -156,6 +157,7 @@ class EmptyPlaceholderRule:
 
     rule_id = "QA-L-002"
     description = "Detect empty title placeholders"
+    severity = "error"
     auto_fixable = True
 
     def validate(self, presentation: PresentationWrapper) -> list[QAIssue]:
@@ -228,6 +230,7 @@ class UnpopulatedPlaceholderRule:
 
     rule_id = "QA-L-003"
     description = "Detect unpopulated required placeholders"
+    severity = "warning"
     auto_fixable = False
 
     def validate(self, presentation: PresentationWrapper) -> list[QAIssue]:
@@ -315,6 +318,7 @@ class OverlappingObjectsRule:
 
     rule_id = "QA-L-004"
     description = "Detect overlapping objects via bounding box intersection"
+    severity = "warning"
     auto_fixable = False
 
     def validate(self, presentation: PresentationWrapper) -> list[QAIssue]:
@@ -399,6 +403,7 @@ class BoundaryOverflowRule:
 
     rule_id = "QA-L-005"
     description = "Detect objects extending beyond slide boundary"
+    severity = "warning"
     auto_fixable = True
 
     def validate(self, presentation: PresentationWrapper) -> list[QAIssue]:
@@ -477,6 +482,7 @@ class MinimumFontSizeRule:
 
     rule_id = "QA-L-006"
     description = "Detect font sizes below minimum threshold"
+    severity = "warning"
     auto_fixable = False
 
     def __init__(self, min_font_size: float = 10.0) -> None:

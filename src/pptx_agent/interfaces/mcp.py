@@ -26,7 +26,9 @@ logger = logging.getLogger(__name__)
 MCP_TOOLS = [
     {
         "name": "analyze_template",
-        "description": "Analyze a PowerPoint template and generate a manifest with layout information",
+        "description": (
+            "Analyze a PowerPoint template and generate a manifest with layout information"
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -99,7 +101,9 @@ MCP_TOOLS = [
                 "language": {
                     "type": "string",
                     "enum": ["en", "ja"],
-                    "description": "Language for capacity calculations (auto-detected if not specified)",
+                    "description": (
+                        "Language for capacity calculations (auto-detected if not specified)"
+                    ),
                 },
                 "format": {
                     "type": "string",
@@ -128,7 +132,11 @@ async def handle_analyze_template(arguments: dict[str, Any]) -> dict[str, Any]:
     language: Literal["en", "ja"] = arguments.get("language", "en")  # type: ignore[assignment]
     use_cache = arguments.get("use_cache", True)
 
-    if not template_path.exists():
+    # Note: Using sync Path.exists() in async context is acceptable here because:
+    # 1. File existence check is fast
+    # 2. This is a validation step before main processing
+    # 3. Keeps code simple without async file I/O dependencies
+    if not template_path.exists():  # noqa: ASYNC240
         return {
             "success": False,
             "error": f"Template file not found: {template_path}",
@@ -145,11 +153,11 @@ async def handle_analyze_template(arguments: dict[str, Any]) -> dict[str, Any]:
             manifest_dict = cache_manager.get_manifest(template_path)
             if manifest_dict:
                 cache_hit = True
-                logger.info(f"Cache hit for template: {template_path}")
+                logger.info("Cache hit for template: %s", template_path)
 
         # Parse template if not cached
         if manifest_dict is None:
-            logger.info(f"Analyzing template: {template_path}")
+            logger.info("Analyzing template: %s", template_path)
             parser = TemplateParser()
             template_metadata = parser.parse_template(str(template_path))
 
@@ -165,7 +173,7 @@ async def handle_analyze_template(arguments: dict[str, Any]) -> dict[str, Any]:
             # Cache manifest (unless disabled)
             if use_cache:
                 cache_manager.set_manifest(template_path, manifest_dict)
-                logger.info(f"Cached manifest for: {template_path}")
+                logger.info("Cached manifest for: %s", template_path)
 
         return {
             "success": True,
@@ -174,7 +182,7 @@ async def handle_analyze_template(arguments: dict[str, Any]) -> dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"Template analysis failed: {e}")
+        logger.exception("Template analysis failed")
         return {
             "success": False,
             "error": str(e),
@@ -198,7 +206,7 @@ async def handle_generate_presentation(arguments: dict[str, Any]) -> dict[str, A
     autofix_enabled = arguments.get("autofix_enabled", False)
 
     try:
-        logger.info(f"Generating presentation: {output_path}")
+        logger.info("Generating presentation: %s", output_path)
 
         # Generate presentation
         _, qa_report = await generate_presentation(
@@ -223,7 +231,7 @@ async def handle_generate_presentation(arguments: dict[str, Any]) -> dict[str, A
         }
 
     except Exception as e:
-        logger.error(f"Presentation generation failed: {e}")
+        logger.exception("Presentation generation failed")
         return {
             "success": False,
             "error": str(e),
@@ -243,14 +251,18 @@ async def handle_validate_presentation(arguments: dict[str, Any]) -> dict[str, A
     language: Literal["en", "ja"] | None = arguments.get("language")  # type: ignore[assignment]
     report_format = arguments.get("format", "json")
 
-    if not presentation_path.exists():
+    # Note: Using sync Path.exists() in async context is acceptable here because:
+    # 1. File existence check is fast
+    # 2. This is a validation step before main processing
+    # 3. Keeps code simple without async file I/O dependencies
+    if not presentation_path.exists():  # noqa: ASYNC240
         return {
             "success": False,
             "error": f"Presentation file not found: {presentation_path}",
         }
 
     try:
-        logger.info(f"Running QA on: {presentation_path}")
+        logger.info("Running QA on: %s", presentation_path)
 
         # Load presentation
         wrapper = PresentationWrapper()
@@ -274,7 +286,7 @@ async def handle_validate_presentation(arguments: dict[str, Any]) -> dict[str, A
         }
 
     except Exception as e:
-        logger.error(f"QA validation failed: {e}")
+        logger.exception("QA validation failed")
         return {
             "success": False,
             "error": str(e),
@@ -302,7 +314,8 @@ async def handle_tool_call(tool_name: str, arguments: dict[str, Any]) -> dict[st
     }
 
     if tool_name not in handlers:
-        raise ValueError(f"Unknown tool: {tool_name}")
+        msg = f"Unknown tool: {tool_name}"
+        raise ValueError(msg)
 
     return await handlers[tool_name](arguments)
 
@@ -322,19 +335,11 @@ def get_tool_definitions() -> list[dict[str, Any]]:
 # 3. Registering tools with the server
 # 4. Handling server lifecycle and communication
 #
-# Example (pseudocode):
-# ```python
-# from mcp import Server
-#
-# server = Server("pptx-agent")
-#
-# @server.tool()
-# async def analyze_template(template_path: str, language: str = "en") -> dict:
-#     return await handle_analyze_template({"template_path": template_path, "language": language})
-#
-# if __name__ == "__main__":
-#     server.run()
-# ```
+# Example pseudocode for MCP server setup:
+#   - Import: from mcp import Server
+#   - Create: server = Server("pptx-agent")
+#   - Register: @server.tool() decorator on async functions
+#   - Run: server.run() in main block
 
 
 # Made with Bob

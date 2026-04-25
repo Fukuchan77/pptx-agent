@@ -145,6 +145,36 @@ jobs:
           name: dist
           path: dist/
 
+  qa-module-test:
+    name: QA Module Tests
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run QA module unit tests
+        run: uv run pytest tests/unit/qa/ -v --tb=short
+
+      - name: Run fixer module unit tests
+        run: uv run pytest tests/unit/fixer/ -v --tb=short
+
+      - name: Run cache module unit tests
+        run: uv run pytest tests/unit/cache/ -v --tb=short
+
+      - name: Run QA integration tests
+        run: uv run pytest tests/integration/test_qa_only.py tests/integration/test_fix_loop.py -v --tb=short
+
   integration-test:
     name: Integration Tests
     runs-on: ubuntu-latest
@@ -202,7 +232,7 @@ jobs:
     name: All Checks Passed
     runs-on: ubuntu-latest
     needs:
-      [lint, typecheck, test, security, build, integration-test, coverage-check]
+      [lint, typecheck, test, security, build, qa-module-test, integration-test, coverage-check]
     steps:
       - name: All checks passed
         run: echo "✅ All CI checks passed successfully!"

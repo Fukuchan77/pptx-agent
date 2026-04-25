@@ -376,6 +376,159 @@ The system automatically handles text that doesn't fit:
 
 You don't need to do anything - the system handles this automatically.
 
+### Quality Assurance (QA) and Auto-Fix
+
+The system includes an automated quality assurance framework that inspects generated presentations for common issues and can automatically fix many of them.
+
+#### QA Features
+
+**Automatic QA Pass**: After generation, the system can automatically run quality checks:
+
+```bash
+uv run python -m pptx_agent.main \
+  --input my-content.txt \
+  --template templates/basic-template.pptx \
+  --output presentation.pptx \
+  --qa-report qa-report.json
+```
+
+**QA-Only Mode**: Validate existing presentations without regeneration:
+
+```bash
+uv run python -m pptx_agent.interfaces.cli qa \
+  --input existing-presentation.pptx \
+  --output qa-report.json
+```
+
+#### What QA Checks For
+
+**Layout Issues (Error Severity)**:
+- Text overflow in placeholders
+- Empty title placeholders
+- Objects extending beyond slide boundaries
+- Font sizes below minimum threshold (default 10pt)
+
+**Content Issues (Warning Severity)**:
+- Bullet points exceeding recommended length
+- Duplicate slide titles
+- Unpopulated image placeholders
+- Pathological table dimensions (1×1 tables)
+- Missing chart data
+
+**Style Issues (Warning/Info Severity)**:
+- Off-template font usage
+- Off-template color usage
+- Invalid bullet indent levels
+
+#### Auto-Fix Capabilities
+
+Enable automatic issue remediation with the `--auto-fix` flag:
+
+```bash
+uv run python -m pptx_agent.main \
+  --input my-content.txt \
+  --template templates/basic-template.pptx \
+  --output presentation.pptx \
+  --auto-fix \
+  --max-fix-loops 3
+```
+
+**Fix Strategies**:
+
+1. **Text Overflow**:
+   - Reduces font size by 10% increments
+   - Switches to layout with larger placeholder
+   - Summarizes content using LLM
+
+2. **Empty Placeholders**:
+   - Populates titles from outline headers
+   - Adds default content for required fields
+
+3. **Style Violations**:
+   - Resets fonts to template master fonts
+   - Corrects bullet indent levels
+
+**Fix Loop**: The system iteratively applies fixes and re-runs QA until:
+- All fixable issues are resolved
+- Maximum iterations reached (default: 3)
+- No progress is made
+
+#### QA Report Formats
+
+**JSON Format** (machine-readable):
+```json
+{
+  "total_issues": 5,
+  "errors": 2,
+  "warnings": 3,
+  "info": 0,
+  "issues": [
+    {
+      "rule_id": "QA-L-001",
+      "severity": "Error",
+      "slide_index": 3,
+      "shape_index": 1,
+      "message": "Text overflow detected in title placeholder",
+      "auto_fixable": true
+    }
+  ]
+}
+```
+
+**Markdown Format** (human-readable):
+```markdown
+# QA Report
+
+## Summary
+- Total Issues: 5
+- Errors: 2
+- Warnings: 3
+- Info: 0
+
+## Issues
+
+### Error: Text Overflow (Slide 3, Shape 1)
+**Rule**: QA-L-001
+**Auto-fixable**: Yes
+Text overflow detected in title placeholder
+```
+
+#### CI Integration
+
+Use exit codes for continuous integration:
+
+```bash
+# Exit code 0 if no errors, 1 if errors found
+uv run python -m pptx_agent.interfaces.cli qa \
+  --input presentation.pptx \
+  --output qa-report.json
+
+# Check exit code
+if [ $? -eq 0 ]; then
+  echo "QA passed"
+else
+  echo "QA failed - see qa-report.json"
+  exit 1
+fi
+```
+
+#### Template Conformance Validation
+
+Validate presentations against template standards:
+
+```bash
+uv run python -m pptx_agent.interfaces.cli qa \
+  --input presentation.pptx \
+  --template templates/corporate-template.pptx \
+  --output qa-report.json
+```
+
+This checks:
+- Correct slide master binding
+- Template theme color usage
+- Template font usage
+- Layout conformance
+
 ## Template Requirements
 
 ### Minimum Requirements

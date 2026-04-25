@@ -25,6 +25,7 @@ class OffTemplateFontRule:
 
     rule_id = "QA-S-001"
     description = "Detect off-template font usage"
+    severity = "warning"
     auto_fixable = True
     category = "style"
 
@@ -99,6 +100,7 @@ class OffTemplateColorRule:
 
     rule_id = "QA-S-002"
     description = "Detect off-template theme color usage"
+    severity = "warning"
     auto_fixable = False
     category = "style"
 
@@ -141,6 +143,7 @@ class InvalidBulletIndentRule:
 
     rule_id = "QA-S-003"
     description = "Detect invalid bullet indent levels (> 4)"
+    severity = "warning"
     auto_fixable = True
     category = "style"
 
@@ -206,6 +209,7 @@ class TemplateConformanceRule:
 
     rule_id = "QA-S-004"
     description = "Validate template conformance"
+    severity = "error"
     auto_fixable = False
     category = "style"
 

@@ -2,6 +2,14 @@
 
 import contextlib
 
+from pptx_agent.qa.rules.content_checks import (
+    BulletLengthRule,
+    DuplicateTitleRule,
+    MissingChartDataRule,
+    PathologicalTableDimensionRule,
+    SpeakerNotesVerificationRule,
+    UnpopulatedImagePlaceholderRule,
+)
 from pptx_agent.qa.rules.layout_checks import (
     BoundaryOverflowRule,
     EmptyPlaceholderRule,
@@ -24,7 +32,8 @@ def register_default_rules() -> None:
 
     This function registers all built-in QA rules organized by category:
     - Layout checks: Text overflow, empty placeholders, overlapping objects, etc.
-    - Content checks: (to be added in future phases)
+    - Content checks: Bullet length, duplicate titles, image placeholders,
+      table dimensions, chart data, speaker notes
     - Style checks: Font conformance, color conformance, bullet indentation, template conformance
 
     The function is idempotent - calling it multiple times will not
@@ -50,6 +59,25 @@ def register_default_rules() -> None:
 
     with contextlib.suppress(ValueError):
         registry.register(MinimumFontSizeRule(), category="layout")
+
+    # Register content check rules
+    with contextlib.suppress(ValueError):
+        registry.register(BulletLengthRule(), category="content")
+
+    with contextlib.suppress(ValueError):
+        registry.register(DuplicateTitleRule(), category="content")
+
+    with contextlib.suppress(ValueError):
+        registry.register(UnpopulatedImagePlaceholderRule(), category="content")
+
+    with contextlib.suppress(ValueError):
+        registry.register(PathologicalTableDimensionRule(), category="content")
+
+    with contextlib.suppress(ValueError):
+        registry.register(MissingChartDataRule(), category="content")
+
+    with contextlib.suppress(ValueError):
+        registry.register(SpeakerNotesVerificationRule(), category="content")
 
     # Register style check rules
     with contextlib.suppress(ValueError):

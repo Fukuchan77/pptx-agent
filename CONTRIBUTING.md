@@ -409,6 +409,318 @@ mise run ci
 3. Update documentation if needed
 4. Test that everything still works
 
+## QA Framework Development
+
+### Overview
+
+The QA (Quality Assurance) framework provides automated validation and remediation of PowerPoint presentations. It consists of:
+
+- **QA Engine**: Rule-based validation system
+- **Fix Engine**: Automated issue remediation
+- **Rule Registry**: Extensible rule management
+- **Fix Strategy Registry**: Pluggable fix strategies
+
+### QA Rule Development
+
+#### Creating a New QA Rule
+
+Follow TDD workflow to create a new QA rule:
+
+1. **RED Phase**: Write failing test
+
+```python
+# tests/unit/qa/test_my_new_rule.py
+def test_my_new_rule_detects_issue():
+    """Test that MyNewRule detects the specific issue."""
+    # Arrange
+    from pptx_agent.qa.rules.my_category import MyNewRule
+    rule = MyNewRule()
+    
+    # Create test presentation with the issue
+    prs = create_test_presentation_with_issue()
+    
+    # Act
+    issues = rule.check(prs)
+    
+    # Assert
+    assert len(issues) == 1
+    assert issues[0].rule_id == "QA-X-NNN"
+    assert issues[0].severity == "error"
+```
+
+2. **GREEN Phase**: Implement minimal rule
+
+```python
+# src/pptx_agent/qa/rules/my_category.py
+from pptx_agent.qa.rules.base import QARule
+from pptx_agent.qa.schemas import QAIssue, Severity
+
+class MyNewRule(QARule):
+    """Detects specific issue in presentations."""
+    
+    rule_id = "QA-X-NNN"  # X = L/C/S, NNN = 3-digit number
+    severity = Severity.ERROR
+    auto_fixable = True  # or False
+    
+    def check(self, presentation: Presentation) -> list[QAIssue]:
+        """Check for the specific issue."""
+        issues = []
+        # Implement detection logic
+        return issues
+```
+
+3. **REFACTOR Phase**: Improve implementation
+
+#### QA Rule Naming Convention
+
+- **Format**: `QA-{CATEGORY}-{NUMBER}`
+- **Categories**:
+  - `L`: Layout rules (text overflow, placeholder usage)
+  - `C`: Content rules (missing content, invalid data)
+  - `S`: Style rules (font consistency, color compliance)
+- **Number**: 3-digit sequential (001, 002, 003...)
+
+Examples:
+- `QA-L-001`: Text overflow detection
+- `QA-C-001`: Missing required content
+- `QA-S-001`: Font consistency check
+
+#### QA Rule Requirements
+
+All QA rules MUST:
+
+1. **Inherit from QARule**: Use `pptx_agent.qa.rules.base.QARule`
+2. **Define rule_id**: Unique identifier following naming convention
+3. **Define severity**: `Severity.ERROR`, `Severity.WARNING`, or `Severity.INFO`
+4. **Define auto_fixable**: Boolean indicating if issue can be auto-fixed
+5. **Implement check()**: Return list of `QAIssue` objects
+6. **Have docstring**: Explain what the rule checks
+7. **Have tests**: Minimum 80% coverage
+
+### Fix Strategy Development
+
+#### Creating a Fix Strategy
+
+1. **RED Phase**: Write failing test
+
+```python
+# tests/unit/fixer/test_my_fix_strategy.py
+def test_my_fix_strategy_resolves_issue():
+    """Test that MyFixStrategy resolves the specific issue."""
+    # Arrange
+    from pptx_agent.fixer.strategies.my_strategy import MyFixStrategy
+    strategy = MyFixStrategy()
+    
+    issue = create_test_issue()
+    prs = create_test_presentation_with_issue()
+    
+    # Act
+    result = strategy.apply(issue, prs)
+    
+    # Assert
+    assert result.status == FixStatus.SUCCESS
+    assert result.changes_made == ["specific change description"]
+```
+
+2. **GREEN Phase**: Implement minimal strategy
+
+```python
+# src/pptx_agent/fixer/strategies/my_strategy.py
+from pptx_agent.fixer.strategies.base import FixStrategy
+from pptx_agent.fixer.schemas import FixResult, FixStatus
+
+class MyFixStrategy(FixStrategy):
+    """Fixes specific issue type."""
+    
+    def apply(self, issue: QAIssue, presentation: Presentation) -> FixResult:
+        """Apply fix for the issue."""
+        try:
+            # Implement fix logic
+            return FixResult(
+                status=FixStatus.SUCCESS,
+                message="Issue fixed successfully",
+                changes_made=["specific change"],
+            )
+        except Exception as e:
+            return FixResult(
+                status=FixStatus.FAILED,
+                message=f"Fix failed: {e}",
+                changes_made=[],
+            )
+```
+
+3. **Register strategy**:
+
+```python
+# In appropriate module initialization
+from pptx_agent.fixer.engine import get_global_registry
+from pptx_agent.fixer.strategies.my_strategy import MyFixStrategy
+
+registry = get_global_registry()
+registry.register("QA-X-NNN", MyFixStrategy())
+```
+
+#### Fix Strategy Requirements
+
+All fix strategies MUST:
+
+1. **Inherit from FixStrategy**: Use `pptx_agent.fixer.strategies.base.FixStrategy`
+2. **Implement apply()**: Return `FixResult` with status and changes
+3. **Handle errors gracefully**: Return `FixStatus.FAILED` on errors
+4. **Be idempotent**: Multiple applications should be safe
+5. **Document changes**: List all modifications in `changes_made`
+6. **Have tests**: Test success, failure, and edge cases
+7. **Register with engine**: Add to global registry
+
+### Testing QA Features
+
+#### Unit Tests
+
+Test individual rules and strategies in isolation:
+
+```python
+def test_rule_detects_issue(make_test_presentation):
+    """Test rule detection logic."""
+    prs = make_test_presentation(with_issue=True)
+    rule = MyRule()
+    issues = rule.check(prs)
+    assert len(issues) > 0
+
+def test_rule_no_false_positives(make_test_presentation):
+    """Test rule doesn't flag valid presentations."""
+    prs = make_test_presentation(valid=True)
+    rule = MyRule()
+    issues = rule.check(prs)
+    assert len(issues) == 0
+```
+
+#### Integration Tests
+
+Test complete QA workflows:
+
+```python
+def test_qa_and_fix_workflow():
+    """Test end-to-end QA validation and fixing."""
+    # Create presentation with known issues
+    prs = create_test_presentation()
+    
+    # Run QA validation
+    qa_engine = QAEngine()
+    report = qa_engine.validate(prs)
+    assert report.total_issues > 0
+    
+    # Run fix loop
+    fix_engine = FixEngine()
+    result = fix_engine.run_fix_loop(report, prs)
+    assert result.final_issue_count < report.total_issues
+```
+
+#### Performance Tests
+
+Test QA performance on large presentations:
+
+```python
+def test_qa_performance_large_presentation():
+    """Test QA validation completes within time limit."""
+    prs = create_large_presentation(slide_count=30)
+    
+    start_time = time.time()
+    qa_engine = QAEngine()
+    report = qa_engine.validate(prs)
+    elapsed = time.time() - start_time
+    
+    # Should complete in reasonable time
+    assert elapsed < 10.0  # 10 seconds for 30 slides
+```
+
+### Performance Benchmarks
+
+QA framework performance targets:
+
+- **QA Validation**: <5 seconds for 10-slide presentation
+- **Fix Loop**: <10 seconds for 5 issues
+- **Memory Usage**: <500MB for 30-slide presentation
+- **Iteration Limit**: Max 10 iterations per fix loop
+
+### Common Patterns
+
+#### Accessing Slide Elements
+
+```python
+def check(self, presentation: Presentation) -> list[QAIssue]:
+    """Check all slides for issues."""
+    issues = []
+    for slide_idx, slide in enumerate(presentation.slides):
+        for shape_idx, shape in enumerate(slide.shapes):
+            if hasattr(shape, "text_frame"):
+                # Check text content
+                if self._has_issue(shape.text_frame):
+                    issues.append(self._create_issue(slide_idx, shape_idx))
+    return issues
+```
+
+#### Creating QA Issues
+
+```python
+def _create_issue(self, slide_idx: int, shape_idx: int) -> QAIssue:
+    """Create QA issue with proper metadata."""
+    return QAIssue(
+        rule_id=self.rule_id,
+        severity=self.severity,
+        slide_index=slide_idx,
+        shape_index=shape_idx,
+        message="Descriptive error message",
+        auto_fixable=self.auto_fixable,
+        metadata={"additional": "context"},
+    )
+```
+
+#### Safe Shape Modification
+
+```python
+def apply(self, issue: QAIssue, presentation: Presentation) -> FixResult:
+    """Apply fix safely with error handling."""
+    try:
+        slide = presentation.slides[issue.slide_index]
+        shape = slide.shapes[issue.shape_index]
+        
+        # Verify shape has required attributes
+        if not hasattr(shape, "text_frame"):
+            return FixResult(
+                status=FixStatus.SKIPPED,
+                message="Shape has no text frame",
+            )
+        
+        # Apply modification
+        shape.text_frame.text = "Fixed content"
+        
+        return FixResult(
+            status=FixStatus.SUCCESS,
+            message="Content updated",
+            changes_made=["Updated text content"],
+        )
+    except Exception as e:
+        return FixResult(
+            status=FixStatus.FAILED,
+            message=f"Fix failed: {e}",
+        )
+```
+
+### QA Development Checklist
+
+Before submitting QA-related PRs:
+
+- [ ] Rule follows naming convention (QA-X-NNN)
+- [ ] Rule has complete docstring
+- [ ] Rule has unit tests (≥80% coverage)
+- [ ] Fix strategy registered in global registry
+- [ ] Fix strategy handles errors gracefully
+- [ ] Fix strategy has unit tests
+- [ ] Integration test covers end-to-end workflow
+- [ ] Performance test validates benchmarks
+- [ ] Documentation updated (if adding new category)
+- [ ] All CI checks pass (`mise run ci`)
+
 ## Getting Help
 
 - Check existing issues and documentation

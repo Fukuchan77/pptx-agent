@@ -29,8 +29,12 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Manage application lifespan events."""
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
+    """Manage application lifespan events.
+
+    Args:
+        _app: FastAPI application instance (unused, required by FastAPI signature)
+    """
     # Startup
     logger.info("PPTX Agent API starting up")
     yield
@@ -199,11 +203,11 @@ async def analyze_template(
                 manifest_dict = cache_manager.get_manifest(tmp_path)
                 if manifest_dict:
                     cache_hit = True
-                    logger.info(f"Cache hit for template: {template.filename}")
+                    logger.info("Cache hit for template: %s", template.filename)
 
             # Parse template if not cached
             if manifest_dict is None:
-                logger.info(f"Analyzing template: {template.filename}")
+                logger.info("Analyzing template: %s", template.filename)
                 parser = TemplateParser()
                 template_metadata = parser.parse_template(str(tmp_path))
 
@@ -219,7 +223,7 @@ async def analyze_template(
                 # Cache manifest (unless disabled)
                 if req_model.use_cache:
                     cache_manager.set_manifest(tmp_path, manifest_dict)
-                    logger.info(f"Cached manifest for: {template.filename}")
+                    logger.info("Cached manifest for: %s", template.filename)
 
             # Generate file ID and store template path
             file_id = str(uuid.uuid4())
@@ -233,14 +237,18 @@ async def analyze_template(
 
         except Exception:
             # Clean up temporary file on error
-            tmp_path.unlink(missing_ok=True)
+            # Note: Using sync unlink() in async context is acceptable here because:
+            # 1. File operations are fast for small temp files
+            # 2. This is an error path, not performance-critical
+            # 3. Keeps code simple without async file I/O dependencies
+            tmp_path.unlink(missing_ok=True)  # noqa: ASYNC240
             raise
 
     except json.JSONDecodeError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid request JSON: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid request JSON: {e}") from e
     except Exception as e:
-        logger.error(f"Template analysis failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Template analysis failed: {e}")
+        logger.exception("Template analysis failed")
+        raise HTTPException(status_code=500, detail=f"Template analysis failed: {e}") from e
 
 
 @app.post("/api/generate", response_model=GenerateResponse)
@@ -285,10 +293,14 @@ async def generate(
 
         try:
             # Read input text
-            input_text = input_path.read_text(encoding="utf-8")
+            # Note: Using sync read_text() in async context is acceptable here because:
+            # 1. Input files are typically small (text/markdown)
+            # 2. Reading happens once before main processing
+            # 3. Keeps code simple without async file I/O dependencies
+            input_text = input_path.read_text(encoding="utf-8")  # noqa: ASYNC240
 
             # Generate presentation (note: generate_presentation is async, so we await it directly)
-            logger.info(f"Generating presentation from: {input_file.filename}")
+            logger.info("Generating presentation from: %s", input_file.filename)
             _, qa_report = await generate_presentation(
                 input_text=input_text,
                 template_path=str(template_path),
@@ -316,20 +328,24 @@ async def generate(
 
         finally:
             # Clean up input files
-            input_path.unlink(missing_ok=True)
-            template_path.unlink(missing_ok=True)
+            # Note: Using sync unlink() in async context is acceptable here because:
+            # 1. File operations are fast for small temp files
+            # 2. This is cleanup code, not performance-critical
+            # 3. Keeps code simple without async file I/O dependencies
+            input_path.unlink(missing_ok=True)  # noqa: ASYNC240
+            template_path.unlink(missing_ok=True)  # noqa: ASYNC240
 
     except json.JSONDecodeError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid request JSON: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid request JSON: {e}") from e
     except Exception as e:
-        logger.error(f"Presentation generation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Generation failed: {e}")
+        logger.exception("Presentation generation failed")
+        raise HTTPException(status_code=500, detail=f"Generation failed: {e}") from e
 
 
 @app.post("/api/qa", response_model=QAResponse)
 async def qa(
     presentation: Annotated[UploadFile, File(description="Presentation .pptx file to validate")],
-    template: Annotated[
+    template: Annotated[  # noqa: ARG001
         UploadFile | None,
         File(description="Optional template .pptx for style conformance validation"),
     ] = None,
@@ -339,7 +355,7 @@ async def qa(
 
     Args:
         presentation: Presentation .pptx file to validate
-        template: Optional template .pptx for style conformance
+        template: Optional template .pptx for style conformance (unused, reserved for future)
         request: JSON-encoded request parameters
 
     Returns:
@@ -361,7 +377,7 @@ async def qa(
 
         try:
             # Load presentation
-            logger.info(f"Running QA on: {presentation.filename}")
+            logger.info("Running QA on: %s", presentation.filename)
             wrapper = PresentationWrapper()
             wrapper.load_template(str(pres_path))
 
@@ -395,13 +411,17 @@ async def qa(
 
         finally:
             # Clean up temporary file
-            pres_path.unlink(missing_ok=True)
+            # Note: Using sync unlink() in async context is acceptable here because:
+            # 1. File operations are fast for small temp files
+            # 2. This is cleanup code, not performance-critical
+            # 3. Keeps code simple without async file I/O dependencies
+            pres_path.unlink(missing_ok=True)  # noqa: ASYNC240
 
     except json.JSONDecodeError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid request JSON: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid request JSON: {e}") from e
     except Exception as e:
-        logger.error(f"QA validation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"QA validation failed: {e}")
+        logger.exception("QA validation failed")
+        raise HTTPException(status_code=500, detail=f"QA validation failed: {e}") from e
 
 
 @app.get("/api/download/{file_id}")

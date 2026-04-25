@@ -138,6 +138,115 @@ Install extensions:
    - Automatic retry with backoff
    - Provider fallback in production
 
+### Q&A Framework Architecture
+
+The QA (Quality Assurance) framework provides automated inspection and remediation of generated presentations:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    QA Framework                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐     │
+│  │ QA Engine   │    │ Fix Engine  │    │ Cache Mgr   │     │
+│  │             │    │             │    │             │     │
+│  │ • Rule      │    │ • Strategy  │    │ • Template  │     │
+│  │   Registry  │    │   Registry  │    │   Manifest  │     │
+│  │ • Report    │    │ • Fix Loop  │    │ • SHA-256   │     │
+│  │   Generation│    │ • Iteration │    │   Keying    │     │
+│  └─────────────┘    └─────────────┘    └─────────────┘     │
+│         │                   │                   │          │
+│         └───────────────────┼───────────────────┘          │
+│                             │                              │
+│  ┌──────────────────────────┼──────────────────────────┐   │
+│  │           QA Rules       │        Fix Strategies    │   │
+│  │                          │                          │   │
+│  │  Layout Checks:          │  Text Overflow:          │   │
+│  │  • QA-L-001: Overflow    │  • Font reduction        │   │
+│  │  • QA-L-002: Empty title │  • Layout switching      │   │
+│  │  • QA-L-003: Unpopulated │  • Content summarization │   │
+│  │  • QA-L-004: Overlapping │                          │   │
+│  │  • QA-L-005: Boundaries  │  Placeholder:            │   │
+│  │  • QA-L-006: Font size   │  • Populate from outline │   │
+│  │                          │                          │   │
+│  │  Content Checks:         │  Style:                  │   │
+│  │  • QA-C-001: Bullet len  │  • Reset to master font  │   │
+│  │  • QA-C-002: Dup titles  │  • Fix bullet indents    │   │
+│  │  • QA-C-003: Image gaps  │                          │   │
+│  │  • QA-C-004: Table dims  │                          │   │
+│  │  • QA-C-005: Chart data  │                          │   │
+│  │  • QA-C-006: Notes       │                          │   │
+│  │                          │                          │   │
+│  │  Style Checks:           │                          │   │
+│  │  • QA-S-001: Off fonts   │                          │   │
+│  │  • QA-S-002: Off colors  │                          │   │
+│  │  • QA-S-003: Indent lvl  │                          │   │
+│  └──────────────────────────┴──────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### QA Engine Design
+
+**Decoupled Architecture**: QA operates independently from generation pipeline:
+- Re-opens presentations from disk (no in-memory state dependency)
+- Can validate any presentation (not just generated ones)
+- Enables QA-only mode for existing files
+
+**Plugin-Based Rules**: Registry pattern enables extensible rule system:
+```python
+@register_qa_rule("QA-L-001")
+class TextOverflowRule(QARule):
+    def check(self, presentation: Presentation) -> List[QAIssue]:
+        # Detection logic
+        pass
+```
+
+**Severity Classification**:
+- **Error**: Blocks release (text overflow, empty titles, boundary violations)
+- **Warning**: Should fix (style violations, overlapping objects, long bullets)
+- **Info**: Optional (duplicate titles, off-template colors)
+
+#### Fix Engine Design
+
+**Iterative Fix Loop**: Bounded iterations with progress tracking:
+1. Run QA pass → identify fixable issues
+2. Apply fix strategies → modify presentation
+3. Re-run QA pass → verify fixes
+4. Repeat until: zero errors OR max iterations OR no progress
+
+**Staged Fix Strategies**: Multiple approaches per issue type:
+- Text overflow: font reduction → layout switch → summarization
+- Empty placeholders: populate from outline → default content
+- Style violations: reset to master → manual correction needed
+
+**Fix Result Tracking**: Comprehensive reporting:
+```python
+@dataclass
+class FixLoopResult:
+    iterations: int
+    initial_issues: int
+    final_issues: int
+    fixes_applied: List[FixResult]
+    remaining_issues: List[QAIssue]
+```
+
+#### Template Caching Architecture
+
+**Performance Optimization**: SHA-256 keyed manifest caching:
+- First parse: analyze template → generate manifest → cache
+- Subsequent uses: load cached manifest (50%+ speedup)
+- Cache invalidation: automatic on template file changes
+
+**Cache Storage**: Platform-aware directory resolution:
+- Linux/Mac: `~/.cache/pptx-agent/`
+- Windows: `%LOCALAPPDATA%\pptx-agent\`
+- Fallback: system temp directory
+
+**File Locking**: Concurrent access protection:
+- Uses `filelock` for atomic cache operations
+- Prevents race conditions in multi-process scenarios
+- Graceful degradation if locking fails
+
 ## Code Organization
 
 ### Directory Structure
@@ -151,6 +260,37 @@ pptx-agent/
 │   ├── config.py             # Configuration management
 │   ├── constants.py          # Project-wide constants
 │   ├── templates.py          # Template handling utilities
+│   │
+│   ├── qa/                   # Quality assurance framework
+│   │   ├── engine.py         # QA orchestration
+│   │   ├── schemas.py        # QA data models
+│   │   ├── report.py         # Report generation
+│   │   └── rules/            # QA rule implementations
+│   │       ├── base.py       # Rule protocol
+│   │       ├── registry.py   # Rule registration
+│   │       ├── layout_checks.py    # Layout validation rules
+│   │       ├── content_checks.py   # Content validation rules
+│   │       ├── style_checks.py     # Style validation rules
+│   │       └── register_defaults.py # Default rule registration
+│   │
+│   ├── fixer/                # Auto-fix framework
+│   │   ├── engine.py         # Fix loop orchestration
+│   │   ├── schemas.py        # Fix result models
+│   │   └── strategies/       # Fix strategy implementations
+│   │       ├── __init__.py   # Strategy protocol
+│   │       ├── text_overflow.py    # Overflow fixes
+│   │       ├── placeholder.py      # Placeholder fixes
+│   │       └── style.py      # Style fixes
+│   │
+│   ├── cache/                # Template manifest caching
+│   │   ├── manager.py        # Cache operations
+│   │   ├── storage.py        # File-based storage
+│   │   └── schemas.py        # Cache entry models
+│   │
+│   ├── interfaces/           # User interfaces
+│   │   ├── cli.py            # Command-line interface
+│   │   ├── api.py            # FastAPI REST interface
+│   │   └── mcp.py            # MCP server interface
 │   │
 │   ├── agents/               # LLM agents
 │   │   ├── analyzer_config.py     # Analyzer configuration
@@ -227,6 +367,34 @@ pptx-agent/
 **Note**: This shows the main modules and directories. Some subdirectories and utility files are omitted for clarity.
 
 ### Module Responsibilities
+
+#### `qa/`
+
+- **Quality assurance**: Automated presentation inspection
+- **Rule-based checks**: Layout, content, and style validation
+- **Report generation**: JSON and Markdown output formats
+- **Extensibility**: Plugin-based rule registry
+
+#### `fixer/`
+
+- **Auto-remediation**: Iterative fix loop with bounded iterations
+- **Fix strategies**: Text overflow, placeholder, style corrections
+- **Progress tracking**: Fix result reporting and metrics
+- **Graceful degradation**: Handles unfixable issues
+
+#### `cache/`
+
+- **Template caching**: SHA-256 keyed manifest storage
+- **Performance**: 50%+ speedup for repeated template use
+- **Platform-aware**: OS-specific cache directory resolution
+- **Concurrency**: File locking for multi-process safety
+
+#### `interfaces/`
+
+- **CLI**: Command-line interface with comprehensive flags
+- **API**: FastAPI REST endpoints for web integration
+- **MCP**: Model Context Protocol server for AI assistants
+- **Consistency**: Identical outputs across all interfaces
 
 #### `agents/`
 

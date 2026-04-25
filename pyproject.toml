@@ -94,8 +94,12 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+"tests/performance/**" = [
+    "T201",    # print() is intentional in performance profiling tests
+]
 "tests/**" = [
     "S101",    # Use of assert detected
+    "S607",    # Starting process with partial executable path (uv/pytest commands in tests)
     "ANN201",  # Missing return type annotation for public function
     "PLR2004", # Magic value used in comparison
     "ARG001",  # Unused function argument
@@ -137,6 +141,8 @@ ignore = [
 "src/pptx_agent/validators/input_validator.py" = ["ARG001", "PLR0911", "PLR0912"]  # Validator complexity
 "src/pptx_agent/validators/outline_validator.py" = ["ARG001", "PLR0911"]  # Validator complexity
 "src/pptx_agent/validators/security.py" = ["ARG001", "TD", "FIX", "PLR0911", "PLR0912"]  # Security module complexity, TODOs
+"src/pptx_agent/interfaces/mcp.py" = ["TRY300"]  # try/except/return pattern is intentional for tool handler error isolation
+"src/pptx_agent/qa/rules/content_checks.py" = ["PLR0912"]  # Complex content validation with many branches
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

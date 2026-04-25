@@ -615,3 +615,709 @@ Detect prompt injection attempts in input text.
 **Returns**:
 
 - `SecurityValidationResult`: Detection results and sanitized text
+
+## REST API Interface
+
+### FastAPI Application
+
+**Module**: `pptx_agent.interfaces.api`
+
+The REST API provides HTTP endpoints for presentation generation, template analysis, and QA validation. All endpoints support async processing and file uploads.
+
+**Base URL**: `http://localhost:8000` (default)
+
+**API Documentation**: Available at `/docs` (Swagger UI) and `/redoc` (ReDoc)
+
+### Endpoints
+
+#### `GET /`
+
+Root endpoint with API information.
+
+**Response**:
+
+```json
+{
+  "name": "PPTX Agent API",
+  "version": "1.0.0",
+  "docs": "/docs",
+  "redoc": "/redoc"
+}
+```
+
+#### `GET /health`
+
+Health check endpoint.
+
+**Response**:
+
+```json
+{
+  "status": "healthy"
+}
+```
+
+#### `POST /api/analyze-template`
+
+Analyze PowerPoint template and generate manifest.
+
+**Request**:
+
+- **Content-Type**: `multipart/form-data`
+- **Parameters**:
+  - `template` (file, required): Template .pptx file
+  - `request` (form field, optional): JSON-encoded `AnalyzeTemplateRequest`
+
+**AnalyzeTemplateRequest Schema**:
+
+```python
+{
+  "language": "en",  # Default language: "en" or "ja"
+  "use_cache": true  # Whether to use cached manifest
+}
+```
+
+**Response**: `AnalyzeTemplateResponse`
+
+```python
+{
+  "manifest": {...},      # Template manifest data
+  "cache_hit": false,     # Whether manifest was from cache
+  "file_id": "uuid-here"  # Unique identifier for template
+}
+```
+
+**Example**:
+
+```bash
+curl -X POST "http://localhost:8000/api/analyze-template" \
+  -F "template=@template.pptx" \
+  -F 'request={"language":"en","use_cache":true}'
+```
+
+#### `POST /api/generate`
+
+Generate PowerPoint presentation from text input.
+
+**Request**:
+
+- **Content-Type**: `multipart/form-data`
+- **Parameters**:
+  - `input_file` (file, required): Input text or Markdown file
+  - `template` (file, required): Template .pptx file
+  - `request` (form field, optional): JSON-encoded `GenerateRequest`
+
+**GenerateRequest Schema**:
+
+```python
+{
+  "language": "en",         # Output language: "en" or "ja" (auto-detected if null)
+  "qa_enabled": true,       # Enable QA checks after generation
+  "autofix_enabled": false  # Enable automatic issue fixing (experimental)
+}
+```
+
+**Response**: `GenerateResponse`
+
+```python
+{
+  "file_id": "uuid-here",        # Unique identifier for generated file
+  "output_path": "/path/to/output.pptx",
+  "qa_report": {...}             # QA report if qa_enabled was true
+}
+```
+
+**Example**:
+
+```bash
+curl -X POST "http://localhost:8000/api/generate" \
+  -F "input_file=@input.txt" \
+  -F "template=@template.pptx" \
+  -F 'request={"language":"en","qa_enabled":true,"autofix_enabled":false}'
+```
+
+#### `POST /api/qa`
+
+Run quality assurance checks on PowerPoint presentation.
+
+**Request**:
+
+- **Content-Type**: `multipart/form-data`
+- **Parameters**:
+  - `presentation` (file, required): Presentation .pptx file to validate
+  - `template` (file, optional): Optional template .pptx for style conformance
+  - `request` (form field, optional): JSON-encoded `QARequest`
+
+**QARequest Schema**:
+
+```python
+{
+  "language": "en",           # Language override: "en" or "ja" (auto-detected if null)
+  "format": "json",           # Report format: "json" or "markdown"
+  "autofix": false,           # Enable automatic issue fixing
+  "max_fix_iterations": 3     # Maximum fix loop iterations (1-10)
+}
+```
+
+**Response**: `QAResponse`
+
+```python
+{
+  "report": {...},            # QA report (JSON or Markdown string)
+  "passed": true,             # Whether QA validation passed
+  "file_id": "uuid-here"      # File ID for fixed presentation if autofix enabled
+}
+```
+
+**Example**:
+
+```bash
+curl -X POST "http://localhost:8000/api/qa" \
+  -F "presentation=@output.pptx" \
+  -F 'request={"language":"en","format":"json","autofix":false}'
+```
+
+#### `GET /api/download/{file_id}`
+
+Download generated or fixed presentation file.
+
+**Parameters**:
+
+- `file_id` (path, required): Unique file identifier from previous API call
+
+**Response**:
+
+- **Content-Type**: `application/vnd.openxmlformats-officedocument.presentationml.presentation`
+- **Body**: Presentation file binary data
+
+**Example**:
+
+```bash
+curl -X GET "http://localhost:8000/api/download/uuid-here" \
+  -o downloaded.pptx
+```
+
+### Running the API Server
+
+**Development Mode**:
+
+```bash
+# Using uvicorn directly
+uvicorn pptx_agent.interfaces.api:app --reload --port 8000
+
+# Using mise (if configured)
+mise run api
+```
+
+**Production Mode**:
+
+```bash
+uvicorn pptx_agent.interfaces.api:app --host 0.0.0.0 --port 8000 --workers 4
+```
+
+## QA Module
+
+### QA Engine
+
+**Module**: `pptx_agent.qa.engine`
+
+#### `QAEngine`
+
+Quality assurance engine for presentation validation.
+
+**Constructor**:
+
+```python
+def __init__(
+    self,
+    language: Literal["en", "ja"] | None = None,
+    rules: list[QARule] | None = None
+)
+```
+
+**Parameters**:
+
+- `language` (`Literal["en", "ja"] | None`): Language for capacity calculations
+- `rules` (`list[QARule] | None`): Custom rules (uses defaults if None)
+
+**Methods**:
+
+##### `validate(presentation: PresentationWrapper) -> QAReport`
+
+Run all QA rules against presentation.
+
+**Parameters**:
+
+- `presentation` (`PresentationWrapper`): Presentation to validate
+
+**Returns**:
+
+- `QAReport`: Validation results with all detected issues
+
+**Example**:
+
+```python
+from pptx_agent.pptx_wrapper.presentation import PresentationWrapper
+from pptx_agent.qa.engine import QAEngine
+
+# Load presentation
+wrapper = PresentationWrapper()
+wrapper.load_template("output.pptx")
+
+# Run QA validation
+engine = QAEngine(language="en")
+report = engine.validate(wrapper)
+
+# Check results
+if report.passed:
+    print("✓ QA passed - no errors")
+else:
+    print(f"✗ QA failed - {report.error_count} errors")
+    for issue in report.issues:
+        print(f"  [{issue.severity}] {issue.message}")
+```
+
+### QA Schemas
+
+**Module**: `pptx_agent.qa.schemas`
+
+#### `Severity`
+
+Issue severity levels.
+
+**Values**:
+
+- `ERROR`: Blocks quality, must fix before release
+- `WARNING`: Should fix, not blocking but affects quality
+- `INFO`: Informational, optional improvement
+
+#### `QAIssue`
+
+Represents a single quality issue.
+
+**Fields**:
+
+- `rule_id` (`str`): Unique rule identifier (e.g., "QA-L-001")
+- `severity` (`Severity`): Issue severity level
+- `slide_index` (`int`): Zero-based slide index
+- `shape_index` (`int | None`): Zero-based shape index if applicable
+- `message` (`str`): Human-readable issue description
+- `auto_fixable` (`bool`): Whether issue can be automatically fixed
+- `suggested_fix` (`str | None`): Suggested manual fix
+
+**Example**:
+
+```python
+from pptx_agent.qa.schemas import QAIssue, Severity
+
+issue = QAIssue(
+    rule_id="QA-L-001",
+    severity=Severity.ERROR,
+    slide_index=2,
+    shape_index=1,
+    message="Text overflow detected in title placeholder",
+    auto_fixable=True,
+    suggested_fix="Reduce font size or shorten text"
+)
+```
+
+#### `QAReport`
+
+Aggregates all QA issues with summary statistics.
+
+**Fields**:
+
+- `total_issues` (`int`): Total number of issues found
+- `error_count` (`int`): Number of ERROR severity issues
+- `warning_count` (`int`): Number of WARNING severity issues
+- `info_count` (`int`): Number of INFO severity issues
+- `issues` (`list[QAIssue]`): List of all detected issues
+- `fix_iterations` (`int`): Number of fix loop iterations performed
+- `passed` (`bool`): True if error_count == 0 (computed property)
+
+**Methods**:
+
+##### `to_json() -> str`
+
+Serialize to JSON string for machine processing.
+
+**Returns**:
+
+- `str`: JSON string representation
+
+##### `to_markdown(language: Literal["en", "ja"] = "en") -> str`
+
+Generate human-readable Markdown report.
+
+**Parameters**:
+
+- `language` (`Literal["en", "ja"]`): Report language
+
+**Returns**:
+
+- `str`: Markdown formatted report
+
+**Example**:
+
+```python
+from pptx_agent.qa.schemas import QAReport
+
+# Create report
+report = QAReport(
+    total_issues=2,
+    error_count=1,
+    warning_count=1,
+    info_count=0,
+    issues=[...],
+    fix_iterations=0
+)
+
+# Export as JSON
+json_str = report.to_json()
+
+# Export as Markdown
+markdown_str = report.to_markdown(language="en")
+
+# Check if passed
+if report.passed:
+    print("✓ No errors")
+```
+
+### QA Rules
+
+**Module**: `pptx_agent.qa.rules`
+
+#### Layout Check Rules
+
+**Module**: `pptx_agent.qa.rules.layout_checks`
+
+- **QA-L-001**: Text overflow detection
+- **QA-L-002**: Empty title placeholder detection
+- **QA-L-003**: Unpopulated placeholder detection
+- **QA-L-004**: Overlapping object detection
+- **QA-L-005**: Boundary overflow detection
+- **QA-L-006**: Minimum font size detection
+
+#### Content Check Rules
+
+**Module**: `pptx_agent.qa.rules.content_checks`
+
+- **QA-C-001**: Bullet length check
+- **QA-C-002**: Duplicate title detection
+- **QA-C-003**: Unpopulated image placeholder detection
+- **QA-C-004**: Pathological table dimension detection
+- **QA-C-005**: Missing chart data detection
+- **QA-C-006**: Speaker notes verification
+
+#### Style Check Rules
+
+**Module**: `pptx_agent.qa.rules.style_checks`
+
+- **QA-S-001**: Off-template font detection
+- **QA-S-002**: Off-template color detection
+- **QA-S-003**: Invalid bullet indent detection
+
+## Fixer Module
+
+### Fix Engine
+
+**Module**: `pptx_agent.fixer.engine`
+
+#### `FixEngine`
+
+Automatic issue remediation engine.
+
+**Constructor**:
+
+```python
+def __init__(
+    self,
+    max_iterations: int = 3,
+    strategies: list[FixStrategy] | None = None
+)
+```
+
+**Parameters**:
+
+- `max_iterations` (`int`): Maximum fix loop iterations (default: 3)
+- `strategies` (`list[FixStrategy] | None`): Custom strategies (uses defaults if None)
+
+**Methods**:
+
+##### `fix_loop(presentation: PresentationWrapper, qa_report: QAReport) -> FixLoopResult`
+
+Run iterative fix loop until issues resolved or max iterations reached.
+
+**Parameters**:
+
+- `presentation` (`PresentationWrapper`): Presentation to fix
+- `qa_report` (`QAReport`): Initial QA report with issues
+
+**Returns**:
+
+- `FixLoopResult`: Fix loop results with final QA report
+
+**Example**:
+
+```python
+from pptx_agent.fixer.engine import FixEngine
+from pptx_agent.qa.engine import QAEngine
+from pptx_agent.pptx_wrapper.presentation import PresentationWrapper
+
+# Load presentation
+wrapper = PresentationWrapper()
+wrapper.load_template("output.pptx")
+
+# Run initial QA
+qa_engine = QAEngine()
+initial_report = qa_engine.validate(wrapper)
+
+# Run fix loop if issues found
+if not initial_report.passed:
+    fix_engine = FixEngine(max_iterations=3)
+    result = fix_engine.fix_loop(wrapper, initial_report)
+    
+    print(f"Fix iterations: {result.iterations}")
+    print(f"Fixes applied: {len(result.fixes_applied)}")
+    print(f"Final status: {'✓ PASSED' if result.success else '✗ FAILED'}")
+```
+
+### Fixer Schemas
+
+**Module**: `pptx_agent.fixer.schemas`
+
+#### `FixStatus`
+
+Fix operation status.
+
+**Values**:
+
+- `SUCCESS`: Fix successfully applied
+- `PARTIAL`: Some issues fixed, some remain
+- `FAILED`: Fix operation failed
+- `SKIPPED`: Issue not auto-fixable, skipped
+
+#### `FixResult`
+
+Result of a single fix operation.
+
+**Fields**:
+
+- `issue` (`QAIssue`): The QA issue that was addressed
+- `status` (`FixStatus`): Fix operation status
+- `message` (`str`): Fix operation outcome description
+- `changes_made` (`list[str]`): List of specific changes applied
+
+**Example**:
+
+```python
+from pptx_agent.fixer.schemas import FixResult, FixStatus
+from pptx_agent.qa.schemas import QAIssue, Severity
+
+result = FixResult(
+    issue=QAIssue(
+        rule_id="QA-L-001",
+        severity=Severity.ERROR,
+        slide_index=2,
+        shape_index=1,
+        message="Text overflow detected",
+        auto_fixable=True
+    ),
+    status=FixStatus.SUCCESS,
+    message="Reduced font size from 18pt to 16pt",
+    changes_made=["Font size: 18pt → 16pt"]
+)
+```
+
+#### `FixLoopResult`
+
+Result of complete fix loop with multiple iterations.
+
+**Fields**:
+
+- `iterations` (`int`): Number of fix loop iterations performed
+- `fixes_applied` (`list[FixResult]`): List of all fix results
+- `final_qa_report` (`QAReport`): QA report after final iteration
+- `success` (`bool`): True if all errors resolved (error_count == 0)
+
+**Example**:
+
+```python
+from pptx_agent.fixer.schemas import FixLoopResult
+
+result = FixLoopResult(
+    iterations=2,
+    fixes_applied=[...],
+    final_qa_report=QAReport(...),
+    success=True
+)
+
+if result.success:
+    print(f"✓ All issues resolved in {result.iterations} iterations")
+else:
+    print(f"✗ {result.final_qa_report.error_count} errors remain")
+```
+
+### Fix Strategies
+
+**Module**: `pptx_agent.fixer.strategies`
+
+#### Text Overflow Strategies
+
+**Module**: `pptx_agent.fixer.strategies.text_overflow`
+
+- Font reduction: Reduce font size to fit text
+- Layout switching: Switch to layout with more capacity
+- Content summarization: Use LLM to summarize overflowing text
+
+#### Placeholder Strategies
+
+**Module**: `pptx_agent.fixer.strategies.placeholder`
+
+- Empty placeholder population: Fill empty placeholders with appropriate content
+
+#### Style Strategies
+
+**Module**: `pptx_agent.fixer.strategies.style`
+
+- Style reset: Reset fonts/colors to template master styles
+
+## Cache Module
+
+### Cache Manager
+
+**Module**: `pptx_agent.cache.manager`
+
+#### `CacheManager`
+
+Template manifest caching with SHA-256 keying.
+
+**Constructor**:
+
+```python
+def __init__(self, cache_dir: Path | None = None)
+```
+
+**Parameters**:
+
+- `cache_dir` (`Path | None`): Custom cache directory (uses system cache dir if None)
+
+**Methods**:
+
+##### `get_manifest(template_path: Path) -> dict[str, Any] | None`
+
+Retrieve cached manifest for template.
+
+**Parameters**:
+
+- `template_path` (`Path`): Path to template file
+
+**Returns**:
+
+- `dict[str, Any] | None`: Cached manifest or None if not found
+
+##### `set_manifest(template_path: Path, manifest: dict[str, Any]) -> None`
+
+Cache manifest for template.
+
+**Parameters**:
+
+- `template_path` (`Path`): Path to template file
+- `manifest` (`dict[str, Any]`): Manifest data to cache
+
+##### `invalidate(template_path: Path) -> None`
+
+Invalidate cached manifest for template.
+
+**Parameters**:
+
+- `template_path` (`Path`): Path to template file
+
+##### `cleanup_stale(max_age_days: int = 30) -> int`
+
+Remove cache entries older than specified age.
+
+**Parameters**:
+
+- `max_age_days` (`int`): Maximum age in days (default: 30)
+
+**Returns**:
+
+- `int`: Number of entries removed
+
+**Example**:
+
+```python
+from pathlib import Path
+from pptx_agent.cache.manager import CacheManager
+
+# Initialize cache manager
+cache = CacheManager()
+
+# Check for cached manifest
+template_path = Path("template.pptx")
+manifest = cache.get_manifest(template_path)
+
+if manifest:
+    print("✓ Cache hit")
+else:
+    print("✗ Cache miss - parsing template")
+    # ... parse template and generate manifest ...
+    cache.set_manifest(template_path, manifest_dict)
+
+# Cleanup old entries
+removed = cache.cleanup_stale(max_age_days=30)
+print(f"Removed {removed} stale cache entries")
+```
+
+## CLI Interface
+
+### Enhanced CLI Commands
+
+**Module**: `pptx_agent.interfaces.cli`
+
+The CLI has been enhanced with additional commands for QA and template analysis.
+
+#### `analyze-template` Command
+
+Analyze template and generate manifest.
+
+```bash
+python -m pptx_agent.interfaces.cli analyze-template \
+  --template template.pptx \
+  --output manifest.json \
+  [--language en|ja] \
+  [--no-cache]
+```
+
+#### `qa` Command
+
+Run QA validation on existing presentation.
+
+```bash
+python -m pptx_agent.interfaces.cli qa \
+  --input presentation.pptx \
+  [--template template.pptx] \
+  [--language en|ja] \
+  [--format json|markdown] \
+  [--autofix] \
+  [--max-iterations 3] \
+  [--output report.json]
+```
+
+#### Enhanced `generate` Command
+
+Generate presentation with QA and auto-fix options.
+
+```bash
+python -m pptx_agent.main \
+  --input input.txt \
+  --template template.pptx \
+  --output output.pptx \
+  [--language en|ja] \
+  [--qa] \
+  [--autofix] \
+  [--max-fix-iterations 3] \
+  [--verbose]
+```
+
