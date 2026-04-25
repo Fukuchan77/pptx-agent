@@ -153,7 +153,7 @@ async def test_pipeline_with_llm_success(
         mock_content.return_value = mock_presentation_schema
 
         # Act
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=input_text,
             template_path=template_path,
             output_path=str(output_path),
@@ -207,7 +207,7 @@ async def test_pipeline_with_multiple_llm_calls(
         mock_content.return_value = mock_presentation_schema
 
         # Act
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=input_text,
             template_path=template_path,
             output_path=str(output_path),
@@ -268,7 +268,7 @@ async def test_pipeline_heuristic_mode_unaffected(tmp_path: Path, template_path:
     output_path = tmp_path / "output_heuristic.pptx"
 
     # Don't mock agents - they should use heuristic fallback
-    result_path = await generate_presentation(
+    result_path, _qa_report = await generate_presentation(
         input_text=input_text,
         template_path=template_path,
         output_path=str(output_path),
@@ -361,7 +361,7 @@ async def test_pipeline_llm_with_template_constraints(
         mock_content.return_value = mock_content_schema
 
         # Act
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=input_text,
             template_path=template_path,
             output_path=str(output_path),
@@ -460,7 +460,7 @@ async def test_pipeline_with_different_languages(tmp_path: Path, template_path: 
         mock_content.return_value = ja_content
 
         # Act
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=input_text,
             template_path=template_path,
             output_path=str(output_path),

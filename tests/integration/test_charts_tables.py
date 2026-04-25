@@ -59,7 +59,7 @@ async def test_generate_presentation_with_chart_data(chart_data_input: str, temp
         output_path = str(Path(tmpdir) / "output_charts.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=chart_data_input,
             template_path=template_path,
             output_path=output_path,
@@ -91,7 +91,7 @@ async def test_generate_presentation_with_table_data(table_data_input: str, temp
         output_path = str(Path(tmpdir) / "output_tables.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=table_data_input,
             template_path=template_path,
             output_path=output_path,
@@ -122,7 +122,7 @@ async def test_presentation_contains_shapes(chart_data_input: str, template_path
         output_path = str(Path(tmpdir) / "output_shapes.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=chart_data_input,
             template_path=template_path,
             output_path=output_path,
@@ -199,7 +199,7 @@ Geographic distribution:
         output_path = str(Path(tmpdir) / "output_mixed.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=mixed_input,
             template_path=template_path,
             output_path=output_path,
@@ -255,7 +255,7 @@ All categories show consistent growth with software leading the revenue contribu
         output_path = str(Path(tmpdir) / "output_multi_series.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=multi_series_input,
             template_path=template_path,
             output_path=output_path,
@@ -313,7 +313,7 @@ These tables demonstrate our inventory management across different warehouse loc
         output_path = str(Path(tmpdir) / "output_tables_varied.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=table_input,
             template_path=template_path,
             output_path=output_path,
@@ -368,7 +368,7 @@ The 25-34 age group represents our largest customer segment.
         output_path = str(Path(tmpdir) / "output_percentages.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=percentage_input,
             template_path=template_path,
             output_path=output_path,
@@ -395,7 +395,7 @@ async def test_file_opens_without_corruption(chart_data_input: str, template_pat
         output_path = str(Path(tmpdir) / "output_no_corruption.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=chart_data_input,
             template_path=template_path,
             output_path=output_path,
@@ -473,7 +473,7 @@ async def test_generate_presentation_with_charts_tables_llm_mock(
             mock_outline_gen,
             mock_content_gen,
         ):
-            result_path = await generate_presentation(
+            result_path, _qa_report = await generate_presentation(
                 input_text=chart_data_input,
                 template_path=template_path,
                 output_path=output_path,

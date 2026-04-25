@@ -44,7 +44,7 @@ class TestOutputPathResolution:
         ]
 
         with patch("pptx_agent.main.generate_presentation") as mock_generate:
-            mock_generate.return_value = relative_output
+            mock_generate.return_value = (relative_output, None)  # Return tuple (path, qa_report)
             with patch.object(sys, "argv", test_args):
                 # Act
                 exit_code = main.main()
@@ -85,7 +85,7 @@ class TestOutputPathResolution:
         ]
 
         with patch("pptx_agent.main.generate_presentation") as mock_generate:
-            mock_generate.return_value = str(output_file)
+            mock_generate.return_value = (str(output_file), None)  # Return tuple (path, qa_report)
             with patch.object(sys, "argv", test_args):
                 # Act
                 exit_code = main.main()
@@ -128,7 +128,7 @@ class TestOutputPathResolution:
         ]
 
         with patch("pptx_agent.main.generate_presentation") as mock_generate:
-            mock_generate.return_value = relative_output
+            mock_generate.return_value = (relative_output, None)  # Return tuple (path, qa_report)
             with patch.object(sys, "argv", test_args):
                 # Act
                 exit_code = main.main()

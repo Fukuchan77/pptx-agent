@@ -72,7 +72,7 @@ async def test_generate_presentation_with_process_flow_content(
         output_path = str(Path(tmpdir) / "output_process_flow.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=process_flow_input,
             template_path=template_path,
             output_path=output_path,
@@ -106,7 +106,7 @@ async def test_generate_presentation_with_hierarchy_content(
         output_path = str(Path(tmpdir) / "output_hierarchy.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=hierarchy_input,
             template_path=template_path,
             output_path=output_path,
@@ -138,7 +138,7 @@ async def test_generate_presentation_with_cycle_content(cycle_input: str, templa
         output_path = str(Path(tmpdir) / "output_cycle.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=cycle_input,
             template_path=template_path,
             output_path=output_path,
@@ -171,7 +171,7 @@ async def test_presentation_with_smartart_contains_shapes(
         output_path = str(Path(tmpdir) / "output_smartart_shapes.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=process_flow_input,
             template_path=template_path,
             output_path=output_path,
@@ -254,7 +254,7 @@ for future initiatives. This learning cycle ensures organizational capability gr
         output_path = str(Path(tmpdir) / "output_mixed_smartart.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=mixed_input,
             template_path=template_path,
             output_path=output_path,
@@ -321,7 +321,7 @@ This structure enables efficient development and innovation.
         output_path = str(Path(tmpdir) / "output_org_structure.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=org_structure_input,
             template_path=template_path,
             output_path=output_path,
@@ -382,7 +382,7 @@ Then the cycle begins again with the next sprint planning session.
         output_path = str(Path(tmpdir) / "output_cycle_workflow.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=cycle_workflow_input,
             template_path=template_path,
             output_path=output_path,
@@ -409,7 +409,7 @@ async def test_file_opens_without_corruption_smartart(process_flow_input: str, t
         output_path = str(Path(tmpdir) / "output_smartart_no_corruption.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=process_flow_input,
             template_path=template_path,
             output_path=output_path,
@@ -490,7 +490,7 @@ The cycle repeats, driving ongoing enhancement of our processes.
         output_path = str(Path(tmpdir) / "output_multi_smartart.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=multi_smartart_input,
             template_path=template_path,
             output_path=output_path,
@@ -521,7 +521,7 @@ async def test_generate_presentation_with_smartart_llm_mock(
             mock_outline_gen,
             mock_content_gen,
         ):
-            result_path = await generate_presentation(
+            result_path, _qa_report = await generate_presentation(
                 input_text=process_flow_input,
                 template_path=template_path,
                 output_path=output_path,

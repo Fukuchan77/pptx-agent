@@ -101,6 +101,44 @@ Examples:
         help="Automatically generate missing template files instead of raising an error",
     )
 
+    parser.add_argument(
+        "--qa",
+        dest="qa_enabled",
+        action="store_true",
+        default=True,
+        help="Enable QA validation pass (default: enabled)",
+    )
+
+    parser.add_argument(
+        "--no-qa",
+        dest="qa_enabled",
+        action="store_false",
+        help="Disable QA validation pass",
+    )
+
+    parser.add_argument(
+        "--autofix",
+        dest="autofix_enabled",
+        action="store_true",
+        default=False,
+        help="Enable automatic issue fixing (default: disabled)",
+    )
+
+    parser.add_argument(
+        "--max-fix-iterations",
+        type=int,
+        default=3,
+        metavar="N",
+        help="Maximum number of fix loop iterations (default: 3)",
+    )
+
+    parser.add_argument(
+        "--qa-report",
+        type=str,
+        metavar="FILE",
+        help="Output QA report to specified file (JSON format)",
+    )
+
     return parser
 
 
@@ -202,18 +240,40 @@ def main() -> int:
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Generate presentation (async)
-        result_path = asyncio.run(
+        result_path, qa_report = asyncio.run(
             generate_presentation(
                 input_text=input_text,
                 template_path=str(template_path),
                 output_path=str(output_path),
                 template_manifest=template_manifest,
                 output_language=args.language,  # Pass language parameter (can be None)
+                qa_enabled=args.qa_enabled,
+                autofix_enabled=args.autofix_enabled,
+                max_fix_iterations=args.max_fix_iterations,
             )
         )
 
+        # Save QA report if requested
+        if qa_report and args.qa_report:
+            qa_report_path = Path(args.qa_report)
+            qa_report_path.parent.mkdir(parents=True, exist_ok=True)
+            qa_report_path.write_text(qa_report.to_json(), encoding="utf-8")
+            print(f"✓ QA report saved: {args.qa_report}")
+
         # Success message
         print(f"✓ Presentation generated successfully: {result_path}")
+
+        # Print QA summary if enabled
+        if qa_report:
+            if qa_report.passed:
+                print(f"✓ QA passed: {qa_report.total_issues} issues found (0 errors)")
+            else:
+                print(
+                    f"⚠ QA failed: {qa_report.error_count} errors, "
+                    f"{qa_report.warning_count} warnings, {qa_report.info_count} info"
+                )
+                if args.autofix_enabled:
+                    print(f"  Fix iterations: {qa_report.fix_iterations}")
     except InputValidationError as e:
         print(f"Error: Input validation failed: {e}", file=sys.stderr)
         return 1

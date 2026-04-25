@@ -118,7 +118,7 @@ async def test_overflow_resolution_stage_executes_with_manifest(
         )
 
         # Generate presentation with manifest
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=overflow_moderate,
             template_path=template_path,
             output_path=output_path,
@@ -156,7 +156,7 @@ async def test_overflow_resolution_without_manifest(
         output_path = str(Path(tmpdir) / "output_no_manifest.pptx")
 
         # Generate presentation WITHOUT manifest
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=overflow_minor,
             template_path=template_path,
             output_path=output_path,
@@ -192,7 +192,7 @@ async def test_pipeline_generates_valid_presentation_with_large_content(
         output_path = str(Path(tmpdir) / "output_large_overflow.pptx")
 
         # Generate presentation with large content
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=overflow_large,
             template_path=template_path,
             output_path=output_path,
@@ -224,7 +224,7 @@ async def test_extreme_content_handling(overflow_extreme: str, template_path: st
         output_path = str(Path(tmpdir) / "output_extreme_overflow.pptx")
 
         # Generate presentation with extreme content
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=overflow_extreme,
             template_path=template_path,
             output_path=output_path,
@@ -287,7 +287,7 @@ async def test_multiple_content_lengths_in_single_presentation(template_path: st
         output_path = str(Path(tmpdir) / "output_mixed.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=mixed_input,
             template_path=template_path,
             output_path=output_path,

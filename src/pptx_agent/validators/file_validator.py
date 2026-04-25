@@ -185,9 +185,18 @@ def validate_no_symlinks(file_path: Path | str) -> None:
     # IMPORTANT: Check for symlinks BEFORE resolving paths, as resolve() follows symlinks
     # Strategy: Walk up the absolute path and check each component for symlinks
     # Allow cwd itself to be a symlink to support common dev scenarios
+    # Also allow system-level symlinks (e.g., /var -> /private/var on macOS)
     try:
         # Get resolved cwd (Path.cwd() already resolves symlinks on most systems)
         resolved_cwd = Path.cwd().resolve()
+
+        # System-level symlinks that are safe to allow (common OS patterns)
+        # These are typically part of the OS filesystem structure
+        system_symlinks = {
+            Path("/var"),  # macOS: /var -> /private/var
+            Path("/tmp"),  # noqa: S108  # Some systems: /tmp -> /private/tmp
+            Path("/etc"),  # Some systems: /etc -> /private/etc
+        }
 
         # Check if the file path (when resolved) is under or related to cwd
         # This determines if we should apply the pragmatic symlink acceptance
@@ -205,6 +214,11 @@ def validate_no_symlinks(file_path: Path | str) -> None:
         while current != current.parent:
             # Check if this directory is a symlink
             if current.is_symlink():
+                # Allow system-level symlinks (safe OS patterns)
+                if current in system_symlinks:
+                    current = current.parent
+                    continue
+
                 # Pragmatic approach: Allow ONLY symlinks that are part of the cwd path itself
                 # (i.e., cwd or its ancestors). This prevents false positives when running
                 # from a symlinked directory while still catching security issues with

@@ -276,7 +276,7 @@ def test_qa_report_to_markdown_with_info() -> None:
     )
 
     markdown = report.to_markdown()
-    assert "## ℹ️ Info" in markdown  # noqa: RUF001
+    assert "## ℹ️ Info" in markdown
     assert "[QA-L-003]" in markdown
     assert "Informational message" in markdown
 

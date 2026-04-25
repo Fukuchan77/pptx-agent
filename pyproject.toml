@@ -104,6 +104,7 @@ ignore = [
     "SLF001",  # Private member access (necessary for testing internals)
     "PT017",   # Assertions in except blocks (acceptable test pattern)
     "RUF043",  # Regex metacharacters (pytest.raises match patterns)
+    "RUF001",  # Ambiguous unicode chars (intentional in Japanese test fixtures)
     "F841",    # Unused variables (sometimes intentional in tests)
     "PLR0912", # Too many branches (tests can be complex)
     "PLR0913", # Too many arguments (test fixtures)
@@ -115,7 +116,7 @@ ignore = [
 ]
 "src/pptx_agent/config.py" = ["PLW0603", "PYI063", "ANN001"]  # Global singleton, pydantic hooks
 "src/pptx_agent/main.py" = ["T201", "PLR0911", "PLR0912"]  # CLI uses print, many error returns, complex routing
-"src/pptx_agent/pipeline.py" = ["PLR0913"]  # Core pipeline needs many arguments
+"src/pptx_agent/pipeline.py" = ["PLR0913", "PLR0915"]  # Core pipeline needs many arguments and statements
 "src/pptx_agent/pptx_wrapper/slide_builder.py" = ["TRY301"]  # Security validation needs direct raises
 "src/pptx_agent/agents/content_generator.py" = ["ARG001"]  # Unused args required for API parity
 "src/pptx_agent/agents/llm_config.py" = ["ARG001"]  # Unused args required for API parity

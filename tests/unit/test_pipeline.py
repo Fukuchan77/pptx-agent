@@ -85,12 +85,13 @@ class TestGeneratePresentation:
             mock_build.return_value = output_path
 
             # Act
-            result_path = await generate_presentation(
+            result_path, qa_report = await generate_presentation(
                 input_text, template_path, output_path, use_llm=False
             )
 
             # Assert
             assert result_path == output_path
+            assert qa_report is None  # QA disabled by default in tests
             mock_analyze.assert_called_once_with(input_text, use_llm=False)
             mock_gen_outline.assert_called_once_with(mock_story, manifest=None, use_llm=False)
             mock_val_outline.assert_called_once_with(mock_outline, None)
@@ -132,12 +133,13 @@ class TestGeneratePresentation:
             mock_build.return_value = output_path
 
             # Act
-            result_path = await generate_presentation(
+            result_path, qa_report = await generate_presentation(
                 input_text, template_path, output_path, template_manifest, use_llm=False
             )
 
             # Assert
             assert result_path == output_path
+            assert qa_report is None  # QA disabled by default in tests
             mock_gen_content.assert_called_once_with(mock_outline, template_manifest, use_llm=False)
             mock_val_outline.assert_called_once_with(mock_outline, template_manifest)
             mock_val_content.assert_called_once_with(mock_content, mock_outline, template_manifest)
@@ -322,12 +324,13 @@ class TestGeneratePresentation:
             mock_build.return_value = output_path
 
             # Act
-            result = await generate_presentation(
+            result_path, qa_report = await generate_presentation(
                 input_text, template_path, output_path, use_llm=False
             )
 
             # Assert
-            assert result == output_path
+            assert result_path == output_path
+            assert qa_report is None  # QA disabled by default in tests
 
     @pytest.mark.asyncio
     async def test_pipeline_logs_stage_execution_times(

@@ -10,21 +10,70 @@ This module orchestrates the complete workflow from input text to .pptx file:
 """
 
 import logging
+import os
 import time
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from pptx_agent.agents.content_generator import generate_content
 from pptx_agent.agents.outline_generator import generate_outline
 from pptx_agent.agents.overflow_resolver import resolve_overflow
 from pptx_agent.agents.story_analyzer import analyze_story
+from pptx_agent.fixer.engine import FixEngine
+from pptx_agent.pptx_wrapper.presentation import PresentationWrapper
 from pptx_agent.pptx_wrapper.slide_builder import build_presentation
+from pptx_agent.qa.engine import QAEngine
 from pptx_agent.schemas.template_manifest import TemplateManifest
 from pptx_agent.validators.content_validator import validate_content
 from pptx_agent.validators.input_validator import validate_and_sanitize, validate_text_security
 from pptx_agent.validators.outline_validator import validate_outline
 from pptx_agent.validators.security import flag_suspicious_phrases
 
+if TYPE_CHECKING:
+    from pptx_agent.qa.schemas import QAReport
+
 logger = logging.getLogger(__name__)
+
+
+async def _run_qa_stage(output_path: str) -> "QAReport":
+    """Run QA validation pass on generated presentation.
+
+    Args:
+        output_path: Path to the generated presentation file
+
+    Returns:
+        QA report with detected issues
+    """
+    # Open presentation for QA validation
+    presentation = PresentationWrapper()
+    presentation.load_template(output_path)
+
+    # Run QA engine
+    qa_engine = QAEngine()
+    return qa_engine.validate(presentation)
+
+
+async def _run_autofix_stage(
+    output_path: str,
+    qa_report: "QAReport",
+    max_iterations: int,
+) -> "QAReport":
+    """Run auto-fix loop to remediate detected issues.
+
+    Args:
+        output_path: Path to the presentation file
+        qa_report: Initial QA report with issues to fix
+        max_iterations: Maximum number of fix iterations
+
+    Returns:
+        Updated QA report after fix attempts
+    """
+    logger.debug("Running auto-fix stage for output: %s", output_path)
+    # Run fix engine
+    fix_engine = FixEngine(max_iterations=max_iterations)
+    fix_result = fix_engine.run_fix_loop(qa_report)
+
+    # Return the final QA report from fix loop
+    return fix_result.final_qa_report
 
 
 async def generate_presentation(
@@ -35,7 +84,10 @@ async def generate_presentation(
     output_language: Literal["en", "ja"] | None = None,
     *,
     use_llm: bool = True,
-) -> str:
+    qa_enabled: bool = True,
+    autofix_enabled: bool = False,
+    max_fix_iterations: int = 3,
+) -> tuple[str, "QAReport | None"]:
     """Generate a PowerPoint presentation from input text.
 
     Orchestrates the complete pipeline:
@@ -45,6 +97,8 @@ async def generate_presentation(
     - Generates detailed content for each slide
     - Validates the content against business rules
     - Builds the final PowerPoint presentation
+    - Optionally runs QA validation pass
+    - Optionally applies automatic fixes
 
     Args:
         input_text: Input text to convert into presentation
@@ -55,9 +109,12 @@ async def generate_presentation(
                         If None, language is auto-detected from input text.
         use_llm: If True, use LLM agents for generation. If False, use heuristic fallback
                  for testing/debugging (default: True).
+        qa_enabled: If True, run QA validation pass after generation (default: True).
+        autofix_enabled: If True, automatically fix detected issues (default: False).
+        max_fix_iterations: Maximum number of fix loop iterations (default: 3).
 
     Returns:
-        Path to the generated .pptx file (same as output_path)
+        Tuple of (path to generated .pptx file, QA report if qa_enabled else None)
 
     Raises:
         ValueError: If input text is invalid or cannot be analyzed
@@ -160,8 +217,35 @@ async def generate_presentation(
     duration = time.time() - start
     logger.info("Stage: Slide Building completed in %.2fs", duration)
 
+    # Stage 7: QA Pass (optional, only if output file exists)
+    qa_report: QAReport | None = None
+    if qa_enabled and os.path.exists(output_path):  # noqa: ASYNC240, PTH110
+        start = time.time()
+        qa_report = await _run_qa_stage(output_path)
+        duration = time.time() - start
+        logger.info("Stage: QA Pass completed in %.2fs", duration)
+        logger.info(
+            "QA Results: %d total issues (%d errors, %d warnings, %d info)",
+            qa_report.total_issues,
+            qa_report.error_count,
+            qa_report.warning_count,
+            qa_report.info_count,
+        )
+
+    # Stage 8: Auto-Fix Loop (optional, only if QA found errors)
+    if autofix_enabled and qa_report and qa_report.error_count > 0:
+        start = time.time()
+        qa_report = await _run_autofix_stage(output_path, qa_report, max_fix_iterations)
+        duration = time.time() - start
+        logger.info("Stage: Auto-Fix Loop completed in %.2fs", duration)
+        logger.info(
+            "Fix Results: %d iterations, %d remaining errors",
+            qa_report.fix_iterations,
+            qa_report.error_count,
+        )
+
     # Log total execution time
     total_time = time.time() - pipeline_start
     logger.info("Total pipeline execution completed in %.2fs", total_time)
 
-    return result
+    return result, qa_report

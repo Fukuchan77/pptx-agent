@@ -74,7 +74,7 @@ async def test_japanese_input_produces_japanese_output(sample_story_ja: str, tem
         output_path = str(Path(tmpdir) / "output_ja_auto.pptx")
 
         # Generate presentation without specifying language (should auto-detect)
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=sample_story_ja,
             template_path=template_path,
             output_path=output_path,
@@ -124,7 +124,7 @@ async def test_english_input_with_explicit_japanese_output(
 
         # Generate presentation with explicit Japanese output language
         # This should fail initially because CLI doesn't support language parameter yet
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=sample_story_en,
             template_path=template_path,
             output_path=output_path,
@@ -169,7 +169,7 @@ async def test_mixed_language_content_preserves_technical_terms(template_path: s
         output_path = str(Path(tmpdir) / "output_mixed.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=mixed_content,
             template_path=template_path,
             output_path=output_path,
@@ -222,7 +222,7 @@ async def test_japanese_template_with_japanese_content(
         output_path = str(Path(tmpdir) / "output_ja_template.pptx")
 
         # Generate presentation with Japanese template
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=sample_story_ja,
             template_path=japanese_template_path,
             output_path=output_path,
@@ -251,7 +251,7 @@ async def test_language_specific_capacity_ratios_applied(sample_story_ja: str, t
         output_path = str(Path(tmpdir) / "output_capacity.pptx")
 
         # Generate presentation with Japanese input
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=sample_story_ja,
             template_path=template_path,
             output_path=output_path,
@@ -295,7 +295,7 @@ async def test_explicit_language_parameter_overrides_detection(
         output_path = str(Path(tmpdir) / "output_explicit_lang.pptx")
 
         # Generate presentation with explicit English output (should override any detection)
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=sample_story_en,
             template_path=template_path,
             output_path=output_path,
@@ -341,7 +341,7 @@ async def test_output_language_in_generated_metadata(sample_story_ja: str, templ
         output_path = str(Path(tmpdir) / "output_metadata_lang.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=sample_story_ja,
             template_path=template_path,
             output_path=output_path,
@@ -395,7 +395,7 @@ async def test_generate_presentation_multilanguage_llm_mock(
             mock_outline_gen,
             mock_content_gen,
         ):
-            result_path = await generate_presentation(
+            result_path, _qa_report = await generate_presentation(
                 input_text=sample_story_ja,
                 template_path=template_path,
                 output_path=output_path,
@@ -431,7 +431,7 @@ async def test_output_language_ja_produces_japanese_text_in_pptx(template_path: 
         output_path = str(Path(tmpdir) / "japanese_text_output.pptx")
 
         # Act - explicitly request Japanese output
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=input_text,
             template_path=template_path,
             output_path=output_path,

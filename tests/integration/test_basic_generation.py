@@ -70,7 +70,7 @@ async def test_generate_presentation_with_english_story(sample_story_en: str, te
         output_path = str(Path(tmpdir) / "output_en.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=sample_story_en,
             template_path=template_path,
             output_path=output_path,
@@ -102,7 +102,7 @@ async def test_generate_presentation_with_japanese_story(sample_story_ja: str, t
         output_path = str(Path(tmpdir) / "output_ja.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=sample_story_ja,
             template_path=template_path,
             output_path=output_path,
@@ -142,7 +142,7 @@ async def test_generate_presentation_with_markdown_input(sample_story_md: str, t
         output_path = str(Path(tmpdir) / "output_md.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=sample_story_md,
             template_path=template_path,
             output_path=output_path,
@@ -171,7 +171,7 @@ async def test_generated_file_opens_without_errors(sample_story_en: str, templat
         output_path = str(Path(tmpdir) / "output_test.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=sample_story_en,
             template_path=template_path,
             output_path=output_path,
@@ -207,7 +207,7 @@ async def test_metadata_is_embedded(sample_story_en: str, template_path: str):
         output_path = str(Path(tmpdir) / "output_metadata.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=sample_story_en,
             template_path=template_path,
             output_path=output_path,
@@ -241,7 +241,7 @@ async def test_speaker_notes_are_present(sample_story_en: str, template_path: st
         output_path = str(Path(tmpdir) / "output_notes.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=sample_story_en,
             template_path=template_path,
             output_path=output_path,
@@ -274,7 +274,7 @@ async def test_presentation_has_correct_slide_count(sample_story_en: str, templa
         output_path = str(Path(tmpdir) / "output_count.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=sample_story_en,
             template_path=template_path,
             output_path=output_path,
@@ -301,7 +301,7 @@ async def test_slides_have_layouts_assigned(sample_story_en: str, template_path:
         output_path = str(Path(tmpdir) / "output_layouts.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=sample_story_en,
             template_path=template_path,
             output_path=output_path,
@@ -328,7 +328,7 @@ async def test_slides_have_content(sample_story_en: str, template_path: str):
         output_path = str(Path(tmpdir) / "output_content.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=sample_story_en,
             template_path=template_path,
             output_path=output_path,
@@ -362,7 +362,7 @@ async def test_file_size_is_reasonable(sample_story_en: str, template_path: str)
         output_path = str(Path(tmpdir) / "output_size.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=sample_story_en,
             template_path=template_path,
             output_path=output_path,
@@ -391,7 +391,7 @@ async def test_pipeline_handles_minimal_input(template_path: str):
         output_path = str(Path(tmpdir) / "output_minimal.pptx")
 
         # Generate presentation
-        result_path = await generate_presentation(
+        result_path, _qa_report = await generate_presentation(
             input_text=minimal_input,
             template_path=template_path,
             output_path=output_path,
