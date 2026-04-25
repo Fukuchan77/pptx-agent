@@ -11,6 +11,12 @@ from pptx_agent.qa.rules.layout_checks import (
     UnpopulatedPlaceholderRule,
 )
 from pptx_agent.qa.rules.registry import get_global_registry
+from pptx_agent.qa.rules.style_checks import (
+    InvalidBulletIndentRule,
+    OffTemplateColorRule,
+    OffTemplateFontRule,
+    TemplateConformanceRule,
+)
 
 
 def register_default_rules() -> None:
@@ -19,7 +25,7 @@ def register_default_rules() -> None:
     This function registers all built-in QA rules organized by category:
     - Layout checks: Text overflow, empty placeholders, overlapping objects, etc.
     - Content checks: (to be added in future phases)
-    - Style checks: (to be added in future phases)
+    - Style checks: Font conformance, color conformance, bullet indentation, template conformance
 
     The function is idempotent - calling it multiple times will not
     cause errors (duplicate registrations are prevented by the registry).
@@ -44,6 +50,19 @@ def register_default_rules() -> None:
 
     with contextlib.suppress(ValueError):
         registry.register(MinimumFontSizeRule(), category="layout")
+
+    # Register style check rules
+    with contextlib.suppress(ValueError):
+        registry.register(OffTemplateFontRule(), category="style")
+
+    with contextlib.suppress(ValueError):
+        registry.register(OffTemplateColorRule(), category="style")
+
+    with contextlib.suppress(ValueError):
+        registry.register(InvalidBulletIndentRule(), category="style")
+
+    with contextlib.suppress(ValueError):
+        registry.register(TemplateConformanceRule(), category="style")
 
 
 # Auto-register rules when module is imported

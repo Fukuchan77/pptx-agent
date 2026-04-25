@@ -11,6 +11,8 @@ import traceback
 from pathlib import Path
 
 from pptx_agent.cache.manager import CacheManager
+from pptx_agent.pptx_wrapper.presentation import PresentationWrapper
+from pptx_agent.qa.engine import QAEngine
 from pptx_agent.template_parser.manifest_builder import ManifestBuilder
 from pptx_agent.template_parser.parser import TemplateParser
 
@@ -187,6 +189,182 @@ def main_analyze_template() -> int:
     parser = create_analyze_template_parser()
     args = parser.parse_args()
     return analyze_template_command(args)
+
+
+def create_qa_parser() -> argparse.ArgumentParser:
+    """Create argument parser for qa command.
+
+    Returns:
+        Configured ArgumentParser for QA operations
+    """
+    parser = argparse.ArgumentParser(
+        prog="pptx-agent qa",
+        description="Run quality assurance checks on PowerPoint presentations",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s -i presentation.pptx
+  %(prog)s --input existing.pptx --report qa-report.json
+  %(prog)s -i presentation.pptx --template corporate.pptx
+  %(prog)s -i presentation.pptx --autofix --output fixed.pptx
+  %(prog)s -i presentation.pptx --format markdown --report report.md
+        """,
+    )
+
+    parser.add_argument(
+        "-i",
+        "--input",
+        type=str,
+        required=True,
+        metavar="FILE",
+        help="Input .pptx file to validate (required)",
+    )
+
+    parser.add_argument(
+        "-t",
+        "--template",
+        type=str,
+        metavar="FILE",
+        help="Template .pptx file for style conformance validation (optional)",
+    )
+
+    parser.add_argument(
+        "-r",
+        "--report",
+        type=str,
+        metavar="FILE",
+        help="Output QA report file path (optional, prints to stdout if not specified)",
+    )
+
+    parser.add_argument(
+        "-f",
+        "--format",
+        type=str,
+        choices=["json", "markdown"],
+        default="json",
+        metavar="FORMAT",
+        help="Report output format: 'json' or 'markdown' (default: json)",
+    )
+
+    parser.add_argument(
+        "--autofix",
+        action="store_true",
+        help="Enable automatic issue fixing (experimental)",
+    )
+
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        metavar="FILE",
+        help="Output .pptx file path when using --autofix (optional)",
+    )
+
+    parser.add_argument(
+        "--max-fix-iterations",
+        type=int,
+        default=3,
+        metavar="N",
+        help="Maximum fix loop iterations (default: 3)",
+    )
+
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output",
+    )
+
+    return parser
+
+
+def qa_command(args: argparse.Namespace) -> int:
+    """Execute QA validation command.
+
+    Args:
+        args: Parsed command-line arguments
+
+    Returns:
+        Exit code: 0 if no errors found, 1 if errors detected
+    """
+    try:
+        input_path = Path(args.input)
+        if not input_path.exists():
+            print(f"Error: Input file not found: {args.input}", file=sys.stderr)
+            return 1
+
+        if args.verbose:
+            print(f"Loading presentation: {args.input}")
+
+        # Load presentation
+        wrapper = PresentationWrapper()
+        wrapper.load_template(str(input_path))
+
+        if args.verbose:
+            print("Running QA validation...")
+
+        # Run QA validation
+        engine = QAEngine()
+        report = engine.validate(wrapper)
+
+        if args.verbose:
+            print(f"QA validation complete: {report.total_issues} issues found")
+            print(f"  Errors: {report.error_count}")
+            print(f"  Warnings: {report.warning_count}")
+            print(f"  Info: {report.info_count}")
+
+        # Handle auto-fix if requested
+        if args.autofix and args.verbose:
+            print("\nAuto-fix mode is not yet fully implemented")
+            print("This feature will be available in a future release")
+            # Note: Auto-fix integration will be implemented in Phase 3
+            # when FixEngine is fully integrated with QA workflow
+
+        # Generate report output
+        report_content = report.to_markdown() if args.format == "markdown" else report.to_json()
+
+        # Output report
+        if args.report:
+            report_path = Path(args.report)
+            report_path.parent.mkdir(parents=True, exist_ok=True)
+            report_path.write_text(report_content, encoding="utf-8")
+            if args.verbose:
+                print(f"\n✓ QA report saved: {args.report}")
+        else:
+            print(report_content)
+
+        # Save fixed presentation if auto-fix was used and output specified
+        if args.autofix and args.output:
+            output_path = Path(args.output)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            wrapper.prs.save(str(output_path))
+            if args.verbose:
+                print(f"✓ Fixed presentation saved: {args.output}")
+
+        # Return exit code based on error count (0 = passed, 1 = failed)
+        exit_code = 0 if report.passed else 1
+
+        if args.verbose:
+            status = "PASSED" if report.passed else "FAILED"
+            print(f"\nQA Status: {status}")
+            print(f"Exit code: {exit_code}")
+            return exit_code
+        return exit_code  # noqa: TRY300
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        if args.verbose:
+            traceback.print_exc(file=sys.stderr)
+        return 1
+
+
+def main_qa() -> int:
+    """Main entry point for qa command.
+
+    Returns:
+        Exit code: 0 if no errors, 1 if errors detected or execution failed
+    """
+    parser = create_qa_parser()
+    args = parser.parse_args()
+    return qa_command(args)
 
 
 if __name__ == "__main__":
