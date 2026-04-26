@@ -1,112 +1,114 @@
 # Architecture Decision Records (ADR)
 
-## 概要
+## Overview
 
-このディレクトリには、AI PowerPoint Presentation Generatorプロジェクトにおける重要なアーキテクチャ決定の記録（Architecture Decision Records、ADR）が含まれています。
+This directory contains Architecture Decision Records (ADRs) for the AI PowerPoint Presentation Generator project.
 
-ADRは、プロジェクトの技術的な決定、その背景、理由、影響を文書化するための軽量な手法です。各ADRは、特定の決定に関する完全な情報を提供し、将来の開発者や関係者が過去の決定の背景を理解できるようにします。
+ADRs are a lightweight method for documenting technical decisions, their context, rationale, and consequences. Each ADR provides complete information about a specific decision, enabling future developers and stakeholders to understand the background of past decisions.
 
-## ADRとは？
+## What are ADRs?
 
-Architecture Decision Records（アーキテクチャ決定記録）は、ソフトウェアアーキテクチャに関する重要な決定を記録する文書です。各ADRには以下が含まれます：
+Architecture Decision Records are documents that record important decisions related to software architecture. Each ADR includes:
 
-- **タイトル**: 決定内容の簡潔な説明
-- **ステータス**: 提案中、承認済み、却下、非推奨など
-- **コンテキスト**: 決定が必要となった背景と状況
-- **決定事項**: 採用した解決策の詳細
-- **影響**: 決定がもたらす結果（ポジティブ、ネガティブ、対策）
-- **代替案**: 検討したが採用しなかった選択肢とその理由
+- **Title**: A concise description of the decision
+- **Status**: Proposed, Accepted, Rejected, Deprecated, etc.
+- **Context**: Background and circumstances that necessitated the decision
+- **Decision**: Details of the adopted solution
+- **Consequences**: Results of the decision (positive, negative, mitigations)
+- **Alternatives**: Options considered but not adopted, and their reasons
 
-## フォーマット
+## Format
 
-このプロジェクトのADRは、[Michael Nygard's ADR template](https://github.com/joelparkerhenderson/architecture-decision-record)に基づいています。
+ADRs in this project are based on [Michael Nygard's ADR template](https://github.com/joelparkerhenderson/architecture-decision-record).
 
-## ADRリスト
+## ADR List
 
-| 番号                                                 | タイトル                                        | ステータス | 採用日     |
-| ---------------------------------------------------- | ----------------------------------------------- | ---------- | ---------- |
-| [0001](0001-template-generation-plan-b.md)           | テンプレート生成戦略 - Plan B（手動作成）の採用 | Accepted   | 2026-04-05 |
-| [0002](0002-config-test-isolation-and-validation.md) | Configテスト隔離とバリデーション                | Accepted   | 2026-04-14 |
+| Number                                               | Title                                           | Status   | Date       |
+| ---------------------------------------------------- | ----------------------------------------------- | -------- | ---------- |
+| [0001](0001-template-generation-plan-b.md)           | Template Generation Strategy - Plan B (Manual)  | Accepted | 2026-04-05 |
+| [0002](0002-config-test-isolation-and-validation.md) | Config Test Isolation and Validation            | Accepted | 2026-04-14 |
+| [0003](0003-qa-architecture.md)                      | QA Framework Architecture                       | Accepted | 2026-04-15 |
+| [0004](0004-template-caching.md)                     | Template Manifest Caching Strategy              | Accepted | 2026-04-16 |
 
-## ADRの作成ガイドライン
+## ADR Creation Guidelines
 
-新しいADRを作成する場合は、以下のガイドラインに従ってください：
+When creating a new ADR, follow these guidelines:
 
-### 1. ファイル命名規則
+### 1. File Naming Convention
 
 ```
 XXXX-brief-title.md
 ```
 
-- `XXXX`: 4桁の連番（例：0001、0002）
-- `brief-title`: 決定内容を簡潔に表す英語のタイトル（ケバブケース）
-- 例：`0002-llm-provider-selection.md`
+- `XXXX`: 4-digit sequential number (e.g., 0001, 0002)
+- `brief-title`: Brief English title in kebab-case
+- Example: `0002-llm-provider-selection.md`
 
-### 2. 必須セクション
+### 2. Required Sections
 
-各ADRには以下のセクションを含める必要があります：
+Each ADR must include the following sections:
 
 ```markdown
-# ADR XXXX: タイトル
+# ADR XXXX: Title
 
-## ステータス
+## Status
 
 [Proposed | Accepted | Rejected | Deprecated | Superseded]
 
-## コンテキスト
+## Context
 
-決定が必要となった背景、問題、制約条件
+Background, problem, and constraints that necessitated the decision
 
-## 決定事項
+## Decision
 
-採用した解決策の詳細
+Details of the adopted solution
 
-## 影響（Consequences）
+## Consequences
 
-### ポジティブな影響
+### Positive Consequences
 
-### ネガティブな影響
+### Negative Consequences
 
-### 対策（Mitigations）
+### Mitigations
 
-## 検討した代替案
+## Alternatives Considered
 
-### 代替案1: ...
+### Alternative 1: ...
 
-### 代替案2: ...
+### Alternative 2: ...
 
-## 参照（References）
+## References
 
-関連ドキュメント、コード、外部リソースへのリンク
+Links to related documents, code, and external resources
 ```
 
-### 3. 作成タイミング
+### 3. When to Create ADRs
 
-ADRは以下の状況で作成します：
+Create ADRs in the following situations:
 
-- **技術スタックの選択**: ライブラリ、フレームワーク、プラットフォームの選定
-- **アーキテクチャパターンの採用**: マイクロサービス、モノリス、レイヤードアーキテクチャなど
-- **重要な設計決定**: データモデル、API設計、セキュリティ戦略など
-- **トレードオフのある決定**: パフォーマンス vs. 保守性など
-- **方針変更**: 既存の決定を覆す、または修正する場合
+- **Technology Stack Selection**: Choosing libraries, frameworks, platforms
+- **Architecture Pattern Adoption**: Microservices, monolith, layered architecture, etc.
+- **Important Design Decisions**: Data models, API design, security strategy, etc.
+- **Trade-off Decisions**: Performance vs. maintainability, etc.
+- **Policy Changes**: Overriding or modifying existing decisions
 
-### 4. 作成プロセス
+### 4. Creation Process
 
-1. **連番の決定**: 最新のADR番号を確認し、次の番号を使用
-2. **ドラフト作成**: テンプレートに従ってドラフトを作成
-3. **レビュー**: チームメンバーによるレビュー
-4. **承認**: ステータスを "Accepted" に変更
-5. **README更新**: このREADMEのADRリストに新しいADRを追加
+1. **Determine Number**: Check the latest ADR number and use the next sequential number
+2. **Create Draft**: Create a draft following the template
+3. **Review**: Team member review
+4. **Approval**: Change status to "Accepted"
+5. **Update README**: Add the new ADR to the ADR list in this README
 
-### 5. ベストプラクティス
+### 5. Best Practices
 
-- **簡潔性**: 各セクションは明確かつ簡潔に記述
-- **客観性**: 感情や主観的な意見ではなく、技術的な事実とトレードオフに基づく
-- **完全性**: 将来の読者が決定の背景を理解できるよう、十分な情報を提供
-- **タイムリー性**: 決定が行われた直後に記録（記憶が新鮮なうちに）
-- **不変性**: 承認後のADRは変更しない（新しいADRで supersede する）
+- **Conciseness**: Write each section clearly and concisely
+- **Objectivity**: Base decisions on technical facts and trade-offs, not emotions or subjective opinions
+- **Completeness**: Provide sufficient information for future readers to understand the decision background
+- **Timeliness**: Record immediately after the decision is made (while memory is fresh)
+- **Immutability**: Do not modify ADRs after approval (supersede with new ADRs instead)
 
-## ADRのステータス遷移
+## ADR Status Transitions
 
 ```
 Proposed → Accepted → [Deprecated | Superseded]
@@ -114,59 +116,58 @@ Proposed → Accepted → [Deprecated | Superseded]
        Rejected
 ```
 
-- **Proposed**: 提案中、議論中
-- **Accepted**: 承認され、実装に使用される
-- **Rejected**: 却下された（理由を明記）
-- **Deprecated**: 非推奨（より良い方法が見つかったが、まだ使用中）
-- **Superseded**: 新しいADRに置き換えられた（置き換え先のADRを明記）
+- **Proposed**: Under proposal, under discussion
+- **Accepted**: Approved and used in implementation
+- **Rejected**: Rejected (with reasons documented)
+- **Deprecated**: Deprecated (better method found but still in use)
+- **Superseded**: Replaced by a new ADR (specify the replacement ADR)
 
-## よくある質問（FAQ）
+## Frequently Asked Questions (FAQ)
 
-### Q: すべての技術決定をADRにする必要がありますか？
+### Q: Do all technical decisions need to be ADRs?
 
-A: いいえ。ADRは**重要な**アーキテクチャ決定のためのものです。以下は記録する価値があります：
+A: No. ADRs are for **important** architecture decisions. The following are worth recording:
 
-- プロジェクトの方向性に影響を与える決定
-- 変更が困難な決定
-- トレードオフを伴う決定
-- チーム全体で理解が必要な決定
+- Decisions that affect project direction
+- Decisions that are difficult to change
+- Decisions involving trade-offs
+- Decisions that require team-wide understanding
 
-日常的な実装の詳細（変数名、ファイル配置など）はADRにする必要はありません。
+Daily implementation details (variable names, file placement, etc.) do not need to be ADRs.
 
-### Q: ADRを後から変更できますか？
+### Q: Can ADRs be modified later?
 
-A: 承認後のADRは**変更すべきではありません**。ADRは歴史的記録です。決定を変更する必要がある場合は、新しいADRを作成し、古いADRを "Superseded" としてマークします。
+A: Approved ADRs **should not be modified**. ADRs are historical records. If you need to change a decision, create a new ADR and mark the old ADR as "Superseded".
 
-軽微な修正（誤字脱字、リンク修正など）は許可されますが、決定内容自体の変更は新しいADRで行います。
+Minor corrections (typos, link fixes, etc.) are permitted, but changes to the decision content itself should be made in a new ADR.
 
-### Q: 日本語と英語、どちらで書くべきですか？
+### Q: Should I write in Japanese or English?
 
-A: このプロジェクトでは、ADRは**日本語**で記述します。これはプロジェクトの標準に従うためです。ただし、以下の要素は英語を使用できます：
+A: In this project, ADRs are written in **English**. This follows the project standard. However, the following elements can use Japanese:
 
-- ファイル名
-- コード例
-- 技術用語（必要に応じて日本語の説明を追加）
+- Comments in code examples (if needed for clarity)
+- Technical terms (with English explanations as needed)
 
-### Q: 却下された代替案も記録すべきですか？
+### Q: Should rejected alternatives also be recorded?
 
-A: はい、**必ず記録してください**。却下された代替案とその理由を記録することで：
+A: Yes, **they must be recorded**. Recording rejected alternatives and their reasons:
 
-- 同じ議論を繰り返さない
-- 将来、状況が変わった際に再評価できる
-- 決定の背景を完全に理解できる
+- Prevents repeating the same discussions
+- Allows re-evaluation when circumstances change in the future
+- Enables complete understanding of the decision background
 
-## 参考リソース
+## Reference Resources
 
 - [Architecture Decision Records (ADR) by Michael Nygard](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions)
 - [ADR GitHub Organization](https://adr.github.io/)
 - [Joel Parker Henderson's ADR Templates](https://github.com/joelparkerhenderson/architecture-decision-record)
 - [Documenting Architecture Decisions - ThoughtWorks](https://www.thoughtworks.com/en-us/radar/techniques/lightweight-architecture-decision-records)
 
-## 貢献
+## Contributing
 
-プロジェクトメンバーは、重要なアーキテクチャ決定を行った際にADRを作成することを推奨します。質問や提案がある場合は、プロジェクトのメインREADMEを参照してください。
+Project members are encouraged to create ADRs when making important architecture decisions. For questions or suggestions, please refer to the project's main README.
 
 ---
 
-**最終更新**: 2026-04-11
-**メンテナー**: AI PowerPoint Generator Project Team
+**Last Updated**: 2026-04-26
+**Maintainer**: AI PowerPoint Generator Project Team

@@ -16,7 +16,7 @@ This directory contains example input files demonstrating various use cases for 
 **Usage**:
 
 ```bash
-python -m pptx_agent.main \
+uv run python -m pptx_agent.main \
   --input examples/01-business-quarterly-review.txt \
   --template templates/basic-template.pptx \
   --output output/quarterly-review.pptx
@@ -44,7 +44,7 @@ python -m pptx_agent.main \
 **Usage**:
 
 ```bash
-python -m pptx_agent.main \
+uv run python -m pptx_agent.main \
   --input examples/02-technical-architecture-overview.txt \
   --template templates/basic-template.pptx \
   --output output/architecture-overview.pptx
@@ -72,7 +72,7 @@ python -m pptx_agent.main \
 **Usage**:
 
 ```bash
-python -m pptx_agent.main \
+uv run python -m pptx_agent.main \
   --input examples/03-python-programming-basics-ja.txt \
   --template templates/japanese-template.pptx \
   --output output/python-basics-ja.pptx \
@@ -107,7 +107,7 @@ python -m pptx_agent.main \
 **Usage**:
 
 ```bash
-python -m pptx_agent.main \
+uv run python -m pptx_agent.main \
   --input examples/04-sales-analytics-dashboard.txt \
   --template templates/basic-template.pptx \
   --output output/sales-analytics.pptx
@@ -137,7 +137,7 @@ python -m pptx_agent.main \
 **Usage**:
 
 ```bash
-python -m pptx_agent.main \
+uv run python -m pptx_agent.main \
   --input examples/05-product-development-process.txt \
   --template templates/basic-template.pptx \
   --output output/product-development.pptx
@@ -160,7 +160,7 @@ python -m pptx_agent.main \
 ### Basic Command Structure
 
 ```bash
-python -m pptx_agent.main \
+uv run python -m pptx_agent.main \
   --input <input-file-path> \
   --template <template-file-path> \
   --output <output-file-path> \
@@ -181,7 +181,7 @@ The system automatically detects input language, but you can explicitly specify 
 **English Output**:
 
 ```bash
-python -m pptx_agent.main \
+uv run python -m pptx_agent.main \
   --input examples/01-business-quarterly-review.txt \
   --template templates/basic-template.pptx \
   --output output/presentation-en.pptx \
@@ -191,7 +191,7 @@ python -m pptx_agent.main \
 **Japanese Output**:
 
 ```bash
-python -m pptx_agent.main \
+uv run python -m pptx_agent.main \
   --input examples/03-python-programming-basics-ja.txt \
   --template templates/japanese-template.pptx \
   --output output/presentation-ja.pptx \
@@ -327,7 +327,7 @@ Test the system with a short example:
 
 ```bash
 # Generate a presentation
-python -m pptx_agent.main \
+uv run python -m pptx_agent.main \
   --input examples/01-business-quarterly-review.txt \
   --template templates/basic-template.pptx \
   --output test-output.pptx
@@ -349,7 +349,7 @@ mkdir -p output
 # Generate each example
 for example in examples/*.txt; do
     filename=$(basename "$example" .txt)
-    python -m pptx_agent.main \
+    uv run python -m pptx_agent.main \
         --input "$example" \
         --template templates/basic-template.pptx \
         --output "output/${filename}.pptx"
@@ -361,7 +361,7 @@ done
 
 ```bash
 # Generate Japanese presentation
-python -m pptx_agent.main \
+uv run python -m pptx_agent.main \
   --input examples/03-python-programming-basics-ja.txt \
   --template templates/japanese-template.pptx \
   --output output/python-basics-ja.pptx \

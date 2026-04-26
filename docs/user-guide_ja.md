@@ -376,6 +376,159 @@ uv run python -m pptx_agent.main \
 
 ユーザーは何もする必要はありません。システムがこれを自動的に処理します。
 
+### 品質保証（QA）と自動修正
+
+システムには、生成されたプレゼンテーションの一般的な問題を検査し、その多くを自動的に修正できる自動品質保証フレームワークが含まれています。
+
+#### QA機能
+
+**自動QAパス**: 生成後、システムは自動的に品質チェックを実行できます:
+
+```bash
+uv run python -m pptx_agent.main \
+  --input my-content.txt \
+  --template templates/basic-template.pptx \
+  --output presentation.pptx \
+  --qa-report qa-report.json
+```
+
+**QA専用モード**: 再生成せずに既存のプレゼンテーションを検証します:
+
+```bash
+uv run python -m pptx_agent.interfaces.cli qa \
+  --input existing-presentation.pptx \
+  --output qa-report.json
+```
+
+#### QAがチェックする内容
+
+**レイアウトの問題（エラー重大度）**:
+- プレースホルダー内のテキストオーバーフロー
+- 空のタイトルプレースホルダー
+- スライド境界を超えるオブジェクト
+- 最小しきい値を下回るフォントサイズ（デフォルト10pt）
+
+**コンテンツの問題（警告重大度）**:
+- 推奨される長さを超える箇条書き
+- 重複するスライドタイトル
+- 未入力の画像プレースホルダー
+- 病的な表の寸法（1×1の表）
+- 欠落しているチャートデータ
+
+**スタイルの問題（警告/情報重大度）**:
+- テンプレート外のフォント使用
+- テンプレート外の色使用
+- 無効な箇条書きインデントレベル
+
+#### 自動修正機能
+
+`--auto-fix` フラグで自動問題修正を有効にします:
+
+```bash
+uv run python -m pptx_agent.main \
+  --input my-content.txt \
+  --template templates/basic-template.pptx \
+  --output presentation.pptx \
+  --auto-fix \
+  --max-fix-loops 3
+```
+
+**修正戦略**:
+
+1. **テキストオーバーフロー**:
+   - フォントサイズを10％ずつ縮小
+   - より大きなプレースホルダーのあるレイアウトに切り替え
+   - LLMを使用してコンテンツを要約
+
+2. **空のプレースホルダー**:
+   - アウトラインヘッダーからタイトルを入力
+   - 必須フィールドにデフォルトコンテンツを追加
+
+3. **スタイル違反**:
+   - テンプレートマスターフォントにフォントをリセット
+   - 箇条書きインデントレベルを修正
+
+**修正ループ**: システムは反復的に修正を適用し、QAを再実行します:
+- 修正可能なすべての問題が解決されるまで
+- 最大反復回数に達するまで（デフォルト: 3）
+- 進捗がなくなるまで
+
+#### QAレポート形式
+
+**JSON形式**（機械可読）:
+```json
+{
+  "total_issues": 5,
+  "errors": 2,
+  "warnings": 3,
+  "info": 0,
+  "issues": [
+    {
+      "rule_id": "QA-L-001",
+      "severity": "Error",
+      "slide_index": 3,
+      "shape_index": 1,
+      "message": "タイトルプレースホルダーでテキストオーバーフローが検出されました",
+      "auto_fixable": true
+    }
+  ]
+}
+```
+
+**Markdown形式**（人間可読）:
+```markdown
+# QAレポート
+
+## 概要
+- 総問題数: 5
+- エラー: 2
+- 警告: 3
+- 情報: 0
+
+## 問題
+
+### エラー: テキストオーバーフロー（スライド3、図形1）
+**ルール**: QA-L-001
+**自動修正可能**: はい
+タイトルプレースホルダーでテキストオーバーフローが検出されました
+```
+
+#### CI統合
+
+継続的インテグレーションのために終了コードを使用します:
+
+```bash
+# エラーがない場合は終了コード0、エラーが見つかった場合は1
+uv run python -m pptx_agent.interfaces.cli qa \
+  --input presentation.pptx \
+  --output qa-report.json
+
+# 終了コードを確認
+if [ $? -eq 0 ]; then
+  echo "QA合格"
+else
+  echo "QA不合格 - qa-report.jsonを参照してください"
+  exit 1
+fi
+```
+
+#### テンプレート適合性検証
+
+テンプレート標準に対してプレゼンテーションを検証します:
+
+```bash
+uv run python -m pptx_agent.interfaces.cli qa \
+  --input presentation.pptx \
+  --template templates/corporate-template.pptx \
+  --output qa-report.json
+```
+
+これにより以下がチェックされます:
+- 正しいスライドマスターバインディング
+- テンプレートテーマカラーの使用
+- テンプレートフォントの使用
+- レイアウトの適合性
+
 ## テンプレートの要件
 
 ### 最低要件

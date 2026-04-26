@@ -14,13 +14,24 @@
 
 ## ✨ 機能
 
+### コア生成機能
 - **自動プレゼンテーション生成**: テキスト/Markdownドキュメントを構造化されたPowerPointプレゼンテーションに変換します
 - **多言語サポート**: 日本語と英語をサポートし、言語を考慮したテキスト容量計算を行います
 - **インテリジェントなレイアウト選択**: コンテンツに基づいて適切なスライドレイアウトを自動的に選択します
 - **スマートコンテンツフィッティング**: フォントの縮小、レイアウトの切り替え、またはコンテンツの要約により、テキストのオーバーフローを解決します
 - **ビジュアルアセットのサポート**: グラフ、表を生成し、SmartArtの図にコンテンツを入力します
 - **テンプレートベース**: 一貫したブランディングのために、カスタマイズ可能なPowerPointテンプレートを使用します
+
+### 品質保証と自動修正
+- **自動QA検証**: 生成後の品質チェックで、テキストのオーバーフロー、空のプレースホルダー、スタイル違反、レイアウトの問題を検出します
+- **自動問題修正**: 反復修正ループが一般的な品質問題を自動的に修正します（フォント縮小、プレースホルダー入力、スタイルリセット）
+- **包括的なレポート**: 重大度レベル（ERROR、WARNING、INFO）と具体的な問題箇所を含む詳細なQAレポート
+- **テンプレート適合性**: テンプレート標準（フォント、色、レイアウト）に対してプレゼンテーションを検証します
+
+### パフォーマンスと信頼性
+- **テンプレートキャッシング**: SHA-256ベースのマニフェストキャッシングにより、テンプレート解析のオーバーヘッドを80-90%削減します
 - **本番環境対応**: 組み込みの再試行戦略、プロバイダーのフォールバック、および包括的なエラー処理
+- **マルチインターフェースサポート**: CLI、REST API、MCPサーバーモードによる柔軟な統合
 
 ## 要件
 
@@ -139,6 +150,45 @@ uv run python -m pptx_agent.main \
   --template templates/basic-template.pptx \
   --output output.pptx \
   --verbose
+```
+
+### 品質保証付き
+
+```bash
+uv run python -m pptx_agent.main \
+  --input examples/01-business-quarterly-review.txt \
+  --template templates/basic-template.pptx \
+  --output output.pptx \
+  --qa
+```
+
+### 自動修正付き（実験的機能）
+
+```bash
+uv run python -m pptx_agent.main \
+  --input examples/01-business-quarterly-review.txt \
+  --template templates/basic-template.pptx \
+  --output output.pptx \
+  --qa \
+  --autofix \
+  --max-fix-iterations 3
+```
+
+### QA専用モード（既存プレゼンテーションの検証）
+
+```bash
+uv run python -m pptx_agent.interfaces.cli qa \
+  --input existing-presentation.pptx \
+  --format markdown \
+  --output qa-report.md
+```
+
+### テンプレート解析
+
+```bash
+uv run python -m pptx_agent.interfaces.cli analyze-template \
+  --template templates/corporate-template.pptx \
+  --output manifest.json
 ```
 
 その他の例と詳細な使用手順については、**[ユーザーガイド](docs/user-guide_ja.md)**を参照してください。
