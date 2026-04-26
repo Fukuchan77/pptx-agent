@@ -1,5 +1,6 @@
 """QA engine for orchestrating validation rules."""
 
+import logging
 from typing import Literal, cast
 
 from pptx_agent.pptx_wrapper.presentation import PresentationWrapper
@@ -7,6 +8,8 @@ from pptx_agent.qa.rules.base import QARule
 from pptx_agent.qa.rules.registry import QARuleRegistry, get_global_registry
 from pptx_agent.qa.schemas import QAIssue, QAReport, Severity
 from pptx_agent.utils.language_detector import detect_language
+
+logger = logging.getLogger(__name__)
 
 
 class QAEngine:
@@ -69,10 +72,15 @@ class QAEngine:
 
                 issues = rule.validate(presentation)
                 all_issues.extend(issues)
-            except Exception:  # noqa: S110
+            except Exception as exc:
                 # Rules should be defensive, but catch any unexpected errors
                 # and continue with other rules
-                pass
+                logger.warning(
+                    "QA rule %s raised %s; skipping",
+                    getattr(rule, "rule_id", type(rule).__name__),
+                    exc,
+                    exc_info=True,
+                )
 
         # Build report
         return self._build_report(all_issues)
@@ -115,8 +123,13 @@ class QAEngine:
             try:
                 issues = rule.validate(presentation)
                 all_issues.extend(issues)
-            except Exception:  # noqa: S110
-                pass
+            except Exception as exc:
+                logger.warning(
+                    "QA rule %s raised %s; skipping",
+                    getattr(rule, "rule_id", type(rule).__name__),
+                    exc,
+                    exc_info=True,
+                )
 
         return self._build_report(all_issues)
 

@@ -101,8 +101,7 @@ class Config(BaseSettings):
 
     # Usage limits (FR-049)
     max_requests: int = 20  # Maximum 20 requests
-    # Maximum 100,000 response tokens (increased for complex presentations)
-    max_response_tokens: int = 100000
+    max_response_tokens: int = 50000  # Maximum 50,000 response tokens
 
     # HTTP-level retry and timeout configuration (FR-045)
     retry_base_delay: float = 1.0  # Base delay for exponential backoff (seconds)

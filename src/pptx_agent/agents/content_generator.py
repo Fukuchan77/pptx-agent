@@ -11,14 +11,15 @@ Uses heuristic-based generation for initial implementation.
 Future versions may integrate LLM-based content enrichment.
 """
 
+import asyncio
 import json
 import logging
 import re
-import time
 from typing import Any, Literal
 
 from pydantic import ValidationError
 from pydantic_ai import Agent
+from pydantic_ai.exceptions import AgentRunError, ModelHTTPError, UnexpectedModelBehavior
 
 from pptx_agent.agents.prompts import (
     CONTENT_GENERATOR_PROMPT,
@@ -30,7 +31,7 @@ from pptx_agent.agents.prompts import (
     SPEAKER_NOTES_JA_TITLE_SLIDE,
 )
 from pptx_agent.agents.utils import run_agent_with_fallback
-from pptx_agent.config import Config, get_config
+from pptx_agent.config import get_config
 from pptx_agent.schemas.outline import PresentationOutline, SlideContent
 from pptx_agent.schemas.presentation import PresentationSchema
 from pptx_agent.schemas.slide import ContentBlock, SlideSchema
@@ -85,84 +86,89 @@ async def generate_content(
     if use_llm:
         config = get_config()
 
+        # Calculate total timeout budget based on slide count
+        total_budget = config.slide_timeout * len(outline.slides)
+
         # Try LLM generation with error handling and retries
         for attempt in range(1, MAX_RETRY_ATTEMPTS + 1):
             try:
-                # Track elapsed time for timeout monitoring
-                start_time = time.time()
+                # Wrap LLM call with asyncio.timeout() (Constitutional requirement)
+                async with asyncio.timeout(total_budget):
+                    # Serialize outline to text prompt for LLM
+                    prompt = _serialize_outline_to_prompt(outline, manifest)
 
-                # Serialize outline to text prompt for LLM
-                prompt = _serialize_outline_to_prompt(outline, manifest)
+                    # Run agent with fallback
+                    result = await run_agent_with_fallback(_content_agent, prompt, config)
 
-                # Run agent with fallback
-                result = await run_agent_with_fallback(_content_agent, prompt, config)
-
-                # Check timeout warning (80% of slide_timeout)
-                elapsed = time.time() - start_time
-                timeout_threshold = config.slide_timeout * 0.8
-                if elapsed > timeout_threshold:
-                    logger.warning(
-                        "Content generation approaching timeout: elapsed=%.2fs, "
-                        "threshold=%.2fs (80%% of %ds timeout)",
-                        elapsed,
-                        timeout_threshold,
-                        config.slide_timeout,
-                    )
-
-                # Try to access output - this may raise JSON or validation errors
-                try:
-                    presentation = result.output
-                    logger.info(
-                        "LLM content generation succeeded: slides=%d, attempt=%d",
-                        len(presentation.slides),
-                        attempt,
-                    )
-                    return presentation
-                except (json.JSONDecodeError, ValidationError) as parse_error:
-                    logger.warning(
-                        "JSON/validation error in LLM response (attempt %d/%d): %s. "
-                        "Falling back to heuristic generation.",
-                        attempt,
-                        MAX_RETRY_ATTEMPTS,
-                        str(parse_error),
-                        exc_info=True,
-                    )
-
-                    # On last attempt, fall back to heuristic
-                    if attempt >= MAX_RETRY_ATTEMPTS:
-                        logger.info(
-                            "Max retry attempts reached. "
-                            "Using heuristic generation as final fallback."
+                    # Try to access output - this may raise JSON or validation errors
+                    try:
+                        presentation = result.output
+                    except (json.JSONDecodeError, ValidationError) as parse_error:
+                        logger.warning(
+                            "JSON/validation error in LLM response (attempt %d/%d): %s. "
+                            "Falling back to heuristic generation.",
+                            attempt,
+                            MAX_RETRY_ATTEMPTS,
+                            str(parse_error),
+                            exc_info=True,
                         )
-                        return _heuristic_generate_content(outline, manifest)
 
-                    # Try with reduced scope on next attempt
-                    if len(outline.slides) > 5:
+                        # On last attempt, fall back to heuristic
+                        if attempt >= MAX_RETRY_ATTEMPTS:
+                            logger.info(
+                                "Max retry attempts reached. "
+                                "Using heuristic generation as final fallback."
+                            )
+                            return _heuristic_generate_content(outline, manifest)
+
+                        # Continue to next retry attempt
+                        continue
+                    else:
                         logger.info(
-                            "Retrying with reduced scope: %d slides -> %d slides",
-                            len(outline.slides),
-                            len(outline.slides) // 2,
+                            "LLM content generation succeeded: slides=%d, attempt=%d",
+                            len(presentation.slides),
+                            attempt,
                         )
-                        # Try individual slide generation as fallback
-                        return await _generate_slides_individually(outline, manifest, config)
+                        return presentation
 
-                    # Continue to next retry attempt
-                    continue
-
-            except Exception as e:
-                logger.exception(
-                    "Unexpected error in LLM content generation (attempt %d/%d): %s. "
-                    "Falling back to heuristic generation.",
+            except TimeoutError:
+                logger.warning(
+                    "Content generation timeout (attempt %d/%d): exceeded %.2fs budget",
                     attempt,
                     MAX_RETRY_ATTEMPTS,
-                    str(e),
+                    total_budget,
                 )
 
                 # On last attempt, fall back to heuristic
                 if attempt >= MAX_RETRY_ATTEMPTS:
                     logger.info(
-                        "Max retry attempts reached. "
+                        "Max retry attempts reached after timeout. "
                         "Using heuristic generation as final fallback."
+                    )
+                    return _heuristic_generate_content(outline, manifest)
+
+                # Continue to next retry attempt
+                continue
+
+            except (
+                AgentRunError,
+                ModelHTTPError,
+                UnexpectedModelBehavior,
+                json.JSONDecodeError,
+                ValidationError,
+            ) as e:
+                logger.warning(
+                    "Retryable error in LLM content generation (attempt %d/%d): %s",
+                    attempt,
+                    MAX_RETRY_ATTEMPTS,
+                    str(e),
+                    exc_info=True,
+                )
+
+                # On last attempt, fall back to heuristic
+                if attempt >= MAX_RETRY_ATTEMPTS:
+                    logger.info(
+                        "Max retry attempts reached. Using heuristic generation as final fallback."
                     )
                     return _heuristic_generate_content(outline, manifest)
 
@@ -667,107 +673,3 @@ def _serialize_outline_to_prompt(
                     prompt_parts.append(f"    Content placeholders: {', '.join(placeholder_names)}")
 
     return "\n".join(prompt_parts)
-
-
-def _validate_partial_json(response: str) -> bool:
-    """Validate if JSON response is structurally complete.
-    
-    Checks if JSON has matching braces/brackets to detect incomplete responses
-    that would cause JSONDecodeError during parsing.
-    
-    Args:
-        response: JSON string to validate
-        
-    Returns:
-        True if JSON structure appears complete, False otherwise
-    """
-    if not response or not response.strip():
-        return False
-
-    # Count opening and closing braces/brackets
-    open_braces = response.count("{")
-    close_braces = response.count("}")
-    open_brackets = response.count("[")
-    close_brackets = response.count("]")
-
-    # Check if all braces and brackets are matched
-    return open_braces == close_braces and open_brackets == close_brackets
-
-
-async def _generate_slides_individually(
-    outline: PresentationOutline,
-    manifest: TemplateManifest | None,
-    config: Config,
-) -> PresentationSchema:
-    """Generate slides individually as fallback when full generation fails.
-    
-    This function generates each slide separately with smaller JSON responses,
-    then merges the results into a complete PresentationSchema. Used as a
-    fallback strategy when generating all slides at once fails due to token
-    limits or JSON parsing errors.
-    
-    Args:
-        outline: Presentation outline with all slides
-        manifest: Optional template manifest
-        config: Application configuration
-        
-    Returns:
-        Complete PresentationSchema with all slides
-        
-    Raises:
-        ValueError: If individual slide generation fails
-    """
-    logger.info(
-        "Generating slides individually: total_slides=%d",
-        len(outline.slides),
-    )
-
-    slides: list[SlideSchema] = []
-
-    for i, slide_content in enumerate(outline.slides, 1):
-        try:
-            # Generate content for this slide using heuristic (more reliable for single slides)
-            # Note: We don't create a single-slide outline because slide_number validation
-            # requires slides to start at 1, which would fail for slides 2+
-            slide_schema = _convert_slide_to_schema(
-                slide_content,
-                outline.output_language,
-                manifest,
-            )
-            slides.append(slide_schema)
-
-            logger.debug(
-                "Generated slide %d/%d: title=%s",
-                i,
-                len(outline.slides),
-                slide_content.title,
-            )
-
-        except Exception as e:
-            logger.exception(
-                "Failed to generate slide %d/%d: %s",
-                i,
-                len(outline.slides),
-                str(e),
-            )
-            # Continue with remaining slides rather than failing completely
-            continue
-
-    if not slides:
-        msg = "Failed to generate any slides individually"
-        raise ValueError(msg)
-
-    # Merge into complete presentation
-    result = PresentationSchema(
-        title=outline.title,
-        slides=slides,
-        metadata={},
-    )
-
-    logger.info(
-        "Individual slide generation completed: generated_slides=%d/%d",
-        len(slides),
-        len(outline.slides),
-    )
-
-    return result

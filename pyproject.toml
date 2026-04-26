@@ -17,6 +17,7 @@ dependencies = [
 api = [
     "fastapi[standard-no-fastapi-cloud-cli]>=0.136.1",
     "uvicorn[standard]>=0.46.0",
+    "cachetools>=7.0.6",
 ]
 dev = [
     "pytest>=9.0.3",
@@ -141,6 +142,7 @@ ignore = [
 "src/pptx_agent/validators/input_validator.py" = ["ARG001", "PLR0911", "PLR0912"]  # Validator complexity
 "src/pptx_agent/validators/outline_validator.py" = ["ARG001", "PLR0911"]  # Validator complexity
 "src/pptx_agent/validators/security.py" = ["ARG001", "TD", "FIX", "PLR0911", "PLR0912"]  # Security module complexity, TODOs
+"src/pptx_agent/interfaces/api.py" = ["ASYNC240", "TRY301"]  # Sync file operations acceptable; direct raises for HTTP errors
 "src/pptx_agent/interfaces/mcp.py" = ["TRY300"]  # try/except/return pattern is intentional for tool handler error isolation
 "src/pptx_agent/qa/rules/content_checks.py" = ["PLR0912"]  # Complex content validation with many branches
 

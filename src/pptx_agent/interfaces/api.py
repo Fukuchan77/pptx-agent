@@ -7,13 +7,15 @@ and QA operations. It supports file uploads, async processing, and result downlo
 import json
 import logging
 import tempfile
+import threading
 import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from cachetools import TTLCache
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
@@ -26,6 +28,32 @@ from pptx_agent.template_parser.parser import TemplateParser
 
 # Setup logger
 logger = logging.getLogger(__name__)
+
+# Security constants
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50MB upload limit
+
+
+async def _save_upload_streaming(upload: UploadFile, dest: Path) -> None:
+    """Stream upload to disk with size limit.
+
+    Args:
+        upload: FastAPI UploadFile to stream
+        dest: Destination path for the file
+
+    Raises:
+        HTTPException: If upload exceeds size limit
+    """
+    bytes_written = 0
+    with dest.open("wb") as f:
+        while chunk := await upload.read(8192):
+            bytes_written += len(chunk)
+            if bytes_written > MAX_UPLOAD_BYTES:
+                dest.unlink(missing_ok=True)
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"Upload exceeds {MAX_UPLOAD_BYTES} byte limit",
+                )
+            f.write(chunk)
 
 
 @asynccontextmanager
@@ -41,9 +69,10 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     # Shutdown
     logger.info("PPTX Agent API shutting down")
     # Clean up temporary files
-    for file_path in _file_storage.values():
-        file_path.unlink(missing_ok=True)
-    _file_storage.clear()
+    with _storage_lock:
+        for file_path in _file_storage.values():
+            file_path.unlink(missing_ok=True)
+        _file_storage.clear()
 
 
 # Create FastAPI app
@@ -56,8 +85,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# In-memory storage for generated files (in production, use proper storage)
-_file_storage: dict[str, Path] = {}
+# TTL-based storage for generated files (1 hour TTL, max 100 files)
+_file_storage: TTLCache[str, Path] = TTLCache(maxsize=100, ttl=3600)
+_storage_lock = threading.Lock()
 
 
 # Request/Response Models
@@ -186,11 +216,11 @@ async def analyze_template(
         req_data = json.loads(request)
         req_model = AnalyzeTemplateRequest(**req_data)
 
-        # Save uploaded template to temporary file
+        # Save uploaded template to temporary file with streaming
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pptx") as tmp_file:
-            content = await template.read()
-            tmp_file.write(content)
             tmp_path = Path(tmp_file.name)
+
+        await _save_upload_streaming(template, tmp_path)
 
         try:
             # Initialize cache manager
@@ -227,7 +257,8 @@ async def analyze_template(
 
             # Generate file ID and store template path
             file_id = str(uuid.uuid4())
-            _file_storage[file_id] = tmp_path
+            with _storage_lock:
+                _file_storage[file_id] = tmp_path
 
             return AnalyzeTemplateResponse(
                 manifest=manifest_dict,
@@ -241,14 +272,17 @@ async def analyze_template(
             # 1. File operations are fast for small temp files
             # 2. This is an error path, not performance-critical
             # 3. Keeps code simple without async file I/O dependencies
-            tmp_path.unlink(missing_ok=True)  # noqa: ASYNC240
+            tmp_path.unlink(missing_ok=True)
             raise
 
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=400, detail=f"Invalid request JSON: {e}") from e
-    except Exception as e:
+    except Exception:
         logger.exception("Template analysis failed")
-        raise HTTPException(status_code=500, detail=f"Template analysis failed: {e}") from e
+        raise HTTPException(
+            status_code=500,
+            detail="Template analysis failed. See server logs for details.",
+        ) from None
 
 
 @app.post("/api/generate", response_model=GenerateResponse)
@@ -275,16 +309,15 @@ async def generate(
         req_data = json.loads(request)
         req_model = GenerateRequest(**req_data)
 
-        # Save uploaded files to temporary files
+        # Save uploaded files to temporary files with streaming
         with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as input_tmp:
-            input_content = await input_file.read()
-            input_tmp.write(input_content)
             input_path = Path(input_tmp.name)
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pptx") as template_tmp:
-            template_content = await template.read()
-            template_tmp.write(template_content)
             template_path = Path(template_tmp.name)
+
+        await _save_upload_streaming(input_file, input_path)
+        await _save_upload_streaming(template, template_path)
 
         # Create output file path
         # Use NamedTemporaryFile with delete=False instead of deprecated mktemp
@@ -297,7 +330,7 @@ async def generate(
             # 1. Input files are typically small (text/markdown)
             # 2. Reading happens once before main processing
             # 3. Keeps code simple without async file I/O dependencies
-            input_text = input_path.read_text(encoding="utf-8")  # noqa: ASYNC240
+            input_text = input_path.read_text(encoding="utf-8")
 
             # Generate presentation (note: generate_presentation is async, so we await it directly)
             logger.info("Generating presentation from: %s", input_file.filename)
@@ -313,7 +346,8 @@ async def generate(
 
             # Generate file ID and store output path
             file_id = str(uuid.uuid4())
-            _file_storage[file_id] = output_path
+            with _storage_lock:
+                _file_storage[file_id] = output_path
 
             # Convert QA report to dict if available
             qa_report_dict = None
@@ -332,14 +366,17 @@ async def generate(
             # 1. File operations are fast for small temp files
             # 2. This is cleanup code, not performance-critical
             # 3. Keeps code simple without async file I/O dependencies
-            input_path.unlink(missing_ok=True)  # noqa: ASYNC240
-            template_path.unlink(missing_ok=True)  # noqa: ASYNC240
+            input_path.unlink(missing_ok=True)
+            template_path.unlink(missing_ok=True)
 
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=400, detail=f"Invalid request JSON: {e}") from e
-    except Exception as e:
+    except Exception:
         logger.exception("Presentation generation failed")
-        raise HTTPException(status_code=500, detail=f"Generation failed: {e}") from e
+        raise HTTPException(
+            status_code=500,
+            detail="Generation failed. See server logs for details.",
+        ) from None
 
 
 @app.post("/api/qa", response_model=QAResponse)
@@ -369,11 +406,20 @@ async def qa(
         req_data = json.loads(request)
         req_model = QARequest(**req_data)
 
-        # Save uploaded presentation to temporary file
+        # Return 501 for unimplemented autofix
+        if req_model.autofix:
+            raise HTTPException(
+                status_code=501,
+                detail=(
+                    "Autofix is not yet implemented. Use /api/generate with QA validation instead."
+                ),
+            )
+
+        # Save uploaded presentation to temporary file with streaming
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pptx") as pres_tmp:
-            pres_content = await presentation.read()
-            pres_tmp.write(pres_content)
             pres_path = Path(pres_tmp.name)
+
+        await _save_upload_streaming(presentation, pres_path)
 
         try:
             # Load presentation
@@ -396,17 +442,10 @@ async def qa(
             else:
                 report_content = json.loads(qa_report.to_json())
 
-            # Handle auto-fix if requested
-            fixed_file_id = None
-            if req_model.autofix and not qa_report.passed:
-                # Note: Auto-fix integration will be fully implemented when
-                # FixEngine is integrated with QA workflow
-                logger.warning("Auto-fix requested but not yet fully implemented")
-
             return QAResponse(
                 report=report_content,
                 passed=qa_report.passed,
-                file_id=fixed_file_id,
+                file_id=None,
             )
 
         finally:
@@ -415,21 +454,25 @@ async def qa(
             # 1. File operations are fast for small temp files
             # 2. This is cleanup code, not performance-critical
             # 3. Keeps code simple without async file I/O dependencies
-            pres_path.unlink(missing_ok=True)  # noqa: ASYNC240
+            pres_path.unlink(missing_ok=True)
 
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=400, detail=f"Invalid request JSON: {e}") from e
-    except Exception as e:
+    except Exception:
         logger.exception("QA validation failed")
-        raise HTTPException(status_code=500, detail=f"QA validation failed: {e}") from e
+        raise HTTPException(
+            status_code=500,
+            detail="QA validation failed. See server logs for details.",
+        ) from None
 
 
 @app.get("/api/download/{file_id}")
-async def download(file_id: str) -> FileResponse:
+async def download(file_id: str, background_tasks: BackgroundTasks) -> FileResponse:
     """Download generated or fixed presentation file.
 
     Args:
         file_id: Unique file identifier from previous API call
+        background_tasks: FastAPI background tasks for cleanup
 
     Returns:
         Presentation file download
@@ -437,12 +480,17 @@ async def download(file_id: str) -> FileResponse:
     Raises:
         HTTPException: If file not found
     """
-    if file_id not in _file_storage:
-        raise HTTPException(status_code=404, detail="File not found")
+    with _storage_lock:
+        if file_id not in _file_storage:
+            raise HTTPException(status_code=404, detail="File not found")
 
-    file_path = _file_storage[file_id]
+        file_path = _file_storage.pop(file_id)
+
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File no longer available")
+
+    # Schedule cleanup after response sent
+    background_tasks.add_task(file_path.unlink, missing_ok=True)
 
     return FileResponse(
         path=str(file_path),
