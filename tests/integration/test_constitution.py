@@ -119,7 +119,7 @@ def test_principle_3_test_coverage_compliance() -> None:
             "COVERAGE_FILE": cov_data_file,
             "COVERAGE_RCFILE": str(cov_rc_file),
         }
-        result = subprocess.run(
+        result = subprocess.run(  # noqa: S603  # Trusted input: hardcoded test command with known arguments
             [
                 "uv",
                 "run",
@@ -291,29 +291,32 @@ def test_qa_rules_have_required_attributes() -> None:
 
 def test_fix_strategies_registered_for_auto_fixable_rules() -> None:
     """Verify fix strategies are registered for all auto-fixable QA rules."""
-    from pptx_agent.fixer.engine import get_global_registry as get_fix_registry
+    from pptx_agent.fixer.engine import FixStrategyRegistry
+    from pptx_agent.fixer.strategies import register_default_strategies
+    from pptx_agent.pptx_wrapper.presentation import PresentationWrapper
     from pptx_agent.qa.engine import QAEngine
     from pptx_agent.qa.rules.register_defaults import register_default_rules
 
     qa_engine = QAEngine()
     register_default_rules()
 
-    fix_registry = get_fix_registry()
+    # Create a local registry with a mock presentation to test strategy registration
+    local_registry = FixStrategyRegistry()
+    mock_presentation = PresentationWrapper()
+    register_default_strategies(
+        registry=local_registry, presentation=mock_presentation, outline=None
+    )
 
     rules = qa_engine.registry.get_all_rules()
     auto_fixable_rules = [rule for rule in rules if rule.auto_fixable]
 
     for rule in auto_fixable_rules:
-        # Auto-fixable rules should have a registered fix strategy
-        strategy = fix_registry.get_strategy(rule.rule_id)
-        # Note: Some rules may not have strategies registered yet in the global registry
-        # This is acceptable during development, but should be addressed before release
-        if strategy is None:
-            import logging
-
-            logging.getLogger(__name__).warning(
-                "Auto-fixable rule %s has no registered fix strategy", rule.rule_id
-            )
+        # Auto-fixable rules MUST have a registered fix strategy
+        strategies = local_registry.get_strategies(rule.rule_id)
+        assert strategies, (
+            f"Auto-fixable rule {rule.rule_id} has no registered fix strategy. "
+            "All auto-fixable rules must have at least one strategy registered."
+        )
 
 
 def test_qa_report_schema_completeness() -> None:

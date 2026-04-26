@@ -398,13 +398,13 @@ class BoundaryOverflowRule:
     Attributes:
         rule_id: Unique identifier "QA-L-005"
         description: Human-readable description
-        auto_fixable: True - can clip coordinates to slide bounds
+        auto_fixable: False - boundary clipping strategy not yet implemented
     """
 
     rule_id = "QA-L-005"
     description = "Detect objects extending beyond slide boundary"
     severity = "warning"
-    auto_fixable = True
+    auto_fixable = False
 
     def validate(self, presentation: PresentationWrapper) -> list[QAIssue]:
         """Validate presentation for boundary overflow.
@@ -437,8 +437,11 @@ class BoundaryOverflowRule:
                             slide_index=slide_idx,
                             shape_index=shape_idx,
                             message="Shape extends beyond slide boundary",
-                            auto_fixable=True,
-                            suggested_fix="Clip shape coordinates to slide bounds",
+                            auto_fixable=False,  # Not implemented: boundary clipping strategy
+                            suggested_fix=(
+                                "Manually clip shape coordinates to slide bounds "
+                                "(auto-fix not implemented)"
+                            ),
                         )
                     )
 

@@ -138,13 +138,13 @@ class InvalidBulletIndentRule:
     Attributes:
         rule_id: Unique identifier "QA-S-003"
         description: Human-readable description
-        auto_fixable: True - can be fixed by reducing indent level
+        auto_fixable: False - bullet indent reduction strategy not yet implemented
     """
 
     rule_id = "QA-S-003"
     description = "Detect invalid bullet indent levels (> 4)"
     severity = "warning"
-    auto_fixable = True
+    auto_fixable = False
     category = "style"
 
     MAX_INDENT_LEVEL = 4

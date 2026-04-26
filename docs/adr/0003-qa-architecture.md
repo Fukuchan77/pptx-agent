@@ -143,18 +143,18 @@ async def generate_presentation(
     autofix_enabled: bool = False,
 ) -> tuple[str, QAReport | None]:
     # ... existing generation stages ...
-    
+
     # Stage 8: QA Pass (optional)
     if qa_enabled:
         qa_engine = QAEngine(language=output_language)
         qa_report = qa_engine.validate(wrapper)
-        
+
         # Stage 9: Auto-Fix Loop (optional)
         if autofix_enabled and not qa_report.passed:
             fix_engine = FixEngine(max_iterations=3)
             fix_result = fix_engine.fix_loop(wrapper, qa_report)
             qa_report = fix_result.final_qa_report
-    
+
     return output_path, qa_report
 ```
 
@@ -172,10 +172,12 @@ async def generate_presentation(
 **Approach**: Use LLM to evaluate presentation quality
 
 **Pros**:
+
 - Could detect semantic issues (unclear messaging, poor flow)
 - No need to define explicit rules
 
 **Cons**:
+
 - **Cost**: LLM calls for every QA pass would be expensive
 - **Latency**: Significantly slower than rule-based checks
 - **Non-Deterministic**: Same presentation might get different results
@@ -188,10 +190,12 @@ async def generate_presentation(
 **Approach**: Validate outline/content before slide building
 
 **Pros**:
+
 - Catch issues earlier in pipeline
 - Prevent generation of problematic presentations
 
 **Cons**:
+
 - **Incomplete Coverage**: Can't detect layout issues without actual slides
 - **No Overflow Detection**: Text capacity depends on actual rendering
 - **No Style Validation**: Can't check template conformance without slides
@@ -203,11 +207,13 @@ async def generate_presentation(
 **Approach**: QA reports issues, user fixes manually
 
 **Pros**:
+
 - Simpler implementation
 - No risk of incorrect automatic fixes
 - User maintains full control
 
 **Cons**:
+
 - **Reduced Value**: Users still need manual cleanup
 - **Slower Workflow**: Defeats purpose of automation
 - **Inconsistent Quality**: Manual fixes vary by user skill
@@ -219,10 +225,12 @@ async def generate_presentation(
 **Approach**: Single class with all validation logic
 
 **Pros**:
+
 - Simpler architecture
 - Fewer abstractions
 
 **Cons**:
+
 - **Not Extensible**: Adding rules requires modifying engine
 - **Hard to Test**: Monolithic class is harder to unit test
 - **Tight Coupling**: Rules coupled to engine implementation

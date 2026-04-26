@@ -171,13 +171,13 @@ class UnpopulatedImagePlaceholderRule:
     Attributes:
         rule_id: Unique identifier "QA-C-003"
         description: Human-readable description
-        auto_fixable: True - can insert default placeholder image
+        auto_fixable: False - image insertion strategy not yet implemented
     """
 
     rule_id = "QA-C-003"
     description = "Detect unpopulated image placeholders"
     severity = "warning"
-    auto_fixable = True
+    auto_fixable = False
 
     def validate(self, presentation: PresentationWrapper) -> list[QAIssue]:
         """Check for empty image placeholders.
@@ -331,13 +331,13 @@ class MissingChartDataRule:
     Attributes:
         rule_id: Unique identifier "QA-C-005"
         description: Human-readable description
-        auto_fixable: True - can populate with zero values or remove chart
+        auto_fixable: False - chart data population strategy not yet implemented
     """
 
     rule_id = "QA-C-005"
     description = "Detect missing chart data"
     severity = "error"
-    auto_fixable = True
+    auto_fixable = False
 
     def validate(self, presentation: PresentationWrapper) -> list[QAIssue]:
         """Check for charts with missing data.
@@ -427,14 +427,14 @@ class SpeakerNotesVerificationRule:
     Attributes:
         rule_id: Unique identifier "QA-C-006"
         description: Human-readable description
-        auto_fixable: True - can add placeholder notes
+        auto_fixable: False - speaker notes generation strategy not yet implemented
         require_notes: Whether speaker notes are required
     """
 
     rule_id = "QA-C-006"
     description = "Verify speaker notes attachment"
     severity = "info"
-    auto_fixable = True
+    auto_fixable = False
 
     def __init__(self, require_notes: bool = False) -> None:
         """Initialize speaker notes verification rule.

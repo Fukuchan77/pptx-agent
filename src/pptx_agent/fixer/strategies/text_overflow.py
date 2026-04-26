@@ -1,5 +1,7 @@
 """Fix strategies for text overflow issues."""
 
+from typing import Any
+
 from pptx.util import Pt
 
 from pptx_agent.fixer.schemas import FixResult, FixStatus
@@ -56,12 +58,14 @@ class FontReductionStrategy:
         self,
         issue: QAIssue,
         presentation: PresentationWrapper,
+        _outline: Any | None = None,
     ) -> FixResult:
         """Apply font reduction fix to resolve text overflow.
 
         Args:
             issue: QA issue describing the overflow
             presentation: Presentation wrapper with the issue
+            _outline: Optional outline data (not used for font reduction)
 
         Returns:
             Fix result describing the outcome
@@ -172,12 +176,14 @@ class LayoutSwitchingStrategy:
         self,
         issue: QAIssue,
         presentation: PresentationWrapper,
+        _outline: Any | None = None,
     ) -> FixResult:
         """Apply layout switching fix to resolve text overflow.
 
         Args:
             issue: QA issue describing the overflow
             presentation: Presentation wrapper with the issue
+            _outline: Optional outline data (not used for layout switching)
 
         Returns:
             Fix result describing the outcome
@@ -214,13 +220,14 @@ class LayoutSwitchingStrategy:
             new_layout = alternative_layouts[0]
 
             # Note: Switching layouts in python-pptx is complex and may lose content
-            # This is a simplified implementation
+            # This is not yet implemented, so return SKIPPED
             layout_msg = (
-                f"Layout switch available (from {current_layout.name} to {new_layout.name})"
+                f"Layout switch available (from {current_layout.name} to {new_layout.name}) "
+                "but not implemented"
             )
             return FixResult(
                 issue=issue,
-                status=FixStatus.SUCCESS,
+                status=FixStatus.SKIPPED,
                 message=layout_msg,
                 changes_made=[
                     f"Identified alternative layout: {new_layout.name}",
@@ -255,12 +262,14 @@ class ContentSummarizationStrategy:
         self,
         issue: QAIssue,
         presentation: PresentationWrapper,
+        _outline: Any | None = None,
     ) -> FixResult:
         """Apply content summarization fix to resolve text overflow.
 
         Args:
             issue: QA issue describing the overflow
             presentation: Presentation wrapper with the issue
+            _outline: Optional outline data (not used for summarization)
 
         Returns:
             Fix result describing the outcome

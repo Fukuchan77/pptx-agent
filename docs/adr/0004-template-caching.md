@@ -197,10 +197,10 @@ with FileLock(lock_path, timeout=10):
 def get_manifest(template_path: Path) -> dict | None:
     current_hash = self._compute_hash(template_path)
     cache_file = self.cache_dir / f"{current_hash}.json"
-    
+
     if not cache_file.exists():
         return None  # Cache miss
-    
+
     # Cache hit - load and return
     return self._load_cache_entry(cache_file)
 ```
@@ -238,13 +238,13 @@ def cleanup_stale(max_age_days: int = 30) -> int:
     """Remove cache entries older than max_age_days."""
     cutoff = datetime.now() - timedelta(days=max_age_days)
     removed = 0
-    
+
     for cache_file in self.cache_dir.glob("*.json"):
         entry = self._load_cache_entry(cache_file)
         if entry.cached_at < cutoff:
             cache_file.unlink()
             removed += 1
-    
+
     return removed
 ```
 
@@ -275,7 +275,7 @@ class CacheManager:
     def __init__(self):
         self._hits = 0
         self._misses = 0
-    
+
     def get_stats(self) -> dict:
         return {
             "hits": self._hits,
@@ -297,11 +297,13 @@ class CacheManager:
 **Approach**: Cache manifests in process memory (dict)
 
 **Pros**:
+
 - Fastest access (no disk I/O)
 - No concurrency issues (single process)
 - Simple implementation
 
 **Cons**:
+
 - **Lost on Restart**: Cache cleared when process exits
 - **No Sharing**: Each process has separate cache
 - **Memory Usage**: Large templates consume RAM
@@ -313,11 +315,13 @@ class CacheManager:
 **Approach**: Use external cache server
 
 **Pros**:
+
 - High performance
 - Built-in expiration
 - Distributed caching
 
 **Cons**:
+
 - **External Dependency**: Requires Redis/Memcached installation
 - **Complexity**: Connection management, error handling
 - **Deployment**: Harder to deploy (additional service)
@@ -330,11 +334,13 @@ class CacheManager:
 **Approach**: Store manifests in SQLite database
 
 **Pros**:
+
 - ACID transactions
 - Query capabilities
 - Built-in to Python
 
 **Cons**:
+
 - **Complexity**: Schema management, migrations
 - **Locking**: SQLite locking can be problematic
 - **Overkill**: Don't need query capabilities
@@ -346,11 +352,13 @@ class CacheManager:
 **Approach**: Parse template on every request
 
 **Pros**:
+
 - Simplest implementation
 - No cache invalidation issues
 - No storage requirements
 
 **Cons**:
+
 - **Performance**: 500-1000ms overhead per request
 - **User Experience**: Slow for repeated use
 - **Scale**: Unacceptable for high-volume usage
@@ -364,7 +372,7 @@ class CacheManager:
 1. **Performance Improvement**: 80-90% reduction in template parsing time
    - First generation: 3-5 seconds (includes parsing)
    - Subsequent generations: 2-3 seconds (cached manifest)
-   
+
 2. **Automatic Invalidation**: Content-based keying ensures cache correctness
 
 3. **Cross-Platform**: Works on Linux, macOS, Windows without configuration
@@ -413,11 +421,13 @@ Following TDD principles (Constitution Principle 1):
 ### Performance Benchmarks
 
 **Template Parsing** (10 layouts, 30 placeholders):
+
 - Without cache: 500-1000ms
 - With cache (hit): 5-10ms
 - Speedup: 50-200x
 
 **Cache Operations**:
+
 - Hash computation: ~5ms (1MB file)
 - Cache read: ~5ms (JSON deserialization)
 - Cache write: ~10ms (JSON serialization + disk write)

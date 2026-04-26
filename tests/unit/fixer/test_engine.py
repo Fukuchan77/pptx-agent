@@ -58,20 +58,28 @@ def test_registry_register_and_get_strategy() -> None:
 
     assert "QA-L-001" in registry
     assert len(registry) == 1
-    assert registry.get_strategy("QA-L-001") is strategy
+    strategies = registry.get_strategies("QA-L-001")
+    assert len(strategies) == 1
+    assert strategies[0] is strategy
 
 
-def test_registry_rejects_duplicate_rule_id() -> None:
-    """Test duplicate strategy registration raises error."""
+def test_registry_allows_multiple_strategies_per_rule() -> None:
+    """Test multiple strategies can be registered for the same rule."""
     registry = FixStrategyRegistry()
 
-    def strategy(issue: QAIssue) -> FixResult:
+    def strategy1(issue: QAIssue) -> FixResult:
         return make_fix_result(issue)
 
-    registry.register("QA-L-001", strategy)
+    def strategy2(issue: QAIssue) -> FixResult:
+        return make_fix_result(issue)
 
-    with pytest.raises(ValueError, match="already registered"):
-        registry.register("QA-L-001", strategy)
+    registry.register("QA-L-001", strategy1)
+    registry.register("QA-L-001", strategy2)
+
+    strategies = registry.get_strategies("QA-L-001")
+    assert len(strategies) == 2
+    assert strategies[0] is strategy1
+    assert strategies[1] is strategy2
 
 
 def test_registry_unregister_existing_rule() -> None:
@@ -153,7 +161,7 @@ def test_apply_fix_handles_strategy_exception() -> None:
     result = engine.apply_fix(issue)
 
     assert result.status == FixStatus.FAILED
-    assert result.message == "Fix strategy failed: boom"
+    assert result.message == "All fix strategies failed. Last error: boom"
 
 
 def test_run_fix_loop_applies_registered_strategies_once() -> None:

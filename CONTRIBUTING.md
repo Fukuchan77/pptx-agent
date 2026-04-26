@@ -435,13 +435,13 @@ def test_my_new_rule_detects_issue():
     # Arrange
     from pptx_agent.qa.rules.my_category import MyNewRule
     rule = MyNewRule()
-    
+
     # Create test presentation with the issue
     prs = create_test_presentation_with_issue()
-    
+
     # Act
     issues = rule.check(prs)
-    
+
     # Assert
     assert len(issues) == 1
     assert issues[0].rule_id == "QA-X-NNN"
@@ -457,11 +457,11 @@ from pptx_agent.qa.schemas import QAIssue, Severity
 
 class MyNewRule(QARule):
     """Detects specific issue in presentations."""
-    
+
     rule_id = "QA-X-NNN"  # X = L/C/S, NNN = 3-digit number
     severity = Severity.ERROR
     auto_fixable = True  # or False
-    
+
     def check(self, presentation: Presentation) -> list[QAIssue]:
         """Check for the specific issue."""
         issues = []
@@ -481,6 +481,7 @@ class MyNewRule(QARule):
 - **Number**: 3-digit sequential (001, 002, 003...)
 
 Examples:
+
 - `QA-L-001`: Text overflow detection
 - `QA-C-001`: Missing required content
 - `QA-S-001`: Font consistency check
@@ -510,13 +511,13 @@ def test_my_fix_strategy_resolves_issue():
     # Arrange
     from pptx_agent.fixer.strategies.my_strategy import MyFixStrategy
     strategy = MyFixStrategy()
-    
+
     issue = create_test_issue()
     prs = create_test_presentation_with_issue()
-    
+
     # Act
     result = strategy.apply(issue, prs)
-    
+
     # Assert
     assert result.status == FixStatus.SUCCESS
     assert result.changes_made == ["specific change description"]
@@ -531,7 +532,7 @@ from pptx_agent.fixer.schemas import FixResult, FixStatus
 
 class MyFixStrategy(FixStrategy):
     """Fixes specific issue type."""
-    
+
     def apply(self, issue: QAIssue, presentation: Presentation) -> FixResult:
         """Apply fix for the issue."""
         try:
@@ -603,12 +604,12 @@ def test_qa_and_fix_workflow():
     """Test end-to-end QA validation and fixing."""
     # Create presentation with known issues
     prs = create_test_presentation()
-    
+
     # Run QA validation
     qa_engine = QAEngine()
     report = qa_engine.validate(prs)
     assert report.total_issues > 0
-    
+
     # Run fix loop
     fix_engine = FixEngine()
     result = fix_engine.run_fix_loop(report, prs)
@@ -623,12 +624,12 @@ Test QA performance on large presentations:
 def test_qa_performance_large_presentation():
     """Test QA validation completes within time limit."""
     prs = create_large_presentation(slide_count=30)
-    
+
     start_time = time.time()
     qa_engine = QAEngine()
     report = qa_engine.validate(prs)
     elapsed = time.time() - start_time
-    
+
     # Should complete in reasonable time
     assert elapsed < 10.0  # 10 seconds for 30 slides
 ```
@@ -683,17 +684,17 @@ def apply(self, issue: QAIssue, presentation: Presentation) -> FixResult:
     try:
         slide = presentation.slides[issue.slide_index]
         shape = slide.shapes[issue.shape_index]
-        
+
         # Verify shape has required attributes
         if not hasattr(shape, "text_frame"):
             return FixResult(
                 status=FixStatus.SKIPPED,
                 message="Shape has no text frame",
             )
-        
+
         # Apply modification
         shape.text_frame.text = "Fixed content"
-        
+
         return FixResult(
             status=FixStatus.SUCCESS,
             message="Content updated",

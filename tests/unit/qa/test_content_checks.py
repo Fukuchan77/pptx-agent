@@ -389,7 +389,7 @@ class TestUnpopulatedImagePlaceholderRule:
 
         assert rule.rule_id == "QA-C-003"
         assert "image" in rule.description.lower()
-        assert rule.auto_fixable is True
+        assert rule.auto_fixable is False  # Strategy not yet implemented
 
     def test_detects_empty_image_placeholder(
         self, mock_presentation: Mock, mock_slide_with_empty_image_placeholder: Mock
@@ -517,7 +517,7 @@ class TestMissingChartDataRule:
 
         assert rule.rule_id == "QA-C-005"
         assert "chart" in rule.description.lower()
-        assert rule.auto_fixable is True
+        assert rule.auto_fixable is False  # Strategy not yet implemented
 
     def test_detects_empty_chart(
         self, mock_presentation: Mock, mock_slide_with_empty_chart: Mock
@@ -587,7 +587,7 @@ class TestSpeakerNotesVerificationRule:
 
         assert rule.rule_id == "QA-C-006"
         assert "notes" in rule.description.lower()
-        assert rule.auto_fixable is True
+        assert rule.auto_fixable is False  # Strategy not yet implemented
 
     def test_detects_missing_notes_when_required(
         self, mock_presentation: Mock, mock_slide_without_notes: Mock

@@ -1076,7 +1076,7 @@ initial_report = qa_engine.validate(wrapper)
 if not initial_report.passed:
     fix_engine = FixEngine(max_iterations=3)
     result = fix_engine.fix_loop(wrapper, initial_report)
-    
+
     print(f"Fix iterations: {result.iterations}")
     print(f"Fixes applied: {len(result.fixes_applied)}")
     print(f"Final status: {'✓ PASSED' if result.success else '✗ FAILED'}")
@@ -1320,4 +1320,3 @@ python -m pptx_agent.main \
   [--max-fix-iterations 3] \
   [--verbose]
 ```
-

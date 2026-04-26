@@ -12,13 +12,14 @@ This module orchestrates the complete workflow from input text to .pptx file:
 import logging
 import os
 import time
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pptx_agent.agents.content_generator import generate_content
 from pptx_agent.agents.outline_generator import generate_outline
 from pptx_agent.agents.overflow_resolver import resolve_overflow
 from pptx_agent.agents.story_analyzer import analyze_story
-from pptx_agent.fixer.engine import FixEngine
+from pptx_agent.fixer.engine import FixEngine, FixStrategyRegistry
+from pptx_agent.fixer.strategies import register_default_strategies
 from pptx_agent.pptx_wrapper.presentation import PresentationWrapper
 from pptx_agent.pptx_wrapper.slide_builder import build_presentation
 from pptx_agent.qa.engine import QAEngine
@@ -56,6 +57,7 @@ async def _run_autofix_stage(
     output_path: str,
     qa_report: "QAReport",
     max_iterations: int,
+    outline: Any | None = None,
 ) -> "QAReport":
     """Run auto-fix loop to remediate detected issues.
 
@@ -63,14 +65,37 @@ async def _run_autofix_stage(
         output_path: Path to the presentation file
         qa_report: Initial QA report with issues to fix
         max_iterations: Maximum number of fix iterations
+        outline: Optional outline data for strategies that need it
 
     Returns:
         Updated QA report after fix attempts
     """
     logger.debug("Running auto-fix stage for output: %s", output_path)
-    # Run fix engine
-    fix_engine = FixEngine(max_iterations=max_iterations)
-    fix_result = fix_engine.run_fix_loop(qa_report)
+
+    # Load presentation for fixing
+    try:
+        presentation = PresentationWrapper()
+        presentation.load_template(output_path)
+    except Exception as exc:
+        logger.warning("Autofix skipped: failed to load %s: %s", output_path, exc)
+        return qa_report  # Return original QA report without fixes
+
+    # Create local registry and register strategies with presentation context
+    local_registry = FixStrategyRegistry()
+    register_default_strategies(registry=local_registry, presentation=presentation, outline=outline)
+
+    # Create save callback to persist in-memory edits
+    def save_callback() -> None:
+        """Save presentation changes to disk."""
+        presentation.prs.save(output_path)
+
+    # Run fix engine with local registry and save callback
+    fix_engine = FixEngine(registry=local_registry, max_iterations=max_iterations)
+    fix_result = fix_engine.run_fix_loop(
+        qa_report,
+        presentation_path=output_path,
+        save_callback=save_callback,
+    )
 
     # Return the final QA report from fix loop
     return fix_result.final_qa_report
@@ -235,7 +260,9 @@ async def generate_presentation(
     # Stage 8: Auto-Fix Loop (optional, only if QA found errors)
     if autofix_enabled and qa_report and qa_report.error_count > 0:
         start = time.time()
-        qa_report = await _run_autofix_stage(output_path, qa_report, max_fix_iterations)
+        qa_report = await _run_autofix_stage(
+            output_path, qa_report, max_fix_iterations, outline=validated_outline
+        )
         duration = time.time() - start
         logger.info("Stage: Auto-Fix Loop completed in %.2fs", duration)
         logger.info(

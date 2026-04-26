@@ -35,6 +35,8 @@ __all__ = [
 
 def register_default_strategies(
     registry: FixStrategyRegistry | None = None,
+    presentation: PresentationWrapper | None = None,
+    outline: Any | None = None,
 ) -> None:
     """Register all default fix strategies with the registry.
 
@@ -45,45 +47,42 @@ def register_default_strategies(
 
     Args:
         registry: Registry to register strategies with. If None, uses global registry.
+        presentation: Presentation wrapper to bind to strategies. Required for actual fixing.
+        outline: Optional outline data to bind to strategies.
+
+    Note:
+        If presentation is None, no strategies are registered (early return).
+        Tests that need registration without a real presentation should pass a stub
+        PresentationWrapper instance.
     """
     if registry is None:
         registry = get_global_registry()
 
     # Text overflow strategies - QA-L-001
-    # Note: Multiple strategies can be registered for the same rule
-    # The engine will try them in order until one succeeds
-    # (Instances are not used directly; wrappers below require presentation context)
+    # Multiple strategies registered for the same rule; engine tries them in order
+    if presentation is not None:
+        # Create wrappers that bind the presentation context
+        font_reduction_wrapper = create_strategy_wrapper(
+            FontReductionStrategy, presentation, outline
+        )
+        layout_switching_wrapper = create_strategy_wrapper(
+            LayoutSwitchingStrategy, presentation, outline
+        )
+        content_summarization_wrapper = create_strategy_wrapper(
+            ContentSummarizationStrategy, presentation, outline
+        )
+        placeholder_population_wrapper = create_strategy_wrapper(
+            PlaceholderPopulationStrategy, presentation, outline
+        )
+        style_reset_wrapper = create_strategy_wrapper(StyleResetStrategy, presentation, outline)
 
-    # Create wrapper functions that match the registry signature
-    def font_reduction_wrapper(issue: QAIssue) -> FixResult:
-        # Note: This is a simplified wrapper. In production, we'd need to pass
-        # the presentation and outline from context
-        msg = "Font reduction strategy requires presentation context"
-        raise NotImplementedError(msg)
-
-    def layout_switching_wrapper(issue: QAIssue) -> FixResult:
-        msg = "Layout switching strategy requires presentation context"
-        raise NotImplementedError(msg)
-
-    def content_summarization_wrapper(issue: QAIssue) -> FixResult:
-        msg = "Content summarization strategy requires presentation context"
-        raise NotImplementedError(msg)
-
-    def placeholder_population_wrapper(issue: QAIssue) -> FixResult:
-        msg = "Placeholder population strategy requires presentation and outline context"
-        raise NotImplementedError(msg)
-
-    def style_reset_wrapper(issue: QAIssue) -> FixResult:
-        msg = "Style reset strategy requires presentation context"
-        raise NotImplementedError(msg)
-
-    # Register strategies for each rule
-    # Multiple strategies can be registered per rule; engine tries them in order
-    registry.register(FontReductionStrategy.rule_id, font_reduction_wrapper)
-    registry.register(FontReductionStrategy.rule_id, layout_switching_wrapper)
-    registry.register(FontReductionStrategy.rule_id, content_summarization_wrapper)
-    registry.register(PlaceholderPopulationStrategy.rule_id, placeholder_population_wrapper)
-    registry.register(StyleResetStrategy.rule_id, style_reset_wrapper)
+        # Register strategies for each rule
+        # Multiple strategies can be registered per rule; engine tries them in order
+        registry.register(FontReductionStrategy.rule_id, font_reduction_wrapper)
+        registry.register(FontReductionStrategy.rule_id, layout_switching_wrapper)
+        registry.register(FontReductionStrategy.rule_id, content_summarization_wrapper)
+        registry.register(PlaceholderPopulationStrategy.rule_id, placeholder_population_wrapper)
+        registry.register(StyleResetStrategy.rule_id, style_reset_wrapper)
 
 
 def create_strategy_wrapper(

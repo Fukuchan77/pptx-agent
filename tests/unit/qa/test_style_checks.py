@@ -301,7 +301,7 @@ class TestInvalidBulletIndentRule:
 
         assert rule.rule_id == "QA-S-003"
         assert "indent" in rule.description.lower()
-        assert rule.auto_fixable is True
+        assert rule.auto_fixable is False  # Strategy not yet implemented
         assert rule.category == "style"
         assert rule.MAX_INDENT_LEVEL == 4
 
@@ -320,7 +320,7 @@ class TestInvalidBulletIndentRule:
         assert len(issues) == 2
         assert all(issue.rule_id == "QA-S-003" for issue in issues)
         assert all(issue.severity == Severity.WARNING for issue in issues)
-        assert all(issue.auto_fixable is True for issue in issues)
+        assert all(issue.auto_fixable is False for issue in issues)  # Strategy not yet implemented
         assert all("indent level" in issue.message.lower() for issue in issues)
 
     def test_no_issues_with_valid_indent(

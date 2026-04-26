@@ -1,5 +1,7 @@
 """Integration tests for fix loop convergence and iteration handling."""
 
+from pathlib import Path
+
 import pytest
 
 from pptx_agent.fixer.engine import FixEngine, FixStrategyRegistry
@@ -310,6 +312,246 @@ class TestMaxIterationsHandling:
         # Current implementation doesn't re-run QA, so we check the logic
         assert isinstance(result.success, bool)
         assert result.success == (result.final_qa_report.error_count == 0)
+
+
+class TestMultipleStrategiesPerRule:
+    """Integration tests for multiple strategies per rule behavior."""
+
+    def test_multiple_strategies_tried_in_order(self) -> None:
+        """Test that multiple strategies for same rule are tried in order until one succeeds."""
+        registry = FixStrategyRegistry()
+        call_order = []
+
+        def first_strategy_fails(issue: QAIssue) -> FixResult:
+            call_order.append("first")
+            return FixResult(
+                issue=issue,
+                status=FixStatus.FAILED,
+                message="First strategy failed",
+            )
+
+        def second_strategy_succeeds(issue: QAIssue) -> FixResult:
+            call_order.append("second")
+            return FixResult(
+                issue=issue,
+                status=FixStatus.SUCCESS,
+                message="Second strategy succeeded",
+                changes_made=["Applied second strategy"],
+            )
+
+        def third_strategy_not_called(issue: QAIssue) -> FixResult:
+            call_order.append("third")
+            return FixResult(
+                issue=issue,
+                status=FixStatus.SUCCESS,
+                message="Third strategy succeeded",
+                changes_made=["Applied third strategy"],
+            )
+
+        # Register multiple strategies for same rule
+        registry.register("QA-L-001", first_strategy_fails)
+        registry.register("QA-L-001", second_strategy_succeeds)
+        registry.register("QA-L-001", third_strategy_not_called)
+
+        engine = FixEngine(registry=registry, max_iterations=3)
+        report = make_qa_report_with_errors(error_count=1)
+
+        result = engine.run_fix_loop(report)
+
+        # Should try first, then second (which succeeds), then stop
+        assert call_order == ["first", "second"]
+        assert len(result.fixes_applied) == 1
+        assert result.fixes_applied[0].status == FixStatus.SUCCESS
+        assert "Second strategy succeeded" in result.fixes_applied[0].message
+
+    def test_all_strategies_fail_returns_failed_result(self) -> None:
+        """Test that when all strategies fail, a FAILED result is returned."""
+        registry = FixStrategyRegistry()
+
+        def strategy1_fails(issue: QAIssue) -> FixResult:
+            return FixResult(
+                issue=issue,
+                status=FixStatus.FAILED,
+                message="Strategy 1 failed",
+            )
+
+        def strategy2_fails(issue: QAIssue) -> FixResult:
+            return FixResult(
+                issue=issue,
+                status=FixStatus.FAILED,
+                message="Strategy 2 failed",
+            )
+
+        registry.register("QA-L-001", strategy1_fails)
+        registry.register("QA-L-001", strategy2_fails)
+
+        engine = FixEngine(registry=registry, max_iterations=3)
+        report = make_qa_report_with_errors(error_count=1)
+
+        result = engine.run_fix_loop(report)
+
+        assert len(result.fixes_applied) == 1
+        assert result.fixes_applied[0].status == FixStatus.FAILED
+        assert "All fix strategies failed" in result.fixes_applied[0].message
+
+    def test_partial_success_stops_trying_other_strategies(self) -> None:
+        """Test that PARTIAL status stops trying remaining strategies."""
+        registry = FixStrategyRegistry()
+        call_order = []
+
+        def first_strategy_partial(issue: QAIssue) -> FixResult:
+            call_order.append("first")
+            return FixResult(
+                issue=issue,
+                status=FixStatus.PARTIAL,
+                message="First strategy partially succeeded",
+                changes_made=["Partial fix"],
+            )
+
+        def second_strategy_not_called(issue: QAIssue) -> FixResult:
+            call_order.append("second")
+            return FixResult(
+                issue=issue,
+                status=FixStatus.SUCCESS,
+                message="Second strategy succeeded",
+                changes_made=["Complete fix"],
+            )
+
+        registry.register("QA-L-001", first_strategy_partial)
+        registry.register("QA-L-001", second_strategy_not_called)
+
+        engine = FixEngine(registry=registry, max_iterations=3)
+        report = make_qa_report_with_errors(error_count=1)
+
+        result = engine.run_fix_loop(report)
+
+        # Should only call first strategy (which returns PARTIAL)
+        assert call_order == ["first"]
+        assert len(result.fixes_applied) == 1
+        assert result.fixes_applied[0].status == FixStatus.PARTIAL
+
+
+class TestPresentationSaveAndQARerun:
+    """Integration tests for presentation saving and QA re-running."""
+
+    def test_fix_loop_calls_qa_runner_after_fixes(self, tmp_path: Path) -> None:
+        """Test that fix loop calls QA runner after applying fixes."""
+        registry = FixStrategyRegistry()
+        qa_runner_calls = []
+        test_pptx = str(tmp_path / "test.pptx")
+
+        def successful_fix(issue: QAIssue) -> FixResult:
+            return FixResult(
+                issue=issue,
+                status=FixStatus.SUCCESS,
+                message="Fixed",
+                changes_made=["Applied fix"],
+            )
+
+        def mock_qa_runner(path: str) -> QAReport:
+            qa_runner_calls.append(path)
+            # Return report with no errors (all fixed)
+            return QAReport(
+                total_issues=0,
+                error_count=0,
+                warning_count=0,
+                info_count=0,
+                issues=[],
+            )
+
+        registry.register("QA-L-001", successful_fix)
+
+        engine = FixEngine(registry=registry, max_iterations=3)
+        report = make_qa_report_with_errors(error_count=1)
+
+        # Add save callback (required for QA runner to be called)
+        def mock_save_callback() -> None:
+            pass
+
+        result = engine.run_fix_loop(
+            report,
+            presentation_path=test_pptx,
+            qa_runner=mock_qa_runner,
+            save_callback=mock_save_callback,
+        )
+
+        # QA runner should be called after fixes
+        assert len(qa_runner_calls) == 1
+        assert qa_runner_calls[0] == test_pptx
+        assert result.final_qa_report.error_count == 0
+
+    def test_fix_loop_iterates_multiple_times_with_qa_rerun(self, tmp_path: Path) -> None:
+        """Test that fix loop iterates multiple times when QA re-run shows remaining errors."""
+        registry = FixStrategyRegistry()
+        qa_runner_call_count = {"count": 0}
+        test_pptx = str(tmp_path / "test.pptx")
+
+        def successful_fix(issue: QAIssue) -> FixResult:
+            return FixResult(
+                issue=issue,
+                status=FixStatus.SUCCESS,
+                message="Fixed",
+                changes_made=["Applied fix"],
+            )
+
+        def mock_qa_runner(path: str) -> QAReport:
+            qa_runner_call_count["count"] += 1
+            # First call: still has 1 error
+            # Second call: no errors
+            if qa_runner_call_count["count"] == 1:
+                return make_qa_report_with_errors(error_count=1)
+            return QAReport(
+                total_issues=0,
+                error_count=0,
+                warning_count=0,
+                info_count=0,
+                issues=[],
+            )
+
+        registry.register("QA-L-001", successful_fix)
+
+        engine = FixEngine(registry=registry, max_iterations=3)
+        report = make_qa_report_with_errors(error_count=1)
+
+        # Add save callback (required for QA runner to be called)
+        def mock_save_callback() -> None:
+            pass
+
+        result = engine.run_fix_loop(
+            report,
+            presentation_path=test_pptx,
+            qa_runner=mock_qa_runner,
+            save_callback=mock_save_callback,
+        )
+
+        # Should iterate twice (first iteration leaves 1 error, second fixes it)
+        assert result.iterations == 2
+        assert qa_runner_call_count["count"] == 2
+        assert result.final_qa_report.error_count == 0
+
+    def test_fix_loop_without_qa_runner_uses_original_report(self) -> None:
+        """Test that fix loop without QA runner doesn't update the report."""
+        registry = FixStrategyRegistry()
+
+        def successful_fix(issue: QAIssue) -> FixResult:
+            return FixResult(
+                issue=issue,
+                status=FixStatus.SUCCESS,
+                message="Fixed",
+                changes_made=["Applied fix"],
+            )
+
+        registry.register("QA-L-001", successful_fix)
+
+        engine = FixEngine(registry=registry, max_iterations=3)
+        report = make_qa_report_with_errors(error_count=1)
+
+        # Run without qa_runner
+        result = engine.run_fix_loop(report)
+
+        # Should still have original error count (no QA re-run)
+        assert result.final_qa_report.error_count == 1
+        assert result.iterations == 1
 
 
 # Made with Bob
