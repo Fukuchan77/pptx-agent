@@ -164,16 +164,16 @@ jobs:
         run: uv sync --all-extras
 
       - name: Run QA module unit tests
-        run: uv run pytest tests/unit/qa/ -v --tb=short
+        run: uv run pytest tests/unit/qa/ -v --tb=short --no-cov
 
       - name: Run fixer module unit tests
-        run: uv run pytest tests/unit/fixer/ -v --tb=short
+        run: uv run pytest tests/unit/fixer/ -v --tb=short --no-cov
 
       - name: Run cache module unit tests
-        run: uv run pytest tests/unit/cache/ -v --tb=short
+        run: uv run pytest tests/unit/cache/ -v --tb=short --no-cov
 
       - name: Run QA integration tests
-        run: uv run pytest tests/integration/test_qa_only.py tests/integration/test_fix_loop.py -v --tb=short
+        run: uv run pytest tests/integration/test_qa_only.py tests/integration/test_fix_loop.py -v --tb=short --no-cov
 
   integration-test:
     name: Integration Tests
