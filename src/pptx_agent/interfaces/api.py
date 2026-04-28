@@ -51,7 +51,7 @@ async def _save_upload_streaming(upload: UploadFile, dest: Path) -> None:
                 dest.unlink(missing_ok=True)
                 raise HTTPException(
                     status_code=413,
-                    detail=f"Upload exceeds {MAX_UPLOAD_BYTES} byte limit",
+                    detail=f"Upload exceeds {MAX_UPLOAD_BYTES // (1024 * 1024)}MB limit",
                 )
             f.write(chunk)
 
@@ -277,6 +277,8 @@ async def analyze_template(
 
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=400, detail=f"Invalid request JSON: {e}") from e
+    except HTTPException:
+        raise
     except Exception:
         logger.exception("Template analysis failed")
         raise HTTPException(
@@ -371,6 +373,8 @@ async def generate(
 
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=400, detail=f"Invalid request JSON: {e}") from e
+    except HTTPException:
+        raise
     except Exception:
         logger.exception("Presentation generation failed")
         raise HTTPException(
@@ -458,6 +462,8 @@ async def qa(
 
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=400, detail=f"Invalid request JSON: {e}") from e
+    except HTTPException:
+        raise
     except Exception:
         logger.exception("QA validation failed")
         raise HTTPException(
@@ -481,13 +487,13 @@ async def download(file_id: str, background_tasks: BackgroundTasks) -> FileRespo
         HTTPException: If file not found
     """
     with _storage_lock:
-        if file_id not in _file_storage:
+        file_path = _file_storage.get(file_id)
+        if file_path is None:
             raise HTTPException(status_code=404, detail="File not found")
-
-        file_path = _file_storage.pop(file_id)
-
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File no longer available")
+        if not file_path.exists():
+            _file_storage.pop(file_id, None)
+            raise HTTPException(status_code=404, detail="File no longer available")
+        _file_storage.pop(file_id)
 
     # Schedule cleanup after response sent
     background_tasks.add_task(file_path.unlink, missing_ok=True)

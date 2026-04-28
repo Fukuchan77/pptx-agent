@@ -144,12 +144,11 @@ class TestRetryScopeReduction:
     """Test retry mechanism with progressive scope reduction."""
 
     @pytest.mark.asyncio
-    async def test_retry_with_scope_reduction_on_failure(
-        self, make_test_config: Callable[..., Any]
-    ) -> None:
-        """Test that failures trigger retry with reduced scope.
+    async def test_retry_attempts_on_json_error(self, make_test_config: Callable[..., Any]) -> None:
+        """Test that JSON errors trigger retry attempts.
 
-        RED Phase: This test should FAIL because retry logic doesn't exist yet.
+        Verifies that on failure the agent is retried at least once before
+        falling back to heuristic generation.
         """
         _ = make_test_config()
         outline = PresentationOutline(
@@ -284,9 +283,8 @@ class TestTimeoutMonitoring:
             assert len(result.slides) == 1
             assert result.slides[0].title == "Test Slide"
 
-            # The timeout monitoring code exists in content_generator.py lines 100-110
-            # It tracks elapsed time and logs warnings when approaching timeout threshold
-            # This test verifies the code path doesn't break normal generation
+            # Timeout enforcement is implemented via `async with asyncio.timeout(total_budget)`
+            # in content_generator.py. This test verifies the happy-path succeeds within budget.
 
 
 # Made with Bob
