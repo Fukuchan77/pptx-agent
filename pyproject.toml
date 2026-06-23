@@ -8,7 +8,7 @@ dependencies = [
     "pydantic-ai-slim[logfire,openai]>=1.83.0",
     "pydantic-ai-litellm>=0.2.3",
     "python-pptx>=1.0.2,<2.0.0",
-    "pydantic-settings>=2.14.0,<3.0.0",
+    "pydantic-settings>=2.14.2,<3.0.0",
     "filelock>=3.29.0",
     "platformdirs>=4.9.6",
 ]
